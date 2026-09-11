@@ -43,50 +43,50 @@
 | 5 | Compliance | Electronic Signature | [`electronic_signature`](#table-electronic_signature) | `signature_id` | `signer_id` | Critical | Y |
 | 6 | Compliance | Audit Trail | [`audit_trail`](#table-audit_trail) | `audit_id` | `actor_id` | Critical | Y |
 | 7 | File | File Asset | [`file_asset`](#table-file_asset) | `file_id` | `uploader_id` | High | Y |
-| 8 | System | System/Equipment Identification Information | [`system_asset`](#table-system_asset) | `system_id` | `organization_id` | High | Y |
-| 9 | Library | Library Item Master | [`library_item`](#table-library_item) | `library_id` | - | High | Y |
-| 10 | Validation | Validation Project | [`validation_project`](#table-validation_project) | `project_id` | `system_id, created_by, updated_by` | High | Y |
-| 11 | QIA | Quality Impact Assessment Header | [`qia_assessment`](#table-qia_assessment) | `qia_id` | `project_id` | High | Y |
-| 12 | QIA | QIA Module Detailed Assessment | [`qia_module_item`](#table-qia_module_item) | `qia_module_item_id` | `qia_id` | High | Y |
-| 13 | VA | Vendor Audit Assessment | [`vendor_audit`](#table-vendor_audit) | `audit_id` | `project_id` | High | Y |
-| 14 | URS | User Requirements Specification | [`requirement`](#table-requirement) | `requirement_id` | `project_id, created_by` | High | Y |
-| 15 | FDS | Functional Design Specification | [`fds_spec`](#table-fds_spec) | `fds_id` | `project_id, created_by, updated_by` | High | Y |
-| 16 | FDS | FDS Detailed Item | [`fds_item`](#table-fds_item) | `fds_item_id` | `fds_id, created_by, updated_by` | High | Y |
-| 17 | FDS | FDS Interface Definition | [`fds_interface`](#table-fds_interface) | `fds_interface_id` | `fds_id, created_by, updated_by` | High | Y |
-| 18 | DQ | Design Qualification Assessment | [`dq_assessment`](#table-dq_assessment) | `dq_id` | `project_id, created_by, updated_by` | High | Y |
-| 19 | DQ | DQ Detailed Assessment Item | [`dq_item`](#table-dq_item) | `dq_item_id` | `dq_id, requirement_id, reviewed_by, created_by, updated_by` | High | Y |
-| 20 | FRA | Functional Risk Assessment | [`fra_assessment`](#table-fra_assessment) | `fra_id` | `project_id, created_by, updated_by` | High | Y |
-| 21 | FRA | FRA Detailed Risk Item | [`fra_item`](#table-fra_item) | `fra_item_id` | `fra_id, requirement_id, created_by, updated_by` | High | Y |
-| 22 | IQ | Installation Qualification Assessment | [`iq_assessment`](#table-iq_assessment) | `iq_id` | `project_id, created_by, updated_by` | High | Y |
-| 23 | IQ | IQ Detailed Test Item | [`iq_item`](#table-iq_item) | `iq_item_id` | `iq_id, executed_by, created_by, updated_by` | High | Y |
-| 24 | OQ | Operational Qualification Assessment | [`oq_assessment`](#table-oq_assessment) | `oq_id` | `project_id, created_by, updated_by` | High | Y |
-| 25 | OQ | OQ Detailed Test Item | [`oq_item`](#table-oq_item) | `oq_item_id` | `oq_id, executed_by, created_by, updated_by` | High | Y |
-| 26 | PQ | Performance Qualification Assessment | [`pq_assessment`](#table-pq_assessment) | `pq_id` | `project_id, created_by, updated_by` | High | Y |
-| 27 | PQ | PQ Detailed Test Item | [`pq_item`](#table-pq_item) | `pq_item_id` | `pq_id, executed_by, created_by, updated_by` | High | Y |
-| 28 | RTM | Requirements Traceability Matrix | [`rtm_assessment`](#table-rtm_assessment) | `rtm_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 29 | RTM | RTM Detailed Traceability Item | [`rtm_item`](#table-rtm_item) | `rtm_item_id` | `rtm_id, requirement_id, created_by, updated_by` | Critical | Y |
-| 30 | VSR | Validation Summary Report | [`vsr_assessment`](#table-vsr_assessment) | `vsr_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 31 | VSR | VSR Activity Summary Item | [`vsr_item`](#table-vsr_item) | `vsr_item_id` | `vsr_id, created_by, updated_by` | Critical | Y |
-| 32 | Workflow | Workflow Instance | [`workflow_instance`](#table-workflow_instance) | `workflow_instance_id` | `requested_by, created_by, updated_by` | Critical | Y |
-| 33 | Workflow | Workflow Step | [`workflow_step`](#table-workflow_step) | `workflow_step_id` | `workflow_instance_id, assignee_id, created_by, updated_by` | Critical | Y |
-| 34 | Workflow | Approval Action History | [`approval_action`](#table-approval_action) | `approval_action_id` | `workflow_step_id, actor_id, signature_id` | Critical | Y |
-| 35 | Traceability | Common Traceability Link | [`traceability_link`](#table-traceability_link) | `traceability_link_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 36 | File | Evidence File Link | [`evidence_link`](#table-evidence_link) | `evidence_link_id` | `project_id, file_id, created_by, updated_by` | High | Y |
-| 37 | Validation | Project Member | [`project_member`](#table-project_member) | `project_member_id` | `project_id, user_id, role_id, created_by, updated_by` | High | Y |
-| 38 | Validation | Validation Activity Master | [`validation_activity`](#table-validation_activity) | `activity_id` | `created_by, updated_by` | High | Y |
-| 39 | Validation | Project Activity | [`project_activity`](#table-project_activity) | `project_activity_id` | `project_id, activity_id, created_by, updated_by` | Critical | Y |
-| 40 | Validation | Activity Dependency | [`activity_dependency`](#table-activity_dependency) | `activity_dependency_id` | `successor_activity_id, predecessor_activity_id, created_by, updated_by` | Critical | Y |
-| 41 | DDS | Detailed Design Specification | [`dds_spec`](#table-dds_spec) | `dds_id` | `project_id, created_by, updated_by` | High | Y |
-| 42 | DDS | DDS Detailed Item | [`dds_item`](#table-dds_item) | `dds_item_id` | `dds_id, created_by, updated_by` | High | Y |
-| 43 | Deviation | Deviation Management | [`deviation`](#table-deviation) | `deviation_id` | `project_id, resolved_by, approved_by, created_by, updated_by` | Critical | Y |
-| 44 | Report | Report Generation Job | [`report_generation`](#table-report_generation) | `report_generation_id` | `project_id, requested_by, result_file_id, report_schedule_id, created_by, updated_by` | High | Y |
-| 45 | AI | AI Generation Job | [`ai_generation_job`](#table-ai_generation_job) | `ai_job_id` | `project_id, requested_by, created_by, updated_by` | High | Y |
-| 46 | AI | AI Generation Result | [`ai_generation_result`](#table-ai_generation_result) | `ai_result_id` | `ai_job_id, created_by, updated_by` | High | Y |
-| 47 | AI | AI Generation Result Item | [`ai_result_item`](#table-ai_result_item) | `ai_result_item_id` | `ai_result_id, created_by, updated_by` | High | Y |
-| 48 | Notification | Notification Delivery | [`notification_delivery`](#table-notification_delivery) | `notification_delivery_id` | `project_id, workflow_instance_id, workflow_step_id, recipient_id, created_by, updated_by` | High | Y |
-| 49 | System | Backup Execution History | [`backup_execution`](#table-backup_execution) | `backup_execution_id` | `requested_by, created_by, updated_by` | Critical | Y |
-| 50 | Report | Report Schedule | [`report_schedule`](#table-report_schedule) | `report_schedule_id` | `project_id, created_by, updated_by` | High | Y |
-| 51 | File | File Cleanup Execution History | [`file_cleanup_execution`](#table-file_cleanup_execution) | `file_cleanup_execution_id` | `requested_by, created_by, updated_by` | High | Y |
+| 8 | File | Evidence File Link | [`evidence_link`](#table-evidence_link) | `evidence_link_id` | `project_id, file_id, created_by, updated_by` | High | Y |
+| 9 | File | File Cleanup Execution History | [`file_cleanup_execution`](#table-file_cleanup_execution) | `file_cleanup_execution_id` | `requested_by, created_by, updated_by` | High | Y |
+| 10 | System | System/Equipment Identification Information | [`system_asset`](#table-system_asset) | `system_id` | `organization_id` | High | Y |
+| 11 | System | Backup Execution History | [`backup_execution`](#table-backup_execution) | `backup_execution_id` | `requested_by, created_by, updated_by` | Critical | Y |
+| 12 | Library | Library Item Master | [`library_item`](#table-library_item) | `library_id` | - | High | Y |
+| 13 | Validation | Validation Project | [`validation_project`](#table-validation_project) | `project_id` | `system_id, created_by, updated_by` | High | Y |
+| 14 | Validation | Project Member | [`project_member`](#table-project_member) | `project_member_id` | `project_id, user_id, role_id, created_by, updated_by` | High | Y |
+| 15 | Validation | Validation Activity Master | [`validation_activity`](#table-validation_activity) | `activity_id` | `created_by, updated_by` | High | Y |
+| 16 | Validation | Project Activity | [`project_activity`](#table-project_activity) | `project_activity_id` | `project_id, activity_id, created_by, updated_by` | Critical | Y |
+| 17 | Validation | Activity Dependency | [`activity_dependency`](#table-activity_dependency) | `activity_dependency_id` | `successor_activity_id, predecessor_activity_id, created_by, updated_by` | Critical | Y |
+| 18 | QIA | Quality Impact Assessment Header | [`qia_assessment`](#table-qia_assessment) | `qia_id` | `project_id` | High | Y |
+| 19 | QIA | QIA Module Detailed Assessment | [`qia_module_item`](#table-qia_module_item) | `qia_module_item_id` | `qia_id` | High | Y |
+| 20 | VA | Vendor Audit Assessment | [`vendor_audit`](#table-vendor_audit) | `audit_id` | `project_id` | High | Y |
+| 21 | URS | User Requirements Specification | [`requirement`](#table-requirement) | `requirement_id` | `project_id, created_by` | High | Y |
+| 22 | FDS | Functional Design Specification | [`fds_spec`](#table-fds_spec) | `fds_id` | `project_id, created_by, updated_by` | High | Y |
+| 23 | FDS | FDS Detailed Item | [`fds_item`](#table-fds_item) | `fds_item_id` | `fds_id, created_by, updated_by` | High | Y |
+| 24 | FDS | FDS Interface Definition | [`fds_interface`](#table-fds_interface) | `fds_interface_id` | `fds_id, created_by, updated_by` | High | Y |
+| 25 | DQ | Design Qualification Assessment | [`dq_assessment`](#table-dq_assessment) | `dq_id` | `project_id, created_by, updated_by` | High | Y |
+| 26 | DQ | DQ Detailed Assessment Item | [`dq_item`](#table-dq_item) | `dq_item_id` | `dq_id, requirement_id, reviewed_by, created_by, updated_by` | High | Y |
+| 27 | FRA | Functional Risk Assessment | [`fra_assessment`](#table-fra_assessment) | `fra_id` | `project_id, created_by, updated_by` | High | Y |
+| 28 | FRA | FRA Detailed Risk Item | [`fra_item`](#table-fra_item) | `fra_item_id` | `fra_id, requirement_id, created_by, updated_by` | High | Y |
+| 29 | IQ | Installation Qualification Assessment | [`iq_assessment`](#table-iq_assessment) | `iq_id` | `project_id, created_by, updated_by` | High | Y |
+| 30 | IQ | IQ Detailed Test Item | [`iq_item`](#table-iq_item) | `iq_item_id` | `iq_id, executed_by, created_by, updated_by` | High | Y |
+| 31 | OQ | Operational Qualification Assessment | [`oq_assessment`](#table-oq_assessment) | `oq_id` | `project_id, created_by, updated_by` | High | Y |
+| 32 | OQ | OQ Detailed Test Item | [`oq_item`](#table-oq_item) | `oq_item_id` | `oq_id, executed_by, created_by, updated_by` | High | Y |
+| 33 | PQ | Performance Qualification Assessment | [`pq_assessment`](#table-pq_assessment) | `pq_id` | `project_id, created_by, updated_by` | High | Y |
+| 34 | PQ | PQ Detailed Test Item | [`pq_item`](#table-pq_item) | `pq_item_id` | `pq_id, executed_by, created_by, updated_by` | High | Y |
+| 35 | RTM | Requirements Traceability Matrix | [`rtm_assessment`](#table-rtm_assessment) | `rtm_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 36 | RTM | RTM Detailed Traceability Item | [`rtm_item`](#table-rtm_item) | `rtm_item_id` | `rtm_id, requirement_id, created_by, updated_by` | Critical | Y |
+| 37 | VSR | Validation Summary Report | [`vsr_assessment`](#table-vsr_assessment) | `vsr_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 38 | VSR | VSR Activity Summary Item | [`vsr_item`](#table-vsr_item) | `vsr_item_id` | `vsr_id, created_by, updated_by` | Critical | Y |
+| 39 | Workflow | Workflow Instance | [`workflow_instance`](#table-workflow_instance) | `workflow_instance_id` | `requested_by, created_by, updated_by` | Critical | Y |
+| 40 | Workflow | Workflow Step | [`workflow_step`](#table-workflow_step) | `workflow_step_id` | `workflow_instance_id, assignee_id, created_by, updated_by` | Critical | Y |
+| 41 | Workflow | Approval Action History | [`approval_action`](#table-approval_action) | `approval_action_id` | `workflow_step_id, actor_id, signature_id` | Critical | Y |
+| 42 | Traceability | Common Traceability Link | [`traceability_link`](#table-traceability_link) | `traceability_link_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 43 | DDS | Detailed Design Specification | [`dds_spec`](#table-dds_spec) | `dds_id` | `project_id, created_by, updated_by` | High | Y |
+| 44 | DDS | DDS Detailed Item | [`dds_item`](#table-dds_item) | `dds_item_id` | `dds_id, created_by, updated_by` | High | Y |
+| 45 | Deviation | Deviation Management | [`deviation`](#table-deviation) | `deviation_id` | `project_id, resolved_by, approved_by, created_by, updated_by` | Critical | Y |
+| 46 | Report | Report Generation Job | [`report_generation`](#table-report_generation) | `report_generation_id` | `project_id, requested_by, result_file_id, report_schedule_id, created_by, updated_by` | High | Y |
+| 47 | Report | Report Schedule | [`report_schedule`](#table-report_schedule) | `report_schedule_id` | `project_id, created_by, updated_by` | High | Y |
+| 48 | AI | AI Generation Job | [`ai_generation_job`](#table-ai_generation_job) | `ai_job_id` | `project_id, requested_by, created_by, updated_by` | High | Y |
+| 49 | AI | AI Generation Result | [`ai_generation_result`](#table-ai_generation_result) | `ai_result_id` | `ai_job_id, created_by, updated_by` | High | Y |
+| 50 | AI | AI Generation Result Item | [`ai_result_item`](#table-ai_result_item) | `ai_result_item_id` | `ai_result_id, created_by, updated_by` | High | Y |
+| 51 | Notification | Notification Delivery | [`notification_delivery`](#table-notification_delivery) | `notification_delivery_id` | `project_id, workflow_instance_id, workflow_step_id, recipient_id, created_by, updated_by` | High | Y |
 
 ## 4. Domain Navigation
 
@@ -362,7 +362,7 @@
 ---
 
 <a id="table-evidence_link"></a>
-### 36. Evidence File Link (`evidence_link`)
+### 8. Evidence File Link (`evidence_link`)
 
 | Item | Definition |
 |---|---|
@@ -397,7 +397,7 @@
 ---
 
 <a id="table-file_cleanup_execution"></a>
-### 51. File Cleanup Execution History (`file_cleanup_execution`)
+### 9. File Cleanup Execution History (`file_cleanup_execution`)
 
 | Item | Definition |
 |---|---|
@@ -444,7 +444,7 @@
 ## System
 
 <a id="table-system_asset"></a>
-### 8. System/Equipment Identification Information (`system_asset`)
+### 10. System/Equipment Identification Information (`system_asset`)
 
 | Item | Definition |
 |---|---|
@@ -485,7 +485,7 @@
 ---
 
 <a id="table-backup_execution"></a>
-### 49. Backup Execution History (`backup_execution`)
+### 11. Backup Execution History (`backup_execution`)
 
 | Item | Definition |
 |---|---|
@@ -531,7 +531,7 @@
 ## Library
 
 <a id="table-library_item"></a>
-### 9. Library Item Master (`library_item`)
+### 12. Library Item Master (`library_item`)
 
 | Item | Definition |
 |---|---|
@@ -568,7 +568,7 @@
 ## Validation
 
 <a id="table-validation_project"></a>
-### 10. Validation Project (`validation_project`)
+### 13. Validation Project (`validation_project`)
 
 | Item | Definition |
 |---|---|
@@ -608,7 +608,7 @@
 ---
 
 <a id="table-project_member"></a>
-### 37. Project Member (`project_member`)
+### 14. Project Member (`project_member`)
 
 | Item | Definition |
 |---|---|
@@ -643,7 +643,7 @@
 ---
 
 <a id="table-validation_activity"></a>
-### 38. Validation Activity Master (`validation_activity`)
+### 15. Validation Activity Master (`validation_activity`)
 
 | Item | Definition |
 |---|---|
@@ -676,7 +676,7 @@
 ---
 
 <a id="table-project_activity"></a>
-### 39. Project Activity (`project_activity`)
+### 16. Project Activity (`project_activity`)
 
 | Item | Definition |
 |---|---|
@@ -714,7 +714,7 @@
 ---
 
 <a id="table-activity_dependency"></a>
-### 40. Activity Dependency (`activity_dependency`)
+### 17. Activity Dependency (`activity_dependency`)
 
 | Item | Definition |
 |---|---|
@@ -754,7 +754,7 @@
 ## QIA
 
 <a id="table-qia_assessment"></a>
-### 11. Quality Impact Assessment Header (`qia_assessment`)
+### 18. Quality Impact Assessment Header (`qia_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -793,7 +793,7 @@
 ---
 
 <a id="table-qia_module_item"></a>
-### 12. QIA Module Detailed Assessment (`qia_module_item`)
+### 19. QIA Module Detailed Assessment (`qia_module_item`)
 
 | Item | Definition |
 |---|---|
@@ -838,7 +838,7 @@
 ## VA
 
 <a id="table-vendor_audit"></a>
-### 13. Vendor Audit Assessment (`vendor_audit`)
+### 20. Vendor Audit Assessment (`vendor_audit`)
 
 | Item | Definition |
 |---|---|
@@ -882,7 +882,7 @@
 ## URS
 
 <a id="table-requirement"></a>
-### 14. User Requirements Specification (`requirement`)
+### 21. User Requirements Specification (`requirement`)
 
 | Item | Definition |
 |---|---|
@@ -923,7 +923,7 @@
 ## FDS
 
 <a id="table-fds_spec"></a>
-### 15. Functional Design Specification (`fds_spec`)
+### 22. Functional Design Specification (`fds_spec`)
 
 | Item | Definition |
 |---|---|
@@ -960,7 +960,7 @@
 ---
 
 <a id="table-fds_item"></a>
-### 16. FDS Detailed Item (`fds_item`)
+### 23. FDS Detailed Item (`fds_item`)
 
 | Item | Definition |
 |---|---|
@@ -998,7 +998,7 @@
 ---
 
 <a id="table-fds_interface"></a>
-### 17. FDS Interface Definition (`fds_interface`)
+### 24. FDS Interface Definition (`fds_interface`)
 
 | Item | Definition |
 |---|---|
@@ -1037,7 +1037,7 @@
 ## DQ
 
 <a id="table-dq_assessment"></a>
-### 18. Design Qualification Assessment (`dq_assessment`)
+### 25. Design Qualification Assessment (`dq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1074,7 +1074,7 @@
 ---
 
 <a id="table-dq_item"></a>
-### 19. DQ Detailed Assessment Item (`dq_item`)
+### 26. DQ Detailed Assessment Item (`dq_item`)
 
 | Item | Definition |
 |---|---|
@@ -1116,7 +1116,7 @@
 ## FRA
 
 <a id="table-fra_assessment"></a>
-### 20. Functional Risk Assessment (`fra_assessment`)
+### 27. Functional Risk Assessment (`fra_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1153,7 +1153,7 @@
 ---
 
 <a id="table-fra_item"></a>
-### 21. FRA Detailed Risk Item (`fra_item`)
+### 28. FRA Detailed Risk Item (`fra_item`)
 
 | Item | Definition |
 |---|---|
@@ -1197,7 +1197,7 @@
 ## IQ
 
 <a id="table-iq_assessment"></a>
-### 22. Installation Qualification Assessment (`iq_assessment`)
+### 29. Installation Qualification Assessment (`iq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1235,7 +1235,7 @@
 ---
 
 <a id="table-iq_item"></a>
-### 23. IQ Detailed Test Item (`iq_item`)
+### 30. IQ Detailed Test Item (`iq_item`)
 
 | Item | Definition |
 |---|---|
@@ -1279,7 +1279,7 @@
 ## OQ
 
 <a id="table-oq_assessment"></a>
-### 24. Operational Qualification Assessment (`oq_assessment`)
+### 31. Operational Qualification Assessment (`oq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1317,7 +1317,7 @@
 ---
 
 <a id="table-oq_item"></a>
-### 25. OQ Detailed Test Item (`oq_item`)
+### 32. OQ Detailed Test Item (`oq_item`)
 
 | Item | Definition |
 |---|---|
@@ -1361,7 +1361,7 @@
 ## PQ
 
 <a id="table-pq_assessment"></a>
-### 26. Performance Qualification Assessment (`pq_assessment`)
+### 33. Performance Qualification Assessment (`pq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1404,7 +1404,7 @@
 ---
 
 <a id="table-pq_item"></a>
-### 27. PQ Detailed Test Item (`pq_item`)
+### 34. PQ Detailed Test Item (`pq_item`)
 
 | Item | Definition |
 |---|---|
@@ -1445,7 +1445,7 @@
 ## RTM
 
 <a id="table-rtm_assessment"></a>
-### 28. Requirements Traceability Matrix (`rtm_assessment`)
+### 35. Requirements Traceability Matrix (`rtm_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1487,7 +1487,7 @@
 ---
 
 <a id="table-rtm_item"></a>
-### 29. RTM Detailed Traceability Item (`rtm_item`)
+### 36. RTM Detailed Traceability Item (`rtm_item`)
 
 | Item | Definition |
 |---|---|
@@ -1531,7 +1531,7 @@
 ## VSR
 
 <a id="table-vsr_assessment"></a>
-### 30. Validation Summary Report (`vsr_assessment`)
+### 37. Validation Summary Report (`vsr_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1552,7 +1552,7 @@
 | 441 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | Related validation project ID | `00000000-0000-0000-0000-000000000001` |
 | 442 | VSR Number | `vsr_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | VSR document number (e.g., VSR-VP-SYS-008-20260422) | `VSR-VP-SYS-008-20260422` |
 | 443 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the validation summary report | `Validation Summary Report` |
-| 444 | Validation Conclusion | `overall_conclusion` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Final acceptability conclusion (Acceptable, Conditionally Acceptable, Unacceptable) | `Conditionally Acceptable (Conditionally Acceptable)` |
+| 444 | Validation Conclusion | `overall_conclusion` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Final acceptability conclusion (Acceptable, Conditionally Acceptable, Unacceptable) | `Conditionally Acceptable` |
 | 445 | Detailed Conclusion | `conclusion_remarks` | `text` | N | N | - | N | - | N | N | N | Y | Reasons and conditions for the conclusion (e.g., final approval possible after resolution of deviation OQ-GMP-02) | `Final approval possible after resolution of deviation OQ-GMP-02` |
 | 446 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the VSR assessment document (e.g., v1.0, v1.1) | `v1.0` |
 | 447 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the VSR assessment document (e.g., 1, 2, 3...) | `1` |
@@ -1570,7 +1570,7 @@
 ---
 
 <a id="table-vsr_item"></a>
-### 31. VSR Activity Summary Item (`vsr_item`)
+### 38. VSR Activity Summary Item (`vsr_item`)
 
 | Item | Definition |
 |---|---|
@@ -1612,7 +1612,7 @@
 ## Workflow
 
 <a id="table-workflow_instance"></a>
-### 32. Workflow Instance (`workflow_instance`)
+### 39. Workflow Instance (`workflow_instance`)
 
 | Item | Definition |
 |---|---|
@@ -1649,7 +1649,7 @@
 ---
 
 <a id="table-workflow_step"></a>
-### 33. Workflow Step (`workflow_step`)
+### 40. Workflow Step (`workflow_step`)
 
 | Item | Definition |
 |---|---|
@@ -1686,7 +1686,7 @@
 ---
 
 <a id="table-approval_action"></a>
-### 34. Approval Action History (`approval_action`)
+### 41. Approval Action History (`approval_action`)
 
 | Item | Definition |
 |---|---|
@@ -1720,7 +1720,7 @@
 ## Traceability
 
 <a id="table-traceability_link"></a>
-### 35. Common Traceability Link (`traceability_link`)
+### 42. Common Traceability Link (`traceability_link`)
 
 | Item | Definition |
 |---|---|
@@ -1758,7 +1758,7 @@
 ## DDS
 
 <a id="table-dds_spec"></a>
-### 41. Detailed Design Specification (`dds_spec`)
+### 43. Detailed Design Specification (`dds_spec`)
 
 | Item | Definition |
 |---|---|
@@ -1795,7 +1795,7 @@
 ---
 
 <a id="table-dds_item"></a>
-### 42. DDS Detailed Item (`dds_item`)
+### 44. DDS Detailed Item (`dds_item`)
 
 | Item | Definition |
 |---|---|
@@ -1832,7 +1832,7 @@
 ## Deviation
 
 <a id="table-deviation"></a>
-### 43. Deviation Management (`deviation`)
+### 45. Deviation Management (`deviation`)
 
 | Item | Definition |
 |---|---|
@@ -1876,7 +1876,7 @@
 ## Report
 
 <a id="table-report_generation"></a>
-### 44. Report Generation Job (`report_generation`)
+### 46. Report Generation Job (`report_generation`)
 
 | Item | Definition |
 |---|---|
@@ -1924,7 +1924,7 @@
 ---
 
 <a id="table-report_schedule"></a>
-### 50. Report Schedule (`report_schedule`)
+### 47. Report Schedule (`report_schedule`)
 
 | Item | Definition |
 |---|---|
@@ -1967,7 +1967,7 @@
 ## AI
 
 <a id="table-ai_generation_job"></a>
-### 45. AI Generation Job (`ai_generation_job`)
+### 48. AI Generation Job (`ai_generation_job`)
 
 | Item | Definition |
 |---|---|
@@ -2011,7 +2011,7 @@
 ---
 
 <a id="table-ai_generation_result"></a>
-### 46. AI Generation Result (`ai_generation_result`)
+### 49. AI Generation Result (`ai_generation_result`)
 
 | Item | Definition |
 |---|---|
@@ -2045,7 +2045,7 @@
 ---
 
 <a id="table-ai_result_item"></a>
-### 47. AI Generation Result Item (`ai_result_item`)
+### 50. AI Generation Result Item (`ai_result_item`)
 
 | Item | Definition |
 |---|---|
@@ -2083,7 +2083,7 @@
 ## Notification
 
 <a id="table-notification_delivery"></a>
-### 48. Notification Delivery (`notification_delivery`)
+### 51. Notification Delivery (`notification_delivery`)
 
 | Item | Definition |
 |---|---|
