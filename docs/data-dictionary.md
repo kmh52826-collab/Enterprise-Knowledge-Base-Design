@@ -1,94 +1,94 @@
-# 데이터 테이블 정의서
+# Data Table Specifications
 
-> Validation Management Platform 데이터 모델 문서  
-> **보안 처리**: 예시값은 문서 공개를 고려하여 비식별 샘플 값으로 치환
+> Validation Management Platform Data Model Documentation  
+> **Security Measures**: Example values have been replaced with de-identified sample values for public release.
 
-## 목차
+## Table of Contents
 
-- [1. 문서 개요](#1-문서-개요)
-- [2. 표기 기준](#2-표기-기준)
-- [3. 테이블 목록](#3-테이블-목록)
-- [4. 도메인별 바로가기](#4-도메인별-바로가기)
-- [5. 상세 테이블 및 컬럼 정의](#5-상세-테이블-및-컬럼-정의)
+- [1. Document Overview](#1-document-overview)
+- [2. Notation Conventions](#2-notation-conventions)
+- [3. Table List](#3-table-list)
+- [4. Domain Navigation](#4-domain-navigation)
+- [5. Detailed Table and Column Definitions](#5-detailed-table-and-column-definitions)
 
-## 1. 문서 개요
+## 1. Document Overview
 
-- 전체 테이블: **51개**
-- 전체 컬럼: **783개**
-- 도메인: **25개**
-- 명명 규칙: 테이블 및 컬럼은 `snake_case`, PK는 엔터티별 식별자 컬럼 사용
-- 날짜/시간 기준: DB에는 UTC 저장, 화면에서는 사용자 또는 사업장 Timezone 적용
-- GxP 원칙: 승인 기록은 직접 수정하지 않고 Revision 및 상태 이력으로 관리하며 주요 변경은 Audit Trail에 기록
+- Total tables: **51**
+- Total columns: **783**
+- Domains: **25**
+- Naming conventions: Tables and columns use `snake_case`; primary keys use entity-specific identifier columns.
+- Date/time conventions: Store UTC in the database; display dates and times in the user's or site's time zone.
+- GxP principles: Manage approved records through revisions and status history without directly modifying them, and record significant changes in the Audit Trail.
 
-## 2. 표기 기준
+## 2. Notation Conventions
 
-| 표기 | 의미 |
+| Notation | Meaning |
 |---|---|
-| `Y` | 적용 또는 필수 |
-| `N` | 미적용 또는 선택 |
-| `-` | 해당 없음 또는 미지정 |
+| `Y` | Applicable or required |
+| `N` | Not applicable or optional |
+| `-` | Not applicable or unspecified |
 | PK | Primary Key |
 | FK | Foreign Key |
-| Not Null | NULL 허용 여부의 반대 조건 |
-| Audit | Audit Trail 기록 대상 여부 |
+| Not Null | The inverse of whether NULL is allowed |
+| Audit | Whether the item is recorded in the Audit Trail |
 
-## 3. 테이블 목록
+## 3. Table List
 
-| No | Domain | 논리 테이블명 | 물리 테이블명 | PK | 주요 참조(FK) | GxP | Audit |
+| No | Domain | Logical Table Name | Physical Table Name | PK | Key References (FK) | GxP | Audit |
 |---:|---|---|---|---|---|:---:|:---:|
-| 1 | Organization | 조직/고객사 | [`organization`](#table-organization) | `organization_id` | - | High | Y |
-| 2 | Security | 사용자 | [`app_user`](#table-app_user) | `user_id` | `organization_id` | High | Y |
-| 3 | Security | 역할 | [`role`](#table-role) | `role_id` | - | High | Y |
-| 4 | Security | 사용자 역할 | [`user_role`](#table-user_role) | `user_role_id` | `user_id, role_id` | High | Y |
-| 5 | Compliance | 전자서명 | [`electronic_signature`](#table-electronic_signature) | `signature_id` | `signer_id` | Critical | Y |
+| 1 | Organization | Organization/Client Company | [`organization`](#table-organization) | `organization_id` | - | High | Y |
+| 2 | Security | User | [`app_user`](#table-app_user) | `user_id` | `organization_id` | High | Y |
+| 3 | Security | Role | [`role`](#table-role) | `role_id` | - | High | Y |
+| 4 | Security | User Role | [`user_role`](#table-user_role) | `user_role_id` | `user_id, role_id` | High | Y |
+| 5 | Compliance | Electronic Signature | [`electronic_signature`](#table-electronic_signature) | `signature_id` | `signer_id` | Critical | Y |
 | 6 | Compliance | Audit Trail | [`audit_trail`](#table-audit_trail) | `audit_id` | `actor_id` | Critical | Y |
-| 7 | File | 파일 자산 | [`file_asset`](#table-file_asset) | `file_id` | `uploader_id` | High | Y |
-| 8 | System | 시스템/장비 식별 정보 | [`system_asset`](#table-system_asset) | `system_id` | `organization_id` | High | Y |
-| 9 | Library | 라이브러리 항목 마스터 | [`library_item`](#table-library_item) | `library_id` | - | High | Y |
-| 10 | Validation | Validation 프로젝트 | [`validation_project`](#table-validation_project) | `project_id` | `system_id, created_by, updated_by` | High | Y |
-| 11 | QIA | 품질 영향 평가 헤더 | [`qia_assessment`](#table-qia_assessment) | `qia_id` | `project_id` | High | Y |
-| 12 | QIA | QIA 모듈 상세 평가 | [`qia_module_item`](#table-qia_module_item) | `qia_module_item_id` | `qia_id` | High | Y |
-| 13 | VA | 공급업체 감사 평가 | [`vendor_audit`](#table-vendor_audit) | `audit_id` | `project_id` | High | Y |
-| 14 | URS | 사용자 요구사항 명세 | [`requirement`](#table-requirement) | `requirement_id` | `project_id, created_by` | High | Y |
-| 15 | FDS | 기능 설계 명세서 | [`fds_spec`](#table-fds_spec) | `fds_id` | `project_id, created_by, updated_by` | High | Y |
-| 16 | FDS | FDS 상세 항목 | [`fds_item`](#table-fds_item) | `fds_item_id` | `fds_id, created_by, updated_by` | High | Y |
-| 17 | FDS | FDS 인터페이스 정의 | [`fds_interface`](#table-fds_interface) | `fds_interface_id` | `fds_id, created_by, updated_by` | High | Y |
-| 18 | DQ | 설계 적격성 평가 | [`dq_assessment`](#table-dq_assessment) | `dq_id` | `project_id, created_by, updated_by` | High | Y |
-| 19 | DQ | DQ 상세 평가 항목 | [`dq_item`](#table-dq_item) | `dq_item_id` | `dq_id, requirement_id, reviewed_by, created_by, updated_by` | High | Y |
-| 20 | FRA | 기능 위험평가 | [`fra_assessment`](#table-fra_assessment) | `fra_id` | `project_id, created_by, updated_by` | High | Y |
-| 21 | FRA | FRA 위험 상세 항목 | [`fra_item`](#table-fra_item) | `fra_item_id` | `fra_id, requirement_id, created_by, updated_by` | High | Y |
-| 22 | IQ | 설치 적격성 평가 | [`iq_assessment`](#table-iq_assessment) | `iq_id` | `project_id, created_by, updated_by` | High | Y |
-| 23 | IQ | IQ 상세 테스트 항목 | [`iq_item`](#table-iq_item) | `iq_item_id` | `iq_id, executed_by, created_by, updated_by` | High | Y |
-| 24 | OQ | 운전 적격성 평가 | [`oq_assessment`](#table-oq_assessment) | `oq_id` | `project_id, created_by, updated_by` | High | Y |
-| 25 | OQ | OQ 상세 테스트 항목 | [`oq_item`](#table-oq_item) | `oq_item_id` | `oq_id, executed_by, created_by, updated_by` | High | Y |
-| 26 | PQ | 성능 적격성 평가 | [`pq_assessment`](#table-pq_assessment) | `pq_id` | `project_id, created_by, updated_by` | High | Y |
-| 27 | PQ | PQ 상세 테스트 항목 | [`pq_item`](#table-pq_item) | `pq_item_id` | `pq_id, executed_by, created_by, updated_by` | High | Y |
-| 28 | RTM | 요구사항 추적 매트릭스 | [`rtm_assessment`](#table-rtm_assessment) | `rtm_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 29 | RTM | RTM 상세 추적 항목 | [`rtm_item`](#table-rtm_item) | `rtm_item_id` | `rtm_id, requirement_id, created_by, updated_by` | Critical | Y |
-| 30 | VSR | 밸리데이션 종합 보고서 | [`vsr_assessment`](#table-vsr_assessment) | `vsr_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 31 | VSR | VSR 활동 요약 항목 | [`vsr_item`](#table-vsr_item) | `vsr_item_id` | `vsr_id, created_by, updated_by` | Critical | Y |
-| 32 | Workflow | Workflow 인스턴스 | [`workflow_instance`](#table-workflow_instance) | `workflow_instance_id` | `requested_by, created_by, updated_by` | Critical | Y |
-| 33 | Workflow | Workflow 단계 | [`workflow_step`](#table-workflow_step) | `workflow_step_id` | `workflow_instance_id, assignee_id, created_by, updated_by` | Critical | Y |
-| 34 | Workflow | 승인 처리 이력 | [`approval_action`](#table-approval_action) | `approval_action_id` | `workflow_step_id, actor_id, signature_id` | Critical | Y |
-| 35 | Traceability | 공통 추적 관계 | [`traceability_link`](#table-traceability_link) | `traceability_link_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 36 | File | 증적 파일 연결 | [`evidence_link`](#table-evidence_link) | `evidence_link_id` | `project_id, file_id, created_by, updated_by` | High | Y |
-| 37 | Validation | 프로젝트 참여자 | [`project_member`](#table-project_member) | `project_member_id` | `project_id, user_id, role_id, created_by, updated_by` | High | Y |
-| 38 | Validation | 밸리데이션 활동 마스터 | [`validation_activity`](#table-validation_activity) | `activity_id` | `created_by, updated_by` | High | Y |
-| 39 | Validation | 프로젝트 수행 활동 | [`project_activity`](#table-project_activity) | `project_activity_id` | `project_id, activity_id, created_by, updated_by` | Critical | Y |
-| 40 | Validation | 활동 선후행 조건 | [`activity_dependency`](#table-activity_dependency) | `activity_dependency_id` | `successor_activity_id, predecessor_activity_id, created_by, updated_by` | Critical | Y |
-| 41 | DDS | 상세 설계 명세서 | [`dds_spec`](#table-dds_spec) | `dds_id` | `project_id, created_by, updated_by` | High | Y |
-| 42 | DDS | DDS 상세 항목 | [`dds_item`](#table-dds_item) | `dds_item_id` | `dds_id, created_by, updated_by` | High | Y |
-| 43 | Deviation | 일탈 관리 | [`deviation`](#table-deviation) | `deviation_id` | `project_id, resolved_by, approved_by, created_by, updated_by` | Critical | Y |
-| 44 | Report | 리포트 생성 작업 | [`report_generation`](#table-report_generation) | `report_generation_id` | `project_id, requested_by, result_file_id, report_schedule_id, created_by, updated_by` | High | Y |
-| 45 | AI | AI 생성 작업 | [`ai_generation_job`](#table-ai_generation_job) | `ai_job_id` | `project_id, requested_by, created_by, updated_by` | High | Y |
-| 46 | AI | AI 생성 결과 | [`ai_generation_result`](#table-ai_generation_result) | `ai_result_id` | `ai_job_id, created_by, updated_by` | High | Y |
-| 47 | AI | AI 생성 결과 항목 | [`ai_result_item`](#table-ai_result_item) | `ai_result_item_id` | `ai_result_id, created_by, updated_by` | High | Y |
-| 48 | Notification | 알림 발송 | [`notification_delivery`](#table-notification_delivery) | `notification_delivery_id` | `project_id, workflow_instance_id, workflow_step_id, recipient_id, created_by, updated_by` | High | Y |
-| 49 | System | 백업 실행 이력 | [`backup_execution`](#table-backup_execution) | `backup_execution_id` | `requested_by, created_by, updated_by` | Critical | Y |
-| 50 | Report | 리포트 실행 일정 | [`report_schedule`](#table-report_schedule) | `report_schedule_id` | `project_id, created_by, updated_by` | High | Y |
-| 51 | File | 파일 정리 실행 이력 | [`file_cleanup_execution`](#table-file_cleanup_execution) | `file_cleanup_execution_id` | `requested_by, created_by, updated_by` | High | Y |
+| 7 | File | File Asset | [`file_asset`](#table-file_asset) | `file_id` | `uploader_id` | High | Y |
+| 8 | System | System/Equipment Identification Information | [`system_asset`](#table-system_asset) | `system_id` | `organization_id` | High | Y |
+| 9 | Library | Library Item Master | [`library_item`](#table-library_item) | `library_id` | - | High | Y |
+| 10 | Validation | Validation Project | [`validation_project`](#table-validation_project) | `project_id` | `system_id, created_by, updated_by` | High | Y |
+| 11 | QIA | Quality Impact Assessment Header | [`qia_assessment`](#table-qia_assessment) | `qia_id` | `project_id` | High | Y |
+| 12 | QIA | QIA Module Detailed Assessment | [`qia_module_item`](#table-qia_module_item) | `qia_module_item_id` | `qia_id` | High | Y |
+| 13 | VA | Vendor Audit Assessment | [`vendor_audit`](#table-vendor_audit) | `audit_id` | `project_id` | High | Y |
+| 14 | URS | User Requirements Specification | [`requirement`](#table-requirement) | `requirement_id` | `project_id, created_by` | High | Y |
+| 15 | FDS | Functional Design Specification | [`fds_spec`](#table-fds_spec) | `fds_id` | `project_id, created_by, updated_by` | High | Y |
+| 16 | FDS | FDS Detailed Item | [`fds_item`](#table-fds_item) | `fds_item_id` | `fds_id, created_by, updated_by` | High | Y |
+| 17 | FDS | FDS Interface Definition | [`fds_interface`](#table-fds_interface) | `fds_interface_id` | `fds_id, created_by, updated_by` | High | Y |
+| 18 | DQ | Design Qualification Assessment | [`dq_assessment`](#table-dq_assessment) | `dq_id` | `project_id, created_by, updated_by` | High | Y |
+| 19 | DQ | DQ Detailed Assessment Item | [`dq_item`](#table-dq_item) | `dq_item_id` | `dq_id, requirement_id, reviewed_by, created_by, updated_by` | High | Y |
+| 20 | FRA | Functional Risk Assessment | [`fra_assessment`](#table-fra_assessment) | `fra_id` | `project_id, created_by, updated_by` | High | Y |
+| 21 | FRA | FRA Detailed Risk Item | [`fra_item`](#table-fra_item) | `fra_item_id` | `fra_id, requirement_id, created_by, updated_by` | High | Y |
+| 22 | IQ | Installation Qualification Assessment | [`iq_assessment`](#table-iq_assessment) | `iq_id` | `project_id, created_by, updated_by` | High | Y |
+| 23 | IQ | IQ Detailed Test Item | [`iq_item`](#table-iq_item) | `iq_item_id` | `iq_id, executed_by, created_by, updated_by` | High | Y |
+| 24 | OQ | Operational Qualification Assessment | [`oq_assessment`](#table-oq_assessment) | `oq_id` | `project_id, created_by, updated_by` | High | Y |
+| 25 | OQ | OQ Detailed Test Item | [`oq_item`](#table-oq_item) | `oq_item_id` | `oq_id, executed_by, created_by, updated_by` | High | Y |
+| 26 | PQ | Performance Qualification Assessment | [`pq_assessment`](#table-pq_assessment) | `pq_id` | `project_id, created_by, updated_by` | High | Y |
+| 27 | PQ | PQ Detailed Test Item | [`pq_item`](#table-pq_item) | `pq_item_id` | `pq_id, executed_by, created_by, updated_by` | High | Y |
+| 28 | RTM | Requirements Traceability Matrix | [`rtm_assessment`](#table-rtm_assessment) | `rtm_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 29 | RTM | RTM Detailed Traceability Item | [`rtm_item`](#table-rtm_item) | `rtm_item_id` | `rtm_id, requirement_id, created_by, updated_by` | Critical | Y |
+| 30 | VSR | Validation Summary Report | [`vsr_assessment`](#table-vsr_assessment) | `vsr_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 31 | VSR | VSR Activity Summary Item | [`vsr_item`](#table-vsr_item) | `vsr_item_id` | `vsr_id, created_by, updated_by` | Critical | Y |
+| 32 | Workflow | Workflow Instance | [`workflow_instance`](#table-workflow_instance) | `workflow_instance_id` | `requested_by, created_by, updated_by` | Critical | Y |
+| 33 | Workflow | Workflow Step | [`workflow_step`](#table-workflow_step) | `workflow_step_id` | `workflow_instance_id, assignee_id, created_by, updated_by` | Critical | Y |
+| 34 | Workflow | Approval Action History | [`approval_action`](#table-approval_action) | `approval_action_id` | `workflow_step_id, actor_id, signature_id` | Critical | Y |
+| 35 | Traceability | Common Traceability Link | [`traceability_link`](#table-traceability_link) | `traceability_link_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 36 | File | Evidence File Link | [`evidence_link`](#table-evidence_link) | `evidence_link_id` | `project_id, file_id, created_by, updated_by` | High | Y |
+| 37 | Validation | Project Member | [`project_member`](#table-project_member) | `project_member_id` | `project_id, user_id, role_id, created_by, updated_by` | High | Y |
+| 38 | Validation | Validation Activity Master | [`validation_activity`](#table-validation_activity) | `activity_id` | `created_by, updated_by` | High | Y |
+| 39 | Validation | Project Activity | [`project_activity`](#table-project_activity) | `project_activity_id` | `project_id, activity_id, created_by, updated_by` | Critical | Y |
+| 40 | Validation | Activity Dependency | [`activity_dependency`](#table-activity_dependency) | `activity_dependency_id` | `successor_activity_id, predecessor_activity_id, created_by, updated_by` | Critical | Y |
+| 41 | DDS | Detailed Design Specification | [`dds_spec`](#table-dds_spec) | `dds_id` | `project_id, created_by, updated_by` | High | Y |
+| 42 | DDS | DDS Detailed Item | [`dds_item`](#table-dds_item) | `dds_item_id` | `dds_id, created_by, updated_by` | High | Y |
+| 43 | Deviation | Deviation Management | [`deviation`](#table-deviation) | `deviation_id` | `project_id, resolved_by, approved_by, created_by, updated_by` | Critical | Y |
+| 44 | Report | Report Generation Job | [`report_generation`](#table-report_generation) | `report_generation_id` | `project_id, requested_by, result_file_id, report_schedule_id, created_by, updated_by` | High | Y |
+| 45 | AI | AI Generation Job | [`ai_generation_job`](#table-ai_generation_job) | `ai_job_id` | `project_id, requested_by, created_by, updated_by` | High | Y |
+| 46 | AI | AI Generation Result | [`ai_generation_result`](#table-ai_generation_result) | `ai_result_id` | `ai_job_id, created_by, updated_by` | High | Y |
+| 47 | AI | AI Generation Result Item | [`ai_result_item`](#table-ai_result_item) | `ai_result_item_id` | `ai_result_id, created_by, updated_by` | High | Y |
+| 48 | Notification | Notification Delivery | [`notification_delivery`](#table-notification_delivery) | `notification_delivery_id` | `project_id, workflow_instance_id, workflow_step_id, recipient_id, created_by, updated_by` | High | Y |
+| 49 | System | Backup Execution History | [`backup_execution`](#table-backup_execution) | `backup_execution_id` | `requested_by, created_by, updated_by` | Critical | Y |
+| 50 | Report | Report Schedule | [`report_schedule`](#table-report_schedule) | `report_schedule_id` | `project_id, created_by, updated_by` | High | Y |
+| 51 | File | File Cleanup Execution History | [`file_cleanup_execution`](#table-file_cleanup_execution) | `file_cleanup_execution_id` | `requested_by, created_by, updated_by` | High | Y |
 
-## 4. 도메인별 바로가기
+## 4. Domain Navigation
 
 - **Organization**: [`organization`](#table-organization)
 - **Security**: [`app_user`](#table-app_user), [`role`](#table-role), [`user_role`](#table-user_role)
@@ -118,2010 +118,2010 @@
 
 ---
 
-# 5. 상세 테이블 및 컬럼 정의
+# 5. Detailed Table and Column Definitions
 
 ## Organization
 
 <a id="table-organization"></a>
-### 1. 조직/고객사 (`organization`)
+### 1. Organization/Client Company (`organization`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 고객사 또는 운영 조직 기본정보 |
+| Description | Basic information about client companies or operating organizations |
 | Primary Key | `organization_id` |
-| 주요 참조(FK) | - |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | - |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 14 | 조직 ID | `organization_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 조직 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 15 | 조직 코드 | `organization_code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | 조직/회사 식별 코드 | `ORG-SAMPLE-01` |
-| 16 | 조직명 | `organization_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 회사/사업장명 | `샘플 주식회사` |
-| 17 | 조직 유형 | `organization_type` | `varchar(50)` | N | N | - | Y | `본사'` | N | N | N | Y | 본사 \| 공장 \| 연구소 \| 해외법인 | `본사` |
-| 18 | 상태 | `status` | `varchar(20)` | N | N | - | Y | `ACTIVE'` | N | N | N | Y | ACTIVE \| INACTIVE | `ACTIVE` |
-| 19 | 설명 | `description` | `text` | N | N | - | N | - | N | N | N | Y | 조직 설명 | `기업 IT 및 데이터 운영 조직` |
-| 20 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-01T00:00:00` |
-| 21 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T16:00:00` |
+| 14 | Organization ID | `organization_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique organization identifier | `00000000-0000-0000-0000-000000000001` |
+| 15 | Organization Code | `organization_code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | Organization/company identification code | `ORG-SAMPLE-01` |
+| 16 | Organization Name | `organization_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Company/site name | `Sample Corporation` |
+| 17 | Organization Type | `organization_type` | `varchar(50)` | N | N | - | Y | `Headquarters'` | N | N | N | Y | Headquarters \| Factory \| Research Institute \| Overseas Subsidiary | `Headquarters` |
+| 18 | Status | `status` | `varchar(20)` | N | N | - | Y | `ACTIVE'` | N | N | N | Y | ACTIVE \| INACTIVE | `ACTIVE` |
+| 19 | Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Organization description | `Corporate IT and data operations organization` |
+| 20 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-01T00:00:00` |
+| 21 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T16:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## Security
 
 <a id="table-app_user"></a>
-### 2. 사용자 (`app_user`)
+### 2. User (`app_user`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 사용자 계정 및 기본 프로필 정보 |
+| Description | User account and basic profile information |
 | Primary Key | `user_id` |
-| 주요 참조(FK) | `organization_id` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `organization_id` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1 | 사용자 ID | `user_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 사용자 계정 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 2 | 조직 ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | organization.organization_id 참조 | `00000000-0000-0000-0000-000000000001` |
-| 3 | 로그인 계정명 | `username` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | 로그인 ID (중복 불가) | `user.sample` |
-| 4 | 비밀번호 해시 | `password_hash` | `varchar(255)` | N | N | - | Y | - | N | N | N | N | 비밀번호 해시값 | `[REDACTED_PASSWORD_HASH]` |
-| 5 | 사용자 실명 | `full_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 사용자 이름 | `홍길동` |
-| 6 | 이메일 | `email` | `varchar(100)` | N | N | - | Y | - | Y | Y | N | Y | 이메일 주소 | `user.sample@example.com` |
-| 7 | 부서명 | `department_name` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 소속 부서명 | `정보전략팀` |
-| 8 | 직급/직책 | `position_title` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | 직급 정보 | `선임` |
-| 9 | 계정 상태 | `status` | `varchar(20)` | N | N | - | Y | `ACTIVE'` | N | N | N | Y | ACTIVE \| INACTIVE \| LOCKED | `ACTIVE` |
-| 10 | 최종 로그인 시각 | `last_login_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 최종 시스템 접속 타임스탬프 | `2026-08-26T16:00:00` |
-| 11 | 비밀번호 변경일 | `password_changed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 비밀번호 마지막 변경 시각 | `2026-08-01T09:00:00` |
-| 12 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-01T00:00:00` |
-| 13 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T16:00:00` |
+| 1 | User ID | `user_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique user account identifier | `00000000-0000-0000-0000-000000000001` |
+| 2 | Organization ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | References organization.organization_id | `00000000-0000-0000-0000-000000000001` |
+| 3 | Username | `username` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | Login ID (duplicates not allowed) | `user.sample` |
+| 4 | Password Hash | `password_hash` | `varchar(255)` | N | N | - | Y | - | N | N | N | N | Hashed password value | `[REDACTED_PASSWORD_HASH]` |
+| 5 | Full Name | `full_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | User name | `Hong Gil-dong` |
+| 6 | Email | `email` | `varchar(100)` | N | N | - | Y | - | Y | Y | N | Y | Email address | `user.sample@example.com` |
+| 7 | Department Name | `department_name` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Name of the user's department | `Information Strategy Team` |
+| 8 | Position/Job Title | `position_title` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Position information | `Senior` |
+| 9 | Account Status | `status` | `varchar(20)` | N | N | - | Y | `ACTIVE'` | N | N | N | Y | ACTIVE \| INACTIVE \| LOCKED | `ACTIVE` |
+| 10 | Last Login At | `last_login_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Timestamp of the most recent system login | `2026-08-26T16:00:00` |
+| 11 | Password Changed At | `password_changed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Timestamp of the last password change | `2026-08-01T09:00:00` |
+| 12 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-01T00:00:00` |
+| 13 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T16:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-role"></a>
-### 3. 역할 (`role`)
+### 3. Role (`role`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 작성자·검토자·승인자 등 권한 역할 마스터 |
+| Description | Master definitions of permission roles, such as author, reviewer, and approver |
 | Primary Key | `role_id` |
-| 주요 참조(FK) | - |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | - |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 22 | 역할 ID | `role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 역할/권한 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 23 | 역할 코드 | `role_code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | 역할 식별 코드 | `SYSTEM_ADMIN` |
-| 24 | 역할명 | `role_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 역할 명칭 (시스템관리자, 작성자, 승인자 등) | `전체관리자` |
-| 25 | 설명 | `description` | `text` | N | N | - | N | - | N | N | N | Y | 역할 상세 권한 범위 설명 | `시스템 전체 관리 권한` |
-| 26 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-01T00:00:00` |
+| 22 | Role ID | `role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique role/permission identifier | `00000000-0000-0000-0000-000000000001` |
+| 23 | Role Code | `role_code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | Role identification code | `SYSTEM_ADMIN` |
+| 24 | Role Name | `role_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Role name (system administrator, author, approver, etc.) | `Super Administrator` |
+| 25 | Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Detailed description of the role's permission scope | `System-wide administrative permissions` |
+| 26 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-01T00:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-user_role"></a>
-### 4. 사용자 역할 (`user_role`)
+### 4. User Role (`user_role`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 사용자-역할 매핑 정보 |
+| Description | User-to-role mapping information |
 | Primary Key | `user_role_id` |
-| 주요 참조(FK) | `user_id, role_id` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `user_id, role_id` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 27 | 매핑 ID | `user_role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 사용자-역할 매핑 고유 식별자. 활성 데이터는 (user_id, role_id) 조합의 중복 등록을 허용하지 않음 | `00000000-0000-0000-0000-000000000001` |
-| 28 | 사용자 ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | app_user.user_id 참조 | `00000000-0000-0000-0000-000000000001` |
-| 29 | 역할 ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | role.role_id 참조 | `00000000-0000-0000-0000-000000000001` |
-| 30 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-01T00:00:00` |
+| 27 | Mapping ID | `user_role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique user-to-role mapping identifier. Duplicate (user_id, role_id) combinations are not allowed in active data. | `00000000-0000-0000-0000-000000000001` |
+| 28 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 29 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | References role.role_id | `00000000-0000-0000-0000-000000000001` |
+| 30 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-01T00:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## Compliance
 
 <a id="table-electronic_signature"></a>
-### 5. 전자서명 (`electronic_signature`)
+### 5. Electronic Signature (`electronic_signature`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 문서 검토/승인 시 전자서명 증적 기록 |
+| Description | Records electronic signature evidence for document review/approval |
 | Primary Key | `signature_id` |
-| 주요 참조(FK) | `signer_id` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `signer_id` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 31 | 전자서명 ID | `signature_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 전자서명 기록 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 32 | 서명자 ID | `signer_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | app_user.user_id 참조 | `00000000-0000-0000-0000-000000000001` |
-| 33 | 대상 테이블명 | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 서명이 적용된 테이블명 (예: requirement) | `requirement` |
-| 34 | 대상 레코드 ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | 서명이 적용된 레코드 PK값 | `00000000-0000-0000-0000-000000000001` |
-| 35 | 서명 단계 | `signature_action` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | REVIEW \| APPROVE \| REJECT | `APPROVE` |
-| 36 | 서명 목적 | `signature_meaning` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 21 CFR Part 11 서명 사유 | `URS 요구사항 최종 승인` |
-| 37 | 서명 타임스탬프 | `signed_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 전자서명 수행 타임스탬프 | `2026-08-26T16:30:00` |
-| 38 | 대상 문서 버전 | `target_version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | 전자서명이 적용된 대상 문서 Revision의 표시 버전 | `v1.0` |
-| 39 | 서명 대상 내용 해시 | `content_hash` | `varchar(128)` | N | N | - | Y | - | N | N | N | Y | 서명 당시 대상 문서 및 상세 내용의 무결성 검증을 위한 SHA-256 해시값 | `[SAMPLE_SHA256_HASH]` |
-| 40 | 재인증 방식 | `authentication_method` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | 전자서명 수행 시 서명자 본인 확인에 사용한 재인증 방식 | `PASSWORD` |
-| 41 | 재인증 결과 | `authentication_result` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | 전자서명 수행 시 재인증 처리 결과 | `SUCCESS` |
+| 31 | Electronic Signature ID | `signature_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique electronic signature record identifier | `00000000-0000-0000-0000-000000000001` |
+| 32 | Signer ID | `signer_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 33 | Target Table Name | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Name of the table to which the signature applies (e.g., requirement) | `requirement` |
+| 34 | Target Record ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | Primary key value of the signed record | `00000000-0000-0000-0000-000000000001` |
+| 35 | Signature Step | `signature_action` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | REVIEW \| APPROVE \| REJECT | `APPROVE` |
+| 36 | Signature Purpose | `signature_meaning` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Reason for signing under 21 CFR Part 11 | `Final approval of URS requirements` |
+| 37 | Signature Timestamp | `signed_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Timestamp when the electronic signature was executed | `2026-08-26T16:30:00` |
+| 38 | Target Document Version | `target_version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the target document revision to which the electronic signature applies | `v1.0` |
+| 39 | Signed Content Hash | `content_hash` | `varchar(128)` | N | N | - | Y | - | N | N | N | Y | SHA-256 hash for verifying the integrity of the target document and its details at the time of signing | `[SAMPLE_SHA256_HASH]` |
+| 40 | Reauthentication Method | `authentication_method` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Reauthentication method used to verify the signer's identity when executing the electronic signature | `PASSWORD` |
+| 41 | Reauthentication Result | `authentication_result` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Result of reauthentication when executing the electronic signature | `SUCCESS` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-audit_trail"></a>
 ### 6. Audit Trail (`audit_trail`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 주요 데이터 변경 전후 및 수행자 감사 추적 기록 |
+| Description | Audit trail records of before and after values for significant data changes and the actors responsible |
 | Primary Key | `audit_id` |
-| 주요 참조(FK) | `actor_id` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `actor_id` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 42 | 감사추적 ID | `audit_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 감사추적 레코드 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 43 | 수행자 ID | `actor_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | app_user.user_id 참조 (시스템 자동 시 NULL 가능) | `00000000-0000-0000-0000-000000000001` |
-| 44 | 작업 유형 | `action_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | CREATE, UPDATE, DELETE, EXPORT, LOGIN, REPORT_GENERATE, REPORT_DOWNLOAD, REPORT_CANCEL | `REPORT_GENERATE` |
-| 45 | 대상 테이블명 | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 변경이 발생한 물리 테이블명 | `requirement` |
-| 46 | 대상 레코드 ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | 변경 대상 레코드 PK값 | `00000000-0000-0000-0000-000000000001` |
-| 47 | 변경 전 데이터 | `old_values` | `jsonb` | N | N | - | N | - | N | N | N | Y | 수정 전 JSON 데이터 | `{"status": "작성중"}` |
-| 48 | 변경 후 데이터 | `new_values` | `jsonb` | N | N | - | N | - | N | N | N | Y | 수정 후 JSON 데이터 | `{"status": "승인완료"}` |
-| 49 | 변경 사유 | `reason_for_change` | `text` | N | N | - | N | - | N | N | N | Y | 21 CFR Part 11 데이터 변경 사유 | `요구사항 오탈자 수정 및 규정 항목 보완` |
-| 50 | 접속 IP 주소 | `client_ip` | `varchar(45)` | N | N | - | N | - | N | N | N | Y | 사용자 클라이언트 IP | `192.0.2.10` |
-| 51 | 발생 시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 감사추적 로그 생성 시각 (UTC) | `2026-08-26T16:30:00` |
-| 52 | 수행 주체 유형 | `actor_type` | `varchar(20)` | N | N | - | Y | `USER` | N | Y | N | Y | 변경 수행 주체 유형. USER, SYSTEM, BATCH로 구분하며 USER인 경우 actor_id를 필수로 저장 | `USER` |
-| 53 | 요청 ID | `request_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | 하나의 화면·API 요청에서 발생한 여러 감사추적 기록을 동일 요청으로 묶기 위한 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 54 | 세션 ID | `session_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | 변경 작업이 발생한 사용자 로그인 세션 식별자. 시스템·배치 처리 또는 세션이 없는 요청은 NULL 허용 | `00000000-0000-0000-0000-000000000001` |
-| 55 | 대상 문서 버전 | `target_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Revision 관리 문서인 경우 변경 발생 당시의 표시 버전을 저장하며 일반 테이블은 NULL 허용 | `v1.0` |
-| 56 | 대상 개정 순번 | `target_revision_number` | `integer` | N | N | - | N | - | N | N | N | Y | Revision 관리 문서인 경우 변경 발생 당시의 숫자형 개정 순번을 저장하며 일반 테이블은 NULL 허용 | `1` |
-| 57 | 요청 경로 | `request_uri` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | 변경을 발생시킨 화면 또는 API 요청 경로. 시스템·배치 처리 등 경로가 없는 경우 NULL 허용 | `/api/fds/approve` |
-| 58 | 접속 클라이언트 정보 | `user_agent` | `text` | N | N | - | N | - | N | N | Y | Y | 변경 요청에 사용된 브라우저, 운영체제 또는 클라이언트 애플리케이션 정보 | `Sample-Client/1.0` |
+| 42 | Audit Trail ID | `audit_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique audit trail record identifier | `00000000-0000-0000-0000-000000000001` |
+| 43 | Actor ID | `actor_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id (NULL allowed for automated system operations) | `00000000-0000-0000-0000-000000000001` |
+| 44 | Action Type | `action_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | CREATE, UPDATE, DELETE, EXPORT, LOGIN, REPORT_GENERATE, REPORT_DOWNLOAD, REPORT_CANCEL | `REPORT_GENERATE` |
+| 45 | Target Table Name | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Physical table name where the change occurred | `requirement` |
+| 46 | Target Record ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | Primary key value of the changed record | `00000000-0000-0000-0000-000000000001` |
+| 47 | Before Data | `old_values` | `jsonb` | N | N | - | N | - | N | N | N | Y | JSON data before modification | `{"status": "Draft"}` |
+| 48 | After Data | `new_values` | `jsonb` | N | N | - | N | - | N | N | N | Y | JSON data after modification | `{"status": "Approved"}` |
+| 49 | Reason for Change | `reason_for_change` | `text` | N | N | - | N | - | N | N | N | Y | Reason for the data change under 21 CFR Part 11 | `Corrected requirement typos and supplemented regulatory items` |
+| 50 | Client IP Address | `client_ip` | `varchar(45)` | N | N | - | N | - | N | N | N | Y | User's client IP address | `192.0.2.10` |
+| 51 | Occurred At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Audit trail log creation timestamp (UTC) | `2026-08-26T16:30:00` |
+| 52 | Actor Type | `actor_type` | `varchar(20)` | N | N | - | Y | `USER` | N | Y | N | Y | Type of actor making the change: USER, SYSTEM, or BATCH. actor_id is required when the type is USER. | `USER` |
+| 53 | Request ID | `request_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Identifier for grouping multiple audit trail records generated by a single UI or API request | `00000000-0000-0000-0000-000000000001` |
+| 54 | Session ID | `session_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Identifier of the user login session in which the change occurred. NULL allowed for system/batch processing or requests without a session. | `00000000-0000-0000-0000-000000000001` |
+| 55 | Target Document Version | `target_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | For revision-controlled documents, stores the display version at the time of the change. NULL allowed for ordinary tables. | `v1.0` |
+| 56 | Target Revision Number | `target_revision_number` | `integer` | N | N | - | N | - | N | N | N | Y | For revision-controlled documents, stores the numeric revision sequence number at the time of the change. NULL allowed for ordinary tables. | `1` |
+| 57 | Request Path | `request_uri` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | UI or API request path that triggered the change. NULL allowed when no path exists, such as for system/batch processing. | `/api/fds/approve` |
+| 58 | Client Information | `user_agent` | `text` | N | N | - | N | - | N | N | Y | Y | Browser, operating system, or client application information for the change request | `Sample-Client/1.0` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## File
 
 <a id="table-file_asset"></a>
-### 7. 파일 자산 (`file_asset`)
+### 7. File Asset (`file_asset`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 사용자 첨부파일, 증적파일, 생성 리포트 및 데이터 내보내기 파일의 저장 메타데이터 관리 |
+| Description | Manages storage metadata for user attachments, evidence files, generated reports, and data export files |
 | Primary Key | `file_id` |
-| 주요 참조(FK) | `uploader_id` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 파일 유형 및 연결 대상의 보존정책에 따라 감사 가능 기간 보존 |
+| Key References (FK) | `uploader_id` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the required audit period according to the retention policies for the file type and linked entity |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 59 | 파일 ID | `file_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 첨부파일 메타데이터 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 60 | 업로드자 ID | `uploader_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자 업로드 파일은 업로드자 ID 필수. 시스템·정기 배치 생성 파일은 NULL 허용 | `UUID` |
-| 61 | 원본 파일명 | `original_file_name` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | 업로드 당시 파일명 | `sample_document.pdf` |
-| 62 | 저장 파일경로 | `stored_file_path` | `text` | N | N | - | Y | - | N | N | N | Y | 스토리지 저장 경로/S3 Key | `documents/2026/08/sample_001.pdf` |
-| 63 | 파일 구분 | `file_category` | `varchar(30)` | N | N | - | Y | `ATTACHMENT` | N | Y | N | Y | 파일 업무 구분. ATTACHMENT, EVIDENCE, REPORT, EXPORT | `REPORT` |
-| 64 | 파일 용량 | `file_size_bytes` | `bigint` | N | N | - | Y | `0` | N | N | N | Y | 파일 크기 (Byte) | `1048576` |
-| 65 | MIME 타입 | `mime_type` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | 파일 형식 | `application/pdf` |
-| 66 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T16:30:00` |
-| 67 | 임시파일 여부 | `is_temporary` | `boolean` | N | N | - | Y | `False` | N | Y | N | Y | 업로드 또는 생성 과정에서 발생한 임시파일 여부 | `True` |
-| 68 | 만료 시각 | `expires_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | 파일 정리 가능 시각. 영구 또는 업무 보존 대상 파일은 NULL | `2026-09-09 18:00:00+00` |
-| 69 | 정리 상태 | `cleanup_status` | `varchar(20)` | N | N | - | Y | `ACTIVE` | N | Y | N | Y | 파일 정리 상태. ACTIVE, CLEANUP_PENDING, CLEANED, CLEANUP_FAILED | `ACTIVE` |
-| 70 | 마지막 정리 실행 ID | `cleanup_execution_id` | `uuid` | N | Y | `file_cleanup_execution.file_cleanup_execution_id` | N | - | N | Y | N | Y | 해당 파일을 마지막으로 처리한 파일 정리 작업 ID | `UUID` |
-| 71 | 정리 완료 시각 | `cleaned_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 실제 스토리지 파일 및 메타데이터 정리가 완료된 시각 | `2026-09-09 19:00:00+00` |
-| 72 | 정리 실패 사유 | `cleanup_error_message` | `text` | N | N | - | N | - | N | N | N | Y | 개별 파일 정리 실패 상세 내용. 접근키 등 민감정보 저장 금지 | `파일에 대한 접근 권한 없음` |
+| 59 | File ID | `file_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique attachment metadata identifier | `00000000-0000-0000-0000-000000000001` |
+| 60 | Uploader ID | `uploader_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Uploader ID is required for files uploaded by users. NULL allowed for files generated by the system or scheduled batch jobs. | `UUID` |
+| 61 | Original File Name | `original_file_name` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | File name at the time of upload | `sample_document.pdf` |
+| 62 | Storage File Path | `stored_file_path` | `text` | N | N | - | Y | - | N | N | N | Y | Storage path/S3 key | `documents/2026/08/sample_001.pdf` |
+| 63 | File Category | `file_category` | `varchar(30)` | N | N | - | Y | `ATTACHMENT` | N | Y | N | Y | Business category of the file: ATTACHMENT, EVIDENCE, REPORT, EXPORT | `REPORT` |
+| 64 | File Size | `file_size_bytes` | `bigint` | N | N | - | Y | `0` | N | N | N | Y | File size (bytes) | `1048576` |
+| 65 | MIME Type | `mime_type` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | File format | `application/pdf` |
+| 66 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T16:30:00` |
+| 67 | Is Temporary File | `is_temporary` | `boolean` | N | N | - | Y | `False` | N | Y | N | Y | Whether the file is a temporary file created during upload or generation | `True` |
+| 68 | Expires At | `expires_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Time when the file becomes eligible for cleanup. NULL for permanent files or files subject to business retention requirements. | `2026-09-09 18:00:00+00` |
+| 69 | Cleanup Status | `cleanup_status` | `varchar(20)` | N | N | - | Y | `ACTIVE` | N | Y | N | Y | File cleanup status: ACTIVE, CLEANUP_PENDING, CLEANED, CLEANUP_FAILED | `ACTIVE` |
+| 70 | Last Cleanup Execution ID | `cleanup_execution_id` | `uuid` | N | Y | `file_cleanup_execution.file_cleanup_execution_id` | N | - | N | Y | N | Y | ID of the file cleanup job that last processed this file | `UUID` |
+| 71 | Cleaned Up At | `cleaned_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when cleanup of the actual stored file and its metadata was completed | `2026-09-09 19:00:00+00` |
+| 72 | Cleanup Failure Reason | `cleanup_error_message` | `text` | N | N | - | N | - | N | N | N | Y | Detailed reason for failure to clean up an individual file. Sensitive information such as access keys must not be stored. | `No permission to access the file` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-evidence_link"></a>
-### 36. 증적 파일 연결 (`evidence_link`)
+### 36. Evidence File Link (`evidence_link`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 문서·시험 항목과 증적 파일 간 N:M 연결 관리 |
+| Description | Manages N:M links between documents/test items and evidence files |
 | Primary Key | `evidence_link_id` |
-| 주요 참조(FK) | `project_id, file_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, file_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 523 | 증적 연결 ID | `evidence_link_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 문서·시험 항목과 증적 파일 간 연결 고유 식별자. 활성 데이터는 (project_id, file_id, target_entity_type, target_entity_id, evidence_type) 조합의 중복 등록을 허용하지 않음 | `UUID` |
-| 524 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | 증적 연결이 속한 프로젝트 ID | `UUID` |
-| 525 | 파일 ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | Y | - | N | Y | N | Y | 연결되는 증적 파일 ID | `UUID` |
-| 526 | 대상 엔터티 유형 | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 증적 파일 연결 대상 유형. REQUIREMENT, FDS_SPEC, FDS_ITEM, FDS_INTERFACE, DDS_SPEC, DDS_ITEM, QIA_ASSESSMENT, QIA_MODULE_ITEM, VENDOR_AUDIT, DQ_ASSESSMENT, DQ_ITEM, FRA_ASSESSMENT, FRA_ITEM, IQ_ASSESSMENT, IQ_ITEM, OQ_ASSESSMENT, OQ_ITEM, PQ_ASSESSMENT, PQ_ITEM, RTM_ASSESSMENT, RTM_ITEM, VSR_ASSESSMENT, VSR_ITEM, DEVIATION | `IQ_ITEM` |
-| 527 | 대상 엔터티 ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | target_entity_type에 해당하는 테이블의 PK값. 다형 참조이므로 물리 FK는 설정하지 않음 | `UUID` |
-| 528 | 증적 유형 | `evidence_type` | `varchar(50)` | N | N | - | Y | `TEST_RESULT` | N | Y | N | Y | TEST_RESULT, SCREENSHOT, LOG, REPORT, APPROVAL_DOCUMENT | `TEST_RESULT` |
-| 529 | 증적 설명 | `description` | `text` | N | N | - | N | - | N | N | N | Y | 증적 파일의 내용 및 연결 목적 | `IQ 수행 결과 화면 캡처` |
-| 530 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 증적 연결 생성 시각(UTC) | `2026-09-01T10:00:00` |
-| 531 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 증적 연결을 생성한 사용자 ID | `UUID` |
-| 532 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 증적 연결 최종 수정 시각(UTC) | `2026-09-01T10:00:00` |
-| 533 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 증적 연결을 최종 수정한 사용자 ID | `UUID` |
-| 534 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 증적 연결 소프트 삭제 시각 | - |
+| 523 | Evidence Link ID | `evidence_link_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier for a link between a document/test item and an evidence file. Duplicate (project_id, file_id, target_entity_type, target_entity_id, evidence_type) combinations are not allowed in active data. | `UUID` |
+| 524 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | ID of the project to which the evidence link belongs | `UUID` |
+| 525 | File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | Y | - | N | Y | N | Y | ID of the linked evidence file | `UUID` |
+| 526 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Type of entity linked to the evidence file: REQUIREMENT, FDS_SPEC, FDS_ITEM, FDS_INTERFACE, DDS_SPEC, DDS_ITEM, QIA_ASSESSMENT, QIA_MODULE_ITEM, VENDOR_AUDIT, DQ_ASSESSMENT, DQ_ITEM, FRA_ASSESSMENT, FRA_ITEM, IQ_ASSESSMENT, IQ_ITEM, OQ_ASSESSMENT, OQ_ITEM, PQ_ASSESSMENT, PQ_ITEM, RTM_ASSESSMENT, RTM_ITEM, VSR_ASSESSMENT, VSR_ITEM, DEVIATION | `IQ_ITEM` |
+| 527 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | Primary key value of the table corresponding to target_entity_type. No physical FK is defined because this is a polymorphic reference. | `UUID` |
+| 528 | Evidence Type | `evidence_type` | `varchar(50)` | N | N | - | Y | `TEST_RESULT` | N | Y | N | Y | TEST_RESULT, SCREENSHOT, LOG, REPORT, APPROVAL_DOCUMENT | `TEST_RESULT` |
+| 529 | Evidence Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Content of the evidence file and purpose of the link | `Screenshot of IQ execution results` |
+| 530 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Evidence link creation timestamp (UTC) | `2026-09-01T10:00:00` |
+| 531 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who created the evidence link | `UUID` |
+| 532 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Evidence link last modification timestamp (UTC) | `2026-09-01T10:00:00` |
+| 533 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last modified the evidence link | `UUID` |
+| 534 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Evidence link soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-file_cleanup_execution"></a>
-### 51. 파일 정리 실행 이력 (`file_cleanup_execution`)
+### 51. File Cleanup Execution History (`file_cleanup_execution`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 임시파일 및 만료파일 정리 작업의 실행 조건, 처리 건수, 실행 상태, 실패 및 재시도 이력 관리 |
+| Description | Manages execution criteria, processed item counts, execution statuses, failures, and retry history for temporary and expired file cleanup jobs |
 | Primary Key | `file_cleanup_execution_id` |
-| 주요 참조(FK) | `requested_by, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 파일 정리 결과와 실행이력을 감사 가능 기간 보존 |
+| Key References (FK) | `requested_by, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain file cleanup results and execution history for the required audit period |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 762 | 파일 정리 실행 ID | `file_cleanup_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 임시파일·만료파일 정리 작업 고유 식별자 | `UUID` |
-| 763 | 정리 유형 | `cleanup_type` | `varchar(30)` | N | N | - | Y | - | N | Y | N | Y | 정리 유형. TEMPORARY_FILE, EXPIRED_FILE, ORPHAN_FILE | `EXPIRED_FILE` |
-| 764 | 실행 방식 | `execution_type` | `varchar(20)` | N | N | - | Y | `SCHEDULED` | N | Y | N | Y | 실행 방식. SCHEDULED, ON_DEMAND | `SCHEDULED` |
-| 765 | 대상 기준시각 | `target_base_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 해당 시각 이전에 만료되거나 정리 대상이 된 파일을 조회하는 기준시각 | `2026-09-02 00:00:00+00` |
-| 766 | 실행 상태 | `execution_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | 실행 상태. PENDING, PROCESSING, COMPLETED, RETRY_WAIT, FAILED, CANCELLED | `COMPLETED` |
-| 767 | 조회 파일 건수 | `scanned_file_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 정리 대상 판정을 위해 조회한 파일 건수. 0 이상 | `100` |
-| 768 | 정리 대상 건수 | `target_file_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 정리 대상으로 판정된 파일 건수. 0 이상 | `20` |
-| 769 | 정리 완료 건수 | `cleaned_file_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 실제 파일과 메타데이터 정리가 완료된 건수. 0 이상 | `19` |
-| 770 | 정리 실패 건수 | `failed_file_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 정리 처리에 실패한 파일 건수. 0 이상 | `1` |
-| 771 | 요청자 ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 수동 정리를 요청한 사용자. 정기 배치 실행은 NULL 허용 | `UUID` |
-| 772 | 요청 시각 | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | 수동 요청이 접수되거나 정기 작업이 등록된 시각 | `2026-09-02 01:00:00+00` |
-| 773 | 실행 시작 시각 | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 파일 정리 작업이 실제 시작된 시각 | `2026-09-02 01:00:05+00` |
-| 774 | 실행 완료 시각 | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 정리 작업이 성공 또는 최종 실패로 종료된 시각 | `2026-09-02 01:05:00+00` |
-| 775 | 재시도 횟수 | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 최초 실행 실패 후 수행한 재시도 횟수. 0 이상 | `0` |
-| 776 | 최대 재시도 횟수 | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | 자동 재시도 최대 허용 횟수. 0 이상 | `3` |
-| 777 | 다음 재시도 시각 | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | RETRY_WAIT 상태 작업의 다음 실행 예정 시각 | `2026-09-02 01:15:00+00` |
-| 778 | 오류 코드 | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | 파일 정리 실패 원인을 분류하는 시스템 오류 코드 | `FILE_DELETE_FAILED` |
-| 779 | 오류 메시지 | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | 파일 정리 실패 상세 내용. 접근키 등 민감정보 저장 금지 | `스토리지 파일 삭제 실패` |
-| 780 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 파일 정리 실행이력 생성 시각(UTC) | `2026-09-02 01:00:00+00` |
-| 781 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자 생성 시 사용자 ID를 저장하며 시스템·배치 생성 시 NULL 허용 | `UUID` |
-| 782 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 파일 정리 실행이력 최종 수정 시각(UTC) | `2026-09-02 01:05:00+00` |
-| 783 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자 수정 시 사용자 ID를 저장하며 시스템·배치 처리 시 NULL 허용 | `UUID` |
+| 762 | File Cleanup Execution ID | `file_cleanup_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier for a temporary/expired file cleanup job | `UUID` |
+| 763 | Cleanup Type | `cleanup_type` | `varchar(30)` | N | N | - | Y | - | N | Y | N | Y | Cleanup type: TEMPORARY_FILE, EXPIRED_FILE, ORPHAN_FILE | `EXPIRED_FILE` |
+| 764 | Execution Mode | `execution_type` | `varchar(20)` | N | N | - | Y | `SCHEDULED` | N | Y | N | Y | Execution mode: SCHEDULED, ON_DEMAND | `SCHEDULED` |
+| 765 | Target Cutoff Time | `target_base_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Cutoff time used to find files that expired or became eligible for cleanup before this time | `2026-09-02 00:00:00+00` |
+| 766 | Execution Status | `execution_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | Execution status: PENDING, PROCESSING, COMPLETED, RETRY_WAIT, FAILED, CANCELLED | `COMPLETED` |
+| 767 | Scanned File Count | `scanned_file_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of files scanned to determine cleanup eligibility. Must be 0 or greater. | `100` |
+| 768 | Cleanup Target Count | `target_file_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of files identified as eligible for cleanup. Must be 0 or greater. | `20` |
+| 769 | Cleaned File Count | `cleaned_file_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of files for which the actual file and metadata cleanup was completed. Must be 0 or greater. | `19` |
+| 770 | Cleanup Failure Count | `failed_file_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of files that failed cleanup. Must be 0 or greater. | `1` |
+| 771 | Requested By ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who requested manual cleanup. NULL allowed for scheduled batch executions. | `UUID` |
+| 772 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when a manual request was received or a scheduled job was registered | `2026-09-02 01:00:00+00` |
+| 773 | Execution Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the file cleanup job actually started | `2026-09-02 01:00:05+00` |
+| 774 | Execution Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the cleanup job ended in success or final failure | `2026-09-02 01:05:00+00` |
+| 775 | Retry Count | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of retries after the initial execution failed. Must be 0 or greater. | `0` |
+| 776 | Maximum Retry Count | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | Maximum number of automatic retries allowed. Must be 0 or greater. | `3` |
+| 777 | Next Retry At | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Next scheduled execution time for a job in RETRY_WAIT status | `2026-09-02 01:15:00+00` |
+| 778 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | System error code categorizing the cause of file cleanup failure | `FILE_DELETE_FAILED` |
+| 779 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Details of file cleanup failure. Sensitive information such as access keys must not be stored. | `Failed to delete the stored file` |
+| 780 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | File cleanup execution history creation timestamp (UTC) | `2026-09-02 01:00:00+00` |
+| 781 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when created by a user. NULL allowed when created by the system or a batch job. | `UUID` |
+| 782 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | File cleanup execution history last modification timestamp (UTC) | `2026-09-02 01:05:00+00` |
+| 783 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when modified by a user. NULL allowed for system/batch processing. | `UUID` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## System
 
 <a id="table-system_asset"></a>
-### 8. 시스템/장비 식별 정보 (`system_asset`)
+### 8. System/Equipment Identification Information (`system_asset`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 밸리데이션 대상 시스템/장비 기준 정보 (관리번호, GAMP 범주) |
+| Description | Reference information for systems/equipment subject to validation (asset management number, GAMP category) |
 | Primary Key | `system_id` |
-| 주요 참조(FK) | `organization_id` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `organization_id` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 73 | 시스템 ID | `system_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 시스템 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 74 | 조직 ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | 시스템/장비가 소속된 고객사 또는 운영 조직 | `00000000-0000-0000-0000-000000000001` |
-| 75 | 관리번호 | `management_number` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 자산/설비 관리번호 | `EQ-MES-2024-001` |
-| 76 | 시스템명 | `system_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 시스템/장비명 | `Sample System` |
-| 77 | 시스템 유형 | `system_type` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | IT시스템 \| 생산 장비 \| 품질 장비 \| 유틸리티 | `IT시스템` |
-| 78 | 담당부서 | `department_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | N | 관리/운용 담당부서 | `생산기술팀` |
-| 79 | 설치위치 | `location` | `varchar(200)` | N | N | - | N | - | N | N | N | N | 물리적/논리적 설치 장소 | `서버실 A동 3F` |
-| 80 | 공급업체 | `vendor` | `varchar(100)` | N | N | - | N | - | N | N | N | N | 장비/시스템 공급업체명 | `Sample Vendor` |
-| 81 | 모델명 | `model_name` | `varchar(100)` | N | N | - | N | - | N | N | N | N | 장비/시스템 모델명 | `FillMaster 500` |
-| 82 | 시스템 설명 | `description` | `text` | N | N | - | N | - | N | N | N | N | 시스템 목적 및 운영 범위 설명 | `생산 공정 데이터 수집 및 제어` |
-| 83 | 시스템 식별 상태 | `identification_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | 대상 시스템 등록·식별 상태. PENDING, COMPLETED | `COMPLETED` |
-| 84 | CS 포함 여부 | `is_cs_included` | `boolean` | N | N | - | Y | `True` | N | N | N | Y | Computerized System 포함 여부 | `True` |
-| 85 | 버전 | `version` | `varchar(50)` | N | N | - | N | - | N | N | N | N | 소프트웨어 또는 설비 버전 | `v3.2.1` |
-| 86 | GAMP 범주 | `gamp_category` | `varchar(50)` | N | N | - | N | - | N | N | N | N | Category 3 \| Category 4 \| Category 5 등 | `Category 4` |
-| 87 | GxP 구분 | `gxp_type` | `varchar(50)` | N | N | - | N | - | N | N | N | N | GMP \| GLP \| GDP \| Non-GxP 등 | `GMP` |
-| 88 | 상태 | `status` | `varchar(20)` | N | N | - | Y | `활성'` | N | N | N | Y | 활성 \| 검토중 \| 비활성 | `활성` |
-| 89 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-25T00:00:00` |
-| 90 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-25T00:00:00` |
+| 73 | System ID | `system_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique system identifier | `00000000-0000-0000-0000-000000000001` |
+| 74 | Organization ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | Client company or operating organization to which the system/equipment belongs | `00000000-0000-0000-0000-000000000001` |
+| 75 | Asset Management Number | `management_number` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Asset/equipment management number | `EQ-MES-2024-001` |
+| 76 | System Name | `system_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | System/equipment name | `Sample System` |
+| 77 | System Type | `system_type` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | IT System \| Production Equipment \| Quality Equipment \| Utility | `IT System` |
+| 78 | Responsible Department | `department_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | N | Department responsible for management/operation | `Production Engineering Team` |
+| 79 | Installation Location | `location` | `varchar(200)` | N | N | - | N | - | N | N | N | N | Physical/logical installation location | `Server Room, Building A, 3F` |
+| 80 | Vendor | `vendor` | `varchar(100)` | N | N | - | N | - | N | N | N | N | Equipment/system vendor name | `Sample Vendor` |
+| 81 | Model Name | `model_name` | `varchar(100)` | N | N | - | N | - | N | N | N | N | Equipment/system model name | `FillMaster 500` |
+| 82 | System Description | `description` | `text` | N | N | - | N | - | N | N | N | N | Description of the system's purpose and operational scope | `Production process data collection and control` |
+| 83 | System Identification Status | `identification_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | Registration/identification status of the target system: PENDING, COMPLETED | `COMPLETED` |
+| 84 | Includes CS | `is_cs_included` | `boolean` | N | N | - | Y | `True` | N | N | N | Y | Whether a Computerized System is included | `True` |
+| 85 | Version | `version` | `varchar(50)` | N | N | - | N | - | N | N | N | N | Software or equipment version | `v3.2.1` |
+| 86 | GAMP Category | `gamp_category` | `varchar(50)` | N | N | - | N | - | N | N | N | N | Category 3 \| Category 4 \| Category 5, etc. | `Category 4` |
+| 87 | GxP Classification | `gxp_type` | `varchar(50)` | N | N | - | N | - | N | N | N | N | GMP \| GLP \| GDP \| Non-GxP, etc. | `GMP` |
+| 88 | Status | `status` | `varchar(20)` | N | N | - | Y | `Active'` | N | N | N | Y | Active \| Under Review \| Inactive | `Active` |
+| 89 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-25T00:00:00` |
+| 90 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-25T00:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-backup_execution"></a>
-### 49. 백업 실행 이력 (`backup_execution`)
+### 49. Backup Execution History (`backup_execution`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 시스템 데이터 및 파일의 정기·수동 백업 실행 상태, 백업 범위, 저장 위치, 실패 및 재시도 이력 관리 |
+| Description | Manages execution statuses, backup scopes, storage locations, failures, and retry history for scheduled and manual system data and file backups |
 | Primary Key | `backup_execution_id` |
-| 주요 참조(FK) | `requested_by, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 백업 정책 및 규정에 따라 백업 실행이력을 감사 가능 기간 보존 |
+| Key References (FK) | `requested_by, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain backup execution history for the required audit period according to backup policies and regulations |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 723 | 백업 실행 ID | `backup_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 백업 실행이력 고유 식별자 | `UUID` |
-| 724 | 백업 유형 | `backup_type` | `varchar(30)` | N | N | - | Y | - | N | Y | N | Y | 백업 유형. FULL, INCREMENTAL, DATABASE, FILE | `FULL` |
-| 725 | 실행 방식 | `execution_type` | `varchar(20)` | N | N | - | Y | `SCHEDULED` | N | Y | N | Y | 실행 방식. SCHEDULED, ON_DEMAND | `SCHEDULED` |
-| 726 | 백업 대상 | `backup_target` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 백업 대상 구분. DATABASE, FILE_STORAGE, ALL | `ALL` |
-| 727 | 백업 기준시각 | `backup_base_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 백업 대상 데이터의 기준시각 | `2026-09-02 18:00:00+00` |
-| 728 | 실행 상태 | `execution_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | 실행 상태. PENDING, PROCESSING, COMPLETED, RETRY_WAIT, FAILED, CANCELLED | `COMPLETED` |
-| 729 | 백업 저장 위치 | `backup_location` | `text` | N | N | - | N | - | N | N | N | Y | 백업 파일 저장 위치 또는 스토리지 경로. 접근 토큰 등 인증정보 저장 금지 | `backups/YYYY/MM/DD/full` |
-| 730 | 백업 파일 크기 | `backup_size_bytes` | `bigint` | N | N | - | N | - | N | N | N | Y | 생성된 전체 백업 파일 크기(Byte) | `1073741824` |
-| 731 | 요청자 ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 수동 실행 요청 사용자. 정기 배치 실행은 NULL 허용 | `UUID` |
-| 732 | 요청 시각 | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | 수동 요청이 접수되거나 정기 백업이 등록된 시각 | `2026-09-02 18:00:00+00` |
-| 733 | 실행 시작 시각 | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 백업 작업이 실제 시작된 시각 | `2026-09-02 18:00:05+00` |
-| 734 | 실행 완료 시각 | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 백업 성공 또는 최종 실패로 작업이 종료된 시각 | `2026-09-02 18:20:00+00` |
-| 735 | 재시도 횟수 | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 최초 실행 실패 후 수행한 재시도 횟수. 0 이상 | `0` |
-| 736 | 최대 재시도 횟수 | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | 자동 재시도 최대 허용 횟수. 0 이상 | `3` |
-| 737 | 다음 재시도 시각 | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | RETRY_WAIT 상태 작업의 다음 실행 예정 시각 | `2026-09-02 18:30:00+00` |
-| 738 | 오류 코드 | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | 백업 실패 원인을 분류하는 시스템 오류 코드 | `BACKUP_STORAGE_UNAVAILABLE` |
-| 739 | 오류 메시지 | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | 백업 실패 상세 내용. 비밀번호와 접근키 등 민감정보 저장 금지 | `백업 저장소 연결 실패` |
-| 740 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 백업 실행이력 생성 시각(UTC) | `2026-09-02 18:00:00+00` |
-| 741 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자 생성 시 사용자 ID를 저장하며 시스템·배치 생성 시 NULL 허용 | `UUID` |
-| 742 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 백업 실행이력 최종 수정 시각(UTC) | `2026-09-02 18:20:00+00` |
-| 743 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자 수정 시 사용자 ID를 저장하며 시스템·배치 처리 시 NULL 허용 | `UUID` |
+| 723 | Backup Execution ID | `backup_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique backup execution history identifier | `UUID` |
+| 724 | Backup Type | `backup_type` | `varchar(30)` | N | N | - | Y | - | N | Y | N | Y | Backup type: FULL, INCREMENTAL, DATABASE, FILE | `FULL` |
+| 725 | Execution Mode | `execution_type` | `varchar(20)` | N | N | - | Y | `SCHEDULED` | N | Y | N | Y | Execution mode: SCHEDULED, ON_DEMAND | `SCHEDULED` |
+| 726 | Backup Target | `backup_target` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Backup target category: DATABASE, FILE_STORAGE, ALL | `ALL` |
+| 727 | Backup Reference Time | `backup_base_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Reference time for the data to be backed up | `2026-09-02 18:00:00+00` |
+| 728 | Execution Status | `execution_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | Execution status: PENDING, PROCESSING, COMPLETED, RETRY_WAIT, FAILED, CANCELLED | `COMPLETED` |
+| 729 | Backup Storage Location | `backup_location` | `text` | N | N | - | N | - | N | N | N | Y | Backup file location or storage path. Authentication information such as access tokens must not be stored. | `backups/YYYY/MM/DD/full` |
+| 730 | Backup File Size | `backup_size_bytes` | `bigint` | N | N | - | N | - | N | N | N | Y | Total size of generated backup files (bytes) | `1073741824` |
+| 731 | Requested By ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User requesting manual execution. NULL allowed for scheduled batch executions. | `UUID` |
+| 732 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when a manual request was received or a scheduled backup was registered | `2026-09-02 18:00:00+00` |
+| 733 | Execution Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the backup job actually started | `2026-09-02 18:00:05+00` |
+| 734 | Execution Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the backup job ended in success or final failure | `2026-09-02 18:20:00+00` |
+| 735 | Retry Count | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of retries after the initial execution failed. Must be 0 or greater. | `0` |
+| 736 | Maximum Retry Count | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | Maximum number of automatic retries allowed. Must be 0 or greater. | `3` |
+| 737 | Next Retry At | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Next scheduled execution time for a job in RETRY_WAIT status | `2026-09-02 18:30:00+00` |
+| 738 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | System error code categorizing the cause of backup failure | `BACKUP_STORAGE_UNAVAILABLE` |
+| 739 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Details of backup failure. Sensitive information such as passwords and access keys must not be stored. | `Failed to connect to backup storage` |
+| 740 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Backup execution history creation timestamp (UTC) | `2026-09-02 18:00:00+00` |
+| 741 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when created by a user. NULL allowed when created by the system or a batch job. | `UUID` |
+| 742 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Backup execution history last modification timestamp (UTC) | `2026-09-02 18:20:00+00` |
+| 743 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when modified by a user. NULL allowed for system/batch processing. | `UUID` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## Library
 
 <a id="table-library_item"></a>
-### 9. 라이브러리 항목 마스터 (`library_item`)
+### 9. Library Item Master (`library_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | URS, IQ, OQ 재사용 가능 표준 라이브러리 항목 마스터 |
+| Description | Master list of reusable standard library items for URS, IQ, and OQ |
 | Primary Key | `library_id` |
-| 주요 참조(FK) | - |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | - |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 91 | 라이브러리 ID | `library_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 라이브러리 항목 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 92 | 모듈 구분 | `module_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | URS \| IQ \| OQ 구분 | `URS` |
-| 93 | 코드 | `code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | 항목 코드 (예: URS-AT-L01) | `URS-AT-L01` |
-| 94 | 카테고리 | `category` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 감사추적, 교정/검증, 보안 등 | `감사추적` |
-| 95 | 항목명 | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 라이브러리 항목명 / 개요 | `데이터 변경 감사추적 자동 생성` |
-| 96 | 요구사항 / 절차 | `requirement_text` | `text` | N | N | - | Y | - | N | N | N | Y | 상세 요구사항 명세 또는 실행 절차 | `모든 데이터 생성·수정·삭제 시...` |
-| 97 | 기대 결과 | `expected_result` | `text` | N | N | - | N | - | N | N | N | Y | IQ/OQ 테스트 시 기대 결과 (URS는 미사용) | - |
-| 98 | 수용 기준 | `acceptance_criteria` | `text` | N | N | - | Y | - | N | N | N | Y | 합격/불합격 판정 기준 | `데이터 변경 시 Audit Trail 자동 생성...` |
-| 99 | 근거 규정 | `regulation` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | 관련 규정 (예: 21 CFR 11.10(e), KGMP) | `21 CFR 11.10(e)` |
-| 100 | 사용 여부 | `is_active` | `boolean` | N | N | - | Y | `True` | N | N | N | Y | 활성 여부 (TRUE/FALSE) | `True` |
-| 101 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-25T00:00:00` |
-| 102 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-25T00:00:00` |
+| 91 | Library ID | `library_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique library item identifier | `00000000-0000-0000-0000-000000000001` |
+| 92 | Module Type | `module_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | URS \| IQ \| OQ classification | `URS` |
+| 93 | Code | `code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | Item code (e.g., URS-AT-L01) | `URS-AT-L01` |
+| 94 | Category | `category` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Audit trail, calibration/verification, security, etc. | `Audit Trail` |
+| 95 | Item Name | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Library item name/overview | `Automatic generation of audit trails for data changes` |
+| 96 | Requirement/Procedure | `requirement_text` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed requirement specification or execution procedure | `Whenever any data is created, modified, or deleted...` |
+| 97 | Expected Result | `expected_result` | `text` | N | N | - | N | - | N | N | N | Y | Expected result for IQ/OQ tests (not used for URS) | - |
+| 98 | Acceptance Criteria | `acceptance_criteria` | `text` | N | N | - | Y | - | N | N | N | Y | Criteria for a pass/fail determination | `Automatically generate an Audit Trail when data changes...` |
+| 99 | Regulatory Reference | `regulation` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Related regulations (e.g., 21 CFR 11.10(e), KGMP) | `21 CFR 11.10(e)` |
+| 100 | Is Active | `is_active` | `boolean` | N | N | - | Y | `True` | N | N | N | Y | Whether active (TRUE/FALSE) | `True` |
+| 101 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-25T00:00:00` |
+| 102 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-25T00:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## Validation
 
 <a id="table-validation_project"></a>
-### 10. Validation 프로젝트 (`validation_project`)
+### 10. Validation Project (`validation_project`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 시스템별 밸리데이션 수행 단위 및 범위 (VP) |
+| Description | Unit and scope of validation execution for each system (VP) |
 | Primary Key | `project_id` |
-| 주요 참조(FK) | `system_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `system_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 103 | 프로젝트 ID | `project_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 프로젝트 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 104 | 프로젝트 코드 | `project_code` | `varchar(100)` | N | N | - | Y | - | Y | Y | N | Y | 프로젝트 식별 코드 | `VP-SYS-008-20260422` |
-| 105 | 프로젝트명 | `project_name` | `varchar(200)` | N | N | - | Y | - | N | Y | N | Y | 프로젝트명 | `테스트 장비3 CSV 프로젝트` |
-| 106 | 시스템 ID | `system_id` | `uuid` | N | Y | `system_asset.system_id` | Y | - | N | Y | N | Y | system_asset.system_id 참조 | `00000000-0000-0000-0000-000000000001` |
-| 107 | 진행률 | `progress_rate` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 프로젝트 진행률 (%) | `0` |
-| 108 | 상태 | `status` | `varchar(20)` | N | N | - | Y | `진행 중'` | N | N | N | Y | 진행 중 \| 완료 \| 보류 | `진행 중` |
-| 109 | 시작일 | `start_date` | `date` | N | N | - | Y | `CURRENT_DATE` | N | N | N | Y | 프로젝트 시작 일자 | `2026-04-15T00:00:00` |
-| 110 | 검증 방식 | `validation_type` | `varchar(50)` | N | N | - | Y | `신규 검증'` | N | N | N | Y | 신규 검증 \| 변경 검증 \| 재검증 | `신규 검증` |
-| 111 | 밸리데이션 레벨 | `validation_level` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Level 1 \| Level 2 \| Level 3 \| Level 4 | `Level 4` |
-| 112 | 프로젝트 컨텍스트 상태 | `context_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | 프로젝트 범위와 컨텍스트 확정 상태. DRAFT, CONFIRMED | `CONFIRMED` |
-| 113 | 비고 | `remarks` | `text` | N | N | - | N | - | N | N | N | Y | 추가 메모 사항 | - |
-| 114 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-25T00:00:00` |
-| 115 | GAMP 카테고리 | `gamp_category` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | GAMP 5 분류 (Category 3, 4, 5) | `Category 3` |
-| 116 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 프로젝트 생성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 117 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 118 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 프로젝트 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 119 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 103 | Project ID | `project_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique project identifier | `00000000-0000-0000-0000-000000000001` |
+| 104 | Project Code | `project_code` | `varchar(100)` | N | N | - | Y | - | Y | Y | N | Y | Project identification code | `VP-SYS-008-20260422` |
+| 105 | Project Name | `project_name` | `varchar(200)` | N | N | - | Y | - | N | Y | N | Y | Project Name | `Test Equipment 3 CSV Project` |
+| 106 | System ID | `system_id` | `uuid` | N | Y | `system_asset.system_id` | Y | - | N | Y | N | Y | References system_asset.system_id | `00000000-0000-0000-0000-000000000001` |
+| 107 | Progress Percentage | `progress_rate` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Project progress (%) | `0` |
+| 108 | Status | `status` | `varchar(20)` | N | N | - | Y | `In Progress'` | N | N | N | Y | In Progress \| Completed \| On Hold | `In Progress` |
+| 109 | Start Date | `start_date` | `date` | N | N | - | Y | `CURRENT_DATE` | N | N | N | Y | Project start date | `2026-04-15T00:00:00` |
+| 110 | Validation Approach | `validation_type` | `varchar(50)` | N | N | - | Y | `Initial Validation'` | N | N | N | Y | Initial Validation \| Change Validation \| Revalidation | `Initial Validation` |
+| 111 | Validation Level | `validation_level` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Level 1 \| Level 2 \| Level 3 \| Level 4 | `Level 4` |
+| 112 | Project Context Status | `context_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | Confirmation status of the project scope and context: DRAFT, CONFIRMED | `CONFIRMED` |
+| 113 | Remarks | `remarks` | `text` | N | N | - | N | - | N | N | N | Y | Additional notes | - |
+| 114 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-25T00:00:00` |
+| 115 | GAMP Category | `gamp_category` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | GAMP 5 classification (Category 3, 4, 5) | `Category 3` |
+| 116 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the project creator | `00000000-0000-0000-0000-000000000001` |
+| 117 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 118 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the project modifier | `00000000-0000-0000-0000-000000000001` |
+| 119 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-project_member"></a>
-### 37. 프로젝트 참여자 (`project_member`)
+### 37. Project Member (`project_member`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 참여 사용자와 수행 역할 관리 |
+| Description | Manages participating users and assigned roles for each project |
 | Primary Key | `project_member_id` |
-| 주요 참조(FK) | `project_id, user_id, role_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, user_id, role_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 535 | 프로젝트 참여자 ID | `project_member_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 프로젝트 참여자 역할 매핑 고유 식별자. 활성 데이터는 (project_id, user_id, role_id) 조합의 중복 등록을 허용하지 않음 | `UUID` |
-| 536 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | 참여자가 소속된 Validation 프로젝트 ID | `UUID` |
-| 537 | 사용자 ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 프로젝트에 참여하는 사용자 ID | `UUID` |
-| 538 | 역할 ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | 프로젝트 내에서 사용자가 수행하는 역할 ID | `UUID` |
-| 539 | 참여 상태 | `member_status` | `varchar(20)` | N | N | - | Y | `ACTIVE` | N | Y | N | Y | 프로젝트 참여 상태. ACTIVE, INACTIVE, WITHDRAWN | `ACTIVE` |
-| 540 | 참여 시작 시각 | `joined_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 프로젝트 참여가 시작된 시각 | `2026-09-01T10:00:00` |
-| 541 | 참여 종료 시각 | `left_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 프로젝트 참여가 종료된 시각. 현재 참여 중이면 NULL | - |
-| 542 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 프로젝트 참여 정보 생성 시각(UTC) | `2026-09-01T10:00:00` |
-| 543 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 프로젝트 참여 정보를 등록한 사용자 ID | `UUID` |
-| 544 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 프로젝트 참여 정보 최종 수정 시각(UTC) | `2026-09-01T10:00:00` |
-| 545 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 프로젝트 참여 정보를 최종 수정한 사용자 ID | `UUID` |
-| 546 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 프로젝트 참여 정보 소프트 삭제 시각 | - |
+| 535 | Project Member ID | `project_member_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique project member role mapping identifier. Duplicate (project_id, user_id, role_id) combinations are not allowed in active data. | `UUID` |
+| 536 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | ID of the validation project to which the member belongs | `UUID` |
+| 537 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user participating in the project | `UUID` |
+| 538 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | ID of the role performed by the user within the project | `UUID` |
+| 539 | Participation Status | `member_status` | `varchar(20)` | N | N | - | Y | `ACTIVE` | N | Y | N | Y | Project participation status: ACTIVE, INACTIVE, WITHDRAWN | `ACTIVE` |
+| 540 | Participation Started At | `joined_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time when project participation began | `2026-09-01T10:00:00` |
+| 541 | Participation Ended At | `left_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when project participation ended. NULL if currently participating. | - |
+| 542 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project participation information creation timestamp (UTC) | `2026-09-01T10:00:00` |
+| 543 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who registered the project participation information | `UUID` |
+| 544 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project participation information last modification timestamp (UTC) | `2026-09-01T10:00:00` |
+| 545 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last modified the project participation information | `UUID` |
+| 546 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Project participation information soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-validation_activity"></a>
-### 38. 밸리데이션 활동 마스터 (`validation_activity`)
+### 38. Validation Activity Master (`validation_activity`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | VP, QIA, VA, URS, FDS, DDS, DQ, FRA, IQ, OQ, PQ, RTM, VSR 활동 기준정보 관리 |
+| Description | Manages reference information for VP, QIA, VA, URS, FDS, DDS, DQ, FRA, IQ, OQ, PQ, RTM, and VSR activities |
 | Primary Key | `activity_id` |
-| 주요 참조(FK) | `created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 547 | 활동 ID | `activity_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 밸리데이션 활동 고유 식별자 | `UUID` |
-| 548 | 활동 코드 | `activity_code` | `varchar(20)` | N | N | - | Y | - | Y | Y | N | Y | 활동 식별 코드. SYSTEM_IDENTIFICATION, VP, QIA, VA, URS, FDS, DDS, DQ, FRA, IQ, OQ, PQ, RTM, VSR | `URS` |
-| 549 | 활동명 | `activity_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 화면 표시용 활동명 | `사용자 요구사항 명세` |
-| 550 | 활동 순서 | `display_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | 화면 및 업무 흐름의 기본 표시 순서 | `5` |
-| 551 | 사용 여부 | `is_active` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 활동 마스터 사용 여부 | `True` |
-| 552 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 활동 마스터 생성 시각(UTC) | `09/01/2026 10:00:00` |
-| 553 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 활동 마스터를 등록한 사용자 | `UUID` |
-| 554 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 활동 마스터 최종 수정 시각(UTC) | `09/01/2026 10:00:00` |
-| 555 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 활동 마스터를 최종 수정한 사용자 | `UUID` |
-| 556 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 활동 마스터 소프트 삭제 시각 | - |
+| 547 | Activity ID | `activity_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique validation activity identifier | `UUID` |
+| 548 | Activity Code | `activity_code` | `varchar(20)` | N | N | - | Y | - | Y | Y | N | Y | Activity identification code: SYSTEM_IDENTIFICATION, VP, QIA, VA, URS, FDS, DDS, DQ, FRA, IQ, OQ, PQ, RTM, VSR | `URS` |
+| 549 | Activity Name | `activity_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Activity name displayed in the UI | `User Requirements Specification` |
+| 550 | Activity Order | `display_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Default display order in the UI and business process | `5` |
+| 551 | Is Active | `is_active` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether the activity master record is enabled | `True` |
+| 552 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Activity master creation timestamp (UTC) | `09/01/2026 10:00:00` |
+| 553 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the activity master record | `UUID` |
+| 554 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Activity master last modification timestamp (UTC) | `09/01/2026 10:00:00` |
+| 555 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the activity master record | `UUID` |
+| 556 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Activity master soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-project_activity"></a>
-### 39. 프로젝트 수행 활동 (`project_activity`)
+### 39. Project Activity (`project_activity`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 수행 대상 활동, 활성화 및 진행 상태 관리 |
+| Description | Manages activities included in each project, their enablement, and progress statuses |
 | Primary Key | `project_activity_id` |
-| 주요 참조(FK) | `project_id, activity_id, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, activity_id, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 557 | 프로젝트 활동 ID | `project_activity_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 프로젝트 수행 활동 고유 식별자. 활성 데이터는 (project_id, activity_id) 조합의 중복을 허용하지 않음 | `UUID` |
-| 558 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | 활동이 속한 Validation 프로젝트 | `UUID` |
-| 559 | 활동 ID | `activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | Y | - | N | Y | N | Y | 프로젝트에서 수행할 활동 | `UUID` |
-| 560 | 수행 대상 여부 | `is_selected` | `boolean` | N | N | - | Y | `False` | N | N | N | Y | VP 수행 활동에 포함된 활동인지 여부 | `True` |
-| 561 | 필수 활동 여부 | `is_required` | `boolean` | N | N | - | Y | `False` | N | N | N | Y | 해당 프로젝트에서 생략할 수 없는 활동인지 여부 | `True` |
-| 562 | 활동 상태 | `activity_status` | `varchar(20)` | N | N | - | Y | `LOCKED` | N | Y | N | Y | 활동 상태. LOCKED, READY, IN_PROGRESS, COMPLETED, APPROVED, SKIPPED | `READY` |
-| 563 | 활성화 시각 | `activated_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 선행 조건 충족으로 활동이 READY가 된 시각 | `2026-09-01T10:00:00` |
-| 564 | 시작 시각 | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 활동 수행 시작 시각 | `2026-09-01T11:00:00` |
-| 565 | 완료 시각 | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 활동 수행 완료 시각 | `2026-09-02T15:00:00` |
-| 566 | 승인 시각 | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 활동의 최종 승인 완료 시각 | `2026-09-02T17:00:00` |
-| 567 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 프로젝트 활동 생성 시각(UTC) | `2026-09-01T10:00:00` |
-| 568 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 프로젝트 활동 등록 사용자 | `UUID` |
-| 569 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 프로젝트 활동 최종 수정 시각(UTC) | `2026-09-01T10:00:00` |
-| 570 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 프로젝트 활동 최종 수정 사용자 | `UUID` |
-| 571 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 프로젝트 활동 소프트 삭제 시각 | - |
+| 557 | Project Activity ID | `project_activity_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique project activity identifier. Duplicate (project_id, activity_id) combinations are not allowed in active data. | `UUID` |
+| 558 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Validation project to which the activity belongs | `UUID` |
+| 559 | Activity ID | `activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | Y | - | N | Y | N | Y | Activity to be performed in the project | `UUID` |
+| 560 | Is Included | `is_selected` | `boolean` | N | N | - | Y | `False` | N | N | N | Y | Whether the activity is included in the activities to be performed under the VP | `True` |
+| 561 | Is Mandatory Activity | `is_required` | `boolean` | N | N | - | Y | `False` | N | N | N | Y | Whether the activity cannot be omitted from this project | `True` |
+| 562 | Activity Status | `activity_status` | `varchar(20)` | N | N | - | Y | `LOCKED` | N | Y | N | Y | Activity status: LOCKED, READY, IN_PROGRESS, COMPLETED, APPROVED, SKIPPED | `READY` |
+| 563 | Enabled At | `activated_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the activity became READY after its prerequisites were satisfied | `2026-09-01T10:00:00` |
+| 564 | Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Activity execution start time | `2026-09-01T11:00:00` |
+| 565 | Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Activity execution completion time | `2026-09-02T15:00:00` |
+| 566 | Approved At | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when final approval of the activity was completed | `2026-09-02T17:00:00` |
+| 567 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project activity creation timestamp (UTC) | `2026-09-01T10:00:00` |
+| 568 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the project activity | `UUID` |
+| 569 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project activity last modification timestamp (UTC) | `2026-09-01T10:00:00` |
+| 570 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the project activity | `UUID` |
+| 571 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Project activity soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-activity_dependency"></a>
-### 40. 활동 선후행 조건 (`activity_dependency`)
+### 40. Activity Dependency (`activity_dependency`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 후행 활동의 활성화를 위한 선행 활동, 관계 구분 및 판정 조건 관리 |
+| Description | Manages predecessor activities, relationship classifications, and evaluation conditions for enabling successor activities |
 | Primary Key | `activity_dependency_id` |
-| 주요 참조(FK) | `successor_activity_id, predecessor_activity_id, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `successor_activity_id, predecessor_activity_id, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 572 | 활동 선후행 조건 ID | `activity_dependency_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 활동 선후행 조건 고유 식별자 | `UUID` |
-| 573 | 후행 활동 ID | `successor_activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | Y | - | N | Y | N | Y | 조건 충족 후 활성화되는 활동 | `UUID` |
-| 574 | 선행 활동 ID | `predecessor_activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | N | - | N | Y | N | Y | 후행 활동 활성화 전에 확인할 활동. 전체 활동 조건이면 NULL 허용 | `UUID` |
-| 575 | 관계 구분 | `dependency_type` | `varchar(20)` | N | N | - | Y | `REQUIRED` | N | Y | N | Y | 선후행 관계 구분. REQUIRED, RECOMMENDED | `REQUIRED` |
-| 576 | 요구 상태 | `required_status` | `varchar(20)` | N | N | - | N | - | N | Y | N | Y | 선행 활동에 요구되는 상태. CREATED, COMPLETED, APPROVED | `APPROVED` |
-| 577 | 조건 유형 | `condition_type` | `varchar(50)` | N | N | - | Y | `STATUS` | N | Y | N | Y | STATUS, ACTIVITY_SELECTED, CONTEXT_CONFIRMED, GXP_SCOPE_CONFIRMED, TRACEABILITY_EXISTS, HIGH_RISK_COVERED, OPEN_DEVIATION_ZERO, ALL_SELECTED_APPROVED | `STATUS` |
-| 578 | 조건 값 | `condition_value` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | 조건 판정에 필요한 추가 값 또는 대상 엔터티 유형 | `APPROVED` |
-| 579 | 조건 설명 | `condition_description` | `text` | N | N | - | Y | - | N | N | N | Y | 사람이 확인할 수 있는 활성화 조건 설명 | `URS 승인완료` |
-| 580 | 평가 순서 | `evaluation_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | 동일 후행 활동의 조건 평가 순서 | `1` |
-| 581 | 사용 여부 | `is_active` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 활성화 조건 사용 여부 | `True` |
-| 582 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 조건 생성 시각(UTC) | `2026-09-01T10:00:00` |
-| 583 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 조건 등록 사용자 | `UUID` |
-| 584 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 조건 최종 수정 시각(UTC) | `2026-09-01T10:00:00` |
-| 585 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 조건 최종 수정 사용자 | `UUID` |
-| 586 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 조건 소프트 삭제 시각 | - |
+| 572 | Activity Dependency ID | `activity_dependency_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique activity dependency identifier | `UUID` |
+| 573 | Successor Activity ID | `successor_activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | Y | - | N | Y | N | Y | Activity enabled after the conditions are satisfied | `UUID` |
+| 574 | Predecessor Activity ID | `predecessor_activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | N | - | N | Y | N | Y | Activity to check before enabling the successor activity. NULL allowed for conditions covering all activities. | `UUID` |
+| 575 | Relationship Classification | `dependency_type` | `varchar(20)` | N | N | - | Y | `REQUIRED` | N | Y | N | Y | Dependency relationship classification: REQUIRED, RECOMMENDED | `REQUIRED` |
+| 576 | Required Status | `required_status` | `varchar(20)` | N | N | - | N | - | N | Y | N | Y | Status required of the predecessor activity: CREATED, COMPLETED, APPROVED | `APPROVED` |
+| 577 | Condition Type | `condition_type` | `varchar(50)` | N | N | - | Y | `STATUS` | N | Y | N | Y | STATUS, ACTIVITY_SELECTED, CONTEXT_CONFIRMED, GXP_SCOPE_CONFIRMED, TRACEABILITY_EXISTS, HIGH_RISK_COVERED, OPEN_DEVIATION_ZERO, ALL_SELECTED_APPROVED | `STATUS` |
+| 578 | Condition Value | `condition_value` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Additional value or target entity type required to evaluate the condition | `APPROVED` |
+| 579 | Condition Description | `condition_description` | `text` | N | N | - | Y | - | N | N | N | Y | Human-readable description of the enablement condition | `URS approval completed` |
+| 580 | Evaluation Order | `evaluation_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Order in which conditions for the same successor activity are evaluated | `1` |
+| 581 | Is Active | `is_active` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether the enablement condition is enabled | `True` |
+| 582 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Condition creation timestamp (UTC) | `2026-09-01T10:00:00` |
+| 583 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the condition | `UUID` |
+| 584 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Condition last modification timestamp (UTC) | `2026-09-01T10:00:00` |
+| 585 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the condition | `UUID` |
+| 586 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Condition soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## QIA
 
 <a id="table-qia_assessment"></a>
-### 11. 품질 영향 평가 헤더 (`qia_assessment`)
+### 11. Quality Impact Assessment Header (`qia_assessment`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 QIA 종합 평가 및 21 CFR Part 11 평가 결과 |
+| Description | Overall QIA assessment and 21 CFR Part 11 assessment results for each project |
 | Primary Key | `qia_id` |
-| 주요 참조(FK) | `project_id` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 120 | QIA ID | `qia_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | QIA 평가 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 121 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | validation_project.project_id 참조 | `00000000-0000-0000-0000-000000000001` |
-| 122 | Part11 Q1 전자기록 생성여부 | `p11_q1` | `varchar(10)` | N | N | - | Y | `Yes'` | N | N | N | Y | Q1 전자기록 생성/수정/유지 여부 (Yes/No) | `Yes` |
-| 123 | Part11 Q2 전자저장 여부 | `p11_q2` | `varchar(10)` | N | N | - | Y | `Yes'` | N | N | N | Y | Q2 전자형태 저장 여부 (Yes/No) | `Yes` |
-| 124 | Part11 Q3 규제기관 제출여부 | `p11_q3` | `varchar(10)` | N | N | - | Y | `No'` | N | N | N | Y | Q3 규제기관 전자기록 제출 여부 (Yes/No) | `No` |
-| 125 | Part11 Q4 전자서명 사용여부 | `p11_q4` | `varchar(10)` | N | N | - | Y | `Yes'` | N | N | N | Y | Q4 전자서명 사용 여부 (Yes/No) | `Yes` |
-| 126 | Part11 Q5 수기서명 대체여부 | `p11_q5` | `varchar(10)` | N | N | - | Y | `Yes'` | N | N | N | Y | Q5 수기서명을 전자서명으로 대체 여부 (Yes/No) | `Yes` |
-| 127 | Part11 Q6 시스템 유형 | `p11_q6` | `varchar(20)` | N | N | - | Y | `Closed'` | N | N | N | Y | Closed System \| Open System | `Closed` |
-| 128 | Part11 평가 결론 | `part11_result` | `text` | N | N | - | Y | - | N | N | N | Y | 21 CFR Part 11 적용 요건 결론 | `21 CFR Part 11 해당 시스템 (Closed System)` |
-| 129 | GxP 범위 상태 | `gxp_scope_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | QIA를 통한 GxP 범위 확정 상태. DRAFT, CONFIRMED | `CONFIRMED` |
-| 130 | 문서 표시 버전 | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | QIA 평가 문서 표시 버전 (예: v1.0, v1.1) | `v1.0` |
-| 131 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | QIA 평가 문서 개정 순번 (예: 1, 2, 3...) | `1` |
-| 132 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | QIA 평가 문서 신규 생성 및 개정 사유 | `최초 작성` |
-| 133 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 QIA 평가 문서 버전 여부 (TRUE/FALSE) | `True` |
-| 134 | 작성·검토·승인 상태 | `status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | N | N | Y | 문서 진행 상태 (DRAFT, REVIEW, APPROVED 등) | `DRAFT` |
-| 135 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
+| 120 | QIA ID | `qia_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique QIA assessment identifier | `00000000-0000-0000-0000-000000000001` |
+| 121 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 122 | Part 11 Q1: Electronic Record Creation | `p11_q1` | `varchar(10)` | N | N | - | Y | `Yes'` | N | N | N | Y | Q1: Whether electronic records are created/modified/maintained (Yes/No) | `Yes` |
+| 123 | Part 11 Q2: Electronic Storage | `p11_q2` | `varchar(10)` | N | N | - | Y | `Yes'` | N | N | N | Y | Q2: Whether records are stored electronically (Yes/No) | `Yes` |
+| 124 | Part 11 Q3: Submission to Regulatory Authorities | `p11_q3` | `varchar(10)` | N | N | - | Y | `No'` | N | N | N | Y | Q3: Whether electronic records are submitted to regulatory authorities (Yes/No) | `No` |
+| 125 | Part 11 Q4: Electronic Signature Use | `p11_q4` | `varchar(10)` | N | N | - | Y | `Yes'` | N | N | N | Y | Q4: Whether electronic signatures are used (Yes/No) | `Yes` |
+| 126 | Part 11 Q5: Replacement of Handwritten Signatures | `p11_q5` | `varchar(10)` | N | N | - | Y | `Yes'` | N | N | N | Y | Q5: Whether electronic signatures replace handwritten signatures (Yes/No) | `Yes` |
+| 127 | Part 11 Q6: System Type | `p11_q6` | `varchar(20)` | N | N | - | Y | `Closed'` | N | N | N | Y | Closed System \| Open System | `Closed` |
+| 128 | Part 11 Assessment Conclusion | `part11_result` | `text` | N | N | - | Y | - | N | N | N | Y | Conclusion on the applicability of 21 CFR Part 11 requirements | `System subject to 21 CFR Part 11 (Closed System)` |
+| 129 | GxP Scope Status | `gxp_scope_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | Confirmation status of the GxP scope determined through QIA: DRAFT, CONFIRMED | `CONFIRMED` |
+| 130 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the QIA assessment document (e.g., v1.0, v1.1) | `v1.0` |
+| 131 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the QIA assessment document (e.g., 1, 2, 3...) | `1` |
+| 132 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating or revising the QIA assessment document | `Initial creation` |
+| 133 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest QIA assessment document version (TRUE/FALSE) | `True` |
+| 134 | Authoring/Review/Approval Status | `status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | N | N | Y | Document progress status (DRAFT, REVIEW, APPROVED, etc.) | `DRAFT` |
+| 135 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-qia_module_item"></a>
-### 12. QIA 모듈 상세 평가 (`qia_module_item`)
+### 12. QIA Module Detailed Assessment (`qia_module_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 모듈/프로세스별 GxP Q1~Q10 항목 및 평가 결과 |
+| Description | GxP Q1–Q10 items and assessment results for each module/process |
 | Primary Key | `qia_module_item_id` |
-| 주요 참조(FK) | `qia_id` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `qia_id` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 136 | QIA 모듈 항목 ID | `qia_module_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | QIA 모듈 평가 항목 고유 식별자 | `UUID` |
-| 137 | QIA ID | `qia_id` | `uuid` | N | Y | `qia_assessment.qia_id` | Y | - | N | Y | N | Y | 상위 QIA 평가 식별자 | `UUID` |
-| 138 | 모듈 코드 | `module_code` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | 상위 모듈 코드 | `QM` |
-| 139 | 모듈명 | `module_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 상위 모듈명 | `품질관리` |
-| 140 | 모듈 설명 | `module_description` | `text` | N | N | - | N | - | N | N | N | Y | 모듈의 범위 및 목적 설명 | `품질관리 관련 종합 평가` |
-| 141 | 프로세스 코드 | `process_code` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 프로세스 식별 코드 | `PRC-001` |
-| 142 | 프로세스명 | `process_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 세부 프로세스명 | `작업지시` |
-| 143 | Q1 GXP목적 | `q1_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `O` |
-| 144 | Q2 생산공정 | `q2_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `O` |
-| 145 | Q3 생산데이터 | `q3_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
-| 146 | Q4 품질영향 | `q4_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `O` |
-| 147 | Q5 보관관리 | `q5_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
-| 148 | Q6 출하승인 | `q6_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
-| 149 | Q7 리콜 | `q7_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
-| 150 | Q8 규제문서 | `q8_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
-| 151 | Q9 문서관리 | `q9_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
-| 152 | Q10 보안 | `q10_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
-| 153 | 평가 결과 | `result_type` | `varchar(20)` | N | N | - | Y | `Non-GxP'` | N | N | N | Y | GxP \| Non-GxP | `GxP` |
-| 154 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각(UTC) | `2026-08-26T10:00:00` |
-| 155 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각(UTC) | `2026-08-26T10:00:00` |
+| 136 | QIA Module Item ID | `qia_module_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique QIA module assessment item identifier | `UUID` |
+| 137 | QIA ID | `qia_id` | `uuid` | N | Y | `qia_assessment.qia_id` | Y | - | N | Y | N | Y | Parent QIA assessment identifier | `UUID` |
+| 138 | Module Code | `module_code` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | Parent module code | `QM` |
+| 139 | Module Name | `module_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Parent module name | `Quality Control` |
+| 140 | Module Description | `module_description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the module's scope and purpose | `Overall assessment related to quality control` |
+| 141 | Process Code | `process_code` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Process identification code | `PRC-001` |
+| 142 | Process Name | `process_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Detailed process name | `Work Order` |
+| 143 | Q1 GxP Purpose | `q1_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `O` |
+| 144 | Q2 Production Process | `q2_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `O` |
+| 145 | Q3 Production Data | `q3_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
+| 146 | Q4 Quality Impact | `q4_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `O` |
+| 147 | Q5 Storage Management | `q5_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
+| 148 | Q6 Release Approval | `q6_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
+| 149 | Q7 Recall | `q7_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
+| 150 | Q8 Regulatory Documents | `q8_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
+| 151 | Q9 Document Management | `q9_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
+| 152 | Q10 Security | `q10_val` | `varchar(5)` | N | N | - | Y | `X'` | N | N | N | Y | O \| X \| △ | `X` |
+| 153 | Assessment Result | `result_type` | `varchar(20)` | N | N | - | Y | `Non-GxP'` | N | N | N | Y | GxP \| Non-GxP | `GxP` |
+| 154 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T10:00:00` |
+| 155 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T10:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## VA
 
 <a id="table-vendor_audit"></a>
-### 13. 공급업체 감사 평가 (`vendor_audit`)
+### 13. Vendor Audit Assessment (`vendor_audit`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 공급업체 점검/감사(Audit) 계획, 실행 및 결함 수치 기록 |
+| Description | Records vendor inspection/audit plans, execution, and deficiency counts |
 | Primary Key | `audit_id` |
-| 주요 참조(FK) | `project_id` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 156 | 감사 ID | `audit_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 공급업체 감사 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 157 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | validation_project.project_id 참조 | `00000000-0000-0000-0000-000000000001` |
-| 158 | 문서 번호 | `document_number` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 감사 보고서 문서 번호 | `VA-2026-001` |
-| 159 | 공급업체명 | `vendor_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 감사 대상 공급업체명 | `Sample Vendor` |
-| 160 | 대상 시스템 | `system_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 감사 대상 시스템명/버전 | `Sample System v1.0` |
-| 161 | 감사 방식 | `audit_type` | `varchar(50)` | N | N | - | Y | `현장 감사'` | N | N | N | Y | 현장 감사 \| 서류 감사 \| 원격 감사 | `현장 감사` |
-| 162 | 감사 일자 | `audit_date` | `date` | N | N | - | Y | `CURRENT_DATE` | N | N | N | Y | 감사 수행 일자 (또는 예정일) | `2026-08-26T00:00:00` |
-| 163 | 감사자 | `auditor_name` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 감사 담당자/수행자 이름 | `홍길동` |
-| 164 | 감사 결과 | `audit_result` | `varchar(20)` | N | N | - | Y | `적합'` | N | N | N | Y | 적합 \| 조건부 적합 \| 부적합 | `적합` |
-| 165 | Critical 결함 수 | `critical_defects` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 치명적 결함(Critical) 발견 건수 | `0` |
-| 166 | Major 결함 수 | `major_defects` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 중대 결함(Major) 발견 건수 | `0` |
-| 167 | Minor 결함 수 | `minor_defects` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 경미 결함(Minor) 발견 건수 | `1` |
-| 168 | 문서 표시 버전 | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | 감사 문서 표시 버전 (예: v1.0, v1.1) | `v1.0` |
-| 169 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | 감사 문서 개정 순번 (예: 1, 2, 3...) | `1` |
-| 170 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | 감사 문서 신규 생성 및 개정 사유 | `최초 작성` |
-| 171 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 감사 문서 버전 여부 (TRUE/FALSE) | `True` |
-| 172 | 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성 중'` | N | N | N | Y | 작성 중 \| 완료 \| 승인완료 | `작성 중` |
-| 173 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 174 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
+| 156 | Audit ID | `audit_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique vendor audit identifier | `00000000-0000-0000-0000-000000000001` |
+| 157 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 158 | Document Number | `document_number` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Audit report document number | `VA-2026-001` |
+| 159 | Vendor Name | `vendor_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Name of the vendor being audited | `Sample Vendor` |
+| 160 | Target System | `system_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Name/version of the system being audited | `Sample System v1.0` |
+| 161 | Audit Method | `audit_type` | `varchar(50)` | N | N | - | Y | `On-site Audit'` | N | N | N | Y | On-site Audit \| Document Audit \| Remote Audit | `On-site Audit` |
+| 162 | Audit Date | `audit_date` | `date` | N | N | - | Y | `CURRENT_DATE` | N | N | N | Y | Date of audit execution (or scheduled date) | `2026-08-26T00:00:00` |
+| 163 | Auditor | `auditor_name` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Name of the person responsible for/conducting the audit | `Hong Gil-dong` |
+| 164 | Audit Result | `audit_result` | `varchar(20)` | N | N | - | Y | `Compliant'` | N | N | N | Y | Compliant \| Conditionally Compliant \| Noncompliant | `Compliant` |
+| 165 | Critical Deficiency Count | `critical_defects` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of critical deficiencies identified | `0` |
+| 166 | Major Deficiency Count | `major_defects` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of major deficiencies identified | `0` |
+| 167 | Minor Deficiency Count | `minor_defects` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of minor deficiencies identified | `1` |
+| 168 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the audit document (e.g., v1.0, v1.1) | `v1.0` |
+| 169 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the audit document (e.g., 1, 2, 3...) | `1` |
+| 170 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating or revising the audit document | `Initial creation` |
+| 171 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest audit document version (TRUE/FALSE) | `True` |
+| 172 | Status | `status` | `varchar(20)` | N | N | - | Y | `Draft'` | N | N | N | Y | Draft \| Completed \| Approved | `Draft` |
+| 173 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 174 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## URS
 
 <a id="table-requirement"></a>
-### 14. 사용자 요구사항 명세 (`requirement`)
+### 14. User Requirements Specification (`requirement`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 URS 요구사항 항목 및 문서 개정 버전 관리 |
+| Description | Manages URS requirement items and document revision versions for each project |
 | Primary Key | `requirement_id` |
-| 주요 참조(FK) | `project_id, created_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 175 | 요구사항 ID | `requirement_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 요구사항 고유 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 176 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | validation_project.project_id 참조 | `00000000-0000-0000-0000-000000000001` |
-| 177 | 항목 번호 | `item_number` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 요구사항 관리 번호 (예: URS-001) | `URS-001` |
-| 178 | 카테고리 | `category` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | 시스템 관리, 감사추적, 전자서명 등 | `전자서명` |
-| 179 | 항목 / 기능 | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 요구사항 항목명 및 주요 기능 | `전자서명 서명자·일시·의미 기록` |
-| 180 | 요구사항 상세 | `requirement_text` | `text` | N | N | - | Y | - | N | N | N | Y | 요구사항 상세 명세 내용 | `전자서명 시 서명자 ID, 서명 일시...` |
-| 181 | 근거 규정 | `regulation` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | 관련 법규 및 규정 (예: 21 CFR 11.50) | `21 CFR 11.50` |
-| 182 | 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성중'` | N | N | N | Y | 작성중 \| 검토중 \| 승인완료 \| 반려 | `작성중` |
-| 183 | 문서 버전 | `version` | `varchar(20)` | N | N | - | Y | `v1.0'` | N | N | N | Y | 요구사항 문서 개정 버전 (예: v1.0, v2.0) | `v1.0` |
-| 184 | 개정 차수 | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | 버전 개정 순번 (1, 2, 3...) | `1` |
-| 185 | 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 버전 여부 (TRUE/FALSE) | `True` |
-| 186 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | 버전 신규 생성/개정 시 사유 | `최초 작성` |
-| 187 | RTM 연결 여부 | `is_rtm_linked` | `boolean` | N | N | - | Y | `False` | N | N | N | Y | Traceability Matrix 연결 여부 | `False` |
-| 188 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 요구사항 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 189 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 190 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
+| 175 | Requirement ID | `requirement_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique requirement identifier | `00000000-0000-0000-0000-000000000001` |
+| 176 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 177 | Item Number | `item_number` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Requirement management number (e.g., URS-001) | `URS-001` |
+| 178 | Category | `category` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | System management, audit trail, electronic signatures, etc. | `Electronic Signature` |
+| 179 | Item/Function | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Requirement item name and main functionality | `Record electronic signature signer, date/time, and meaning` |
+| 180 | Requirement Details | `requirement_text` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed requirement specification | `When electronically signing, the signer ID, signing date/time...` |
+| 181 | Regulatory Reference | `regulation` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Related laws and regulations (e.g., 21 CFR 11.50) | `21 CFR 11.50` |
+| 182 | Status | `status` | `varchar(20)` | N | N | - | Y | `Draft'` | N | N | N | Y | Draft \| Under Review \| Approved \| Rejected | `Draft` |
+| 183 | Document Version | `version` | `varchar(20)` | N | N | - | Y | `v1.0'` | N | N | N | Y | Requirement document revision version (e.g., v1.0, v2.0) | `v1.0` |
+| 184 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Version revision sequence number (1, 2, 3...) | `1` |
+| 185 | Is Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest version (TRUE/FALSE) | `True` |
+| 186 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating/revising the version | `Initial creation` |
+| 187 | Is Linked to RTM | `is_rtm_linked` | `boolean` | N | N | - | Y | `False` | N | N | N | Y | Whether linked to the Traceability Matrix | `False` |
+| 188 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the requirement author | `00000000-0000-0000-0000-000000000001` |
+| 189 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 190 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## FDS
 
 <a id="table-fds_spec"></a>
-### 15. 기능 설계 명세서 (`fds_spec`)
+### 15. Functional Design Specification (`fds_spec`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 FDS 문서 헤더와 버전 및 상태 관리 |
+| Description | Manages FDS document headers, versions, and statuses for each project |
 | Primary Key | `fds_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 191 | FDS ID | `fds_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | FDS 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 192 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | 연관 Validation 프로젝트 ID | `00000000-0000-0000-0000-000000000001` |
-| 193 | FDS 번호 | `fds_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | FDS 문서 번호 | `VP-SYS-008-20260422` |
-| 194 | FDS 문서명 | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | 기능 설계 명세서 제목 | `테스트 장비3 CSV 프로젝트` |
-| 195 | 문서 버전 | `version` | `varchar(20)` | N | N | - | Y | `v1.0` | N | N | N | Y | FDS 문서 표준 버전 | `v1.0` |
-| 196 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | 버전 개정 순번 (예: 1, 2, 3...) | `1` |
-| 197 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | 버전 신규 생성/개정 사유 | `최초 작성` |
-| 198 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 버전 여부 (TRUE/FALSE) | `True` |
-| 199 | 문서 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성 중` | N | N | N | Y | 문서 상태 (작성 중, 검토 중, 승인 완료) | `작성 중` |
-| 200 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 201 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | FDS 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 202 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 203 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | FDS 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 204 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 191 | FDS ID | `fds_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | FDS identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 192 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | Related validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 193 | FDS Number | `fds_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | FDS document number | `VP-SYS-008-20260422` |
+| 194 | FDS Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the functional design specification | `Test Equipment 3 CSV Project` |
+| 195 | Document Version | `version` | `varchar(20)` | N | N | - | Y | `v1.0` | N | N | N | Y | Standard FDS document version | `v1.0` |
+| 196 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Version revision sequence number (e.g., 1, 2, 3...) | `1` |
+| 197 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating/revising the version | `Initial creation` |
+| 198 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest version (TRUE/FALSE) | `True` |
+| 199 | Document Status | `status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | Document status (Draft, Under Review, Approved) | `Draft` |
+| 200 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 201 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the FDS author | `00000000-0000-0000-0000-000000000001` |
+| 202 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 203 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the FDS modifier | `00000000-0000-0000-0000-000000000001` |
+| 204 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-fds_item"></a>
-### 16. FDS 상세 항목 (`fds_item`)
+### 16. FDS Detailed Item (`fds_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | FDS 문서의 기능, 화면 및 상세 설계 항목 관리 |
+| Description | Manages functional, screen, and detailed design items in FDS documents |
 | Primary Key | `fds_item_id` |
-| 주요 참조(FK) | `fds_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `fds_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 205 | FDS 항목 ID | `fds_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | FDS 항목 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 206 | FDS ID | `fds_id` | `uuid` | N | Y | `fds_spec.fds_id` | Y | - | N | N | N | Y | 상위 FDS 문서 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 207 | 항목 구분 | `item_type` | `varchar(20)` | N | N | - | Y | `FUNCTION` | N | N | N | Y | 서브 탭 구분 (FUNCTION, SCREEN, INTERFACE) | `FUNCTION` |
-| 208 | FDS 항목 번호 | `fds_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | FDS 항목 관리 번호 | `FDS-001` |
-| 209 | 카테고리 | `category` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | 기능 카테고리 | `시스템 관리` |
-| 210 | 항목/기능 | `feature_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 기능명 및 주요 기능 | `전자서명` |
-| 211 | 설명 | `description` | `text` | N | N | - | Y | - | N | N | N | Y | 기능 상세 설명 | `사용자 로그인 시 전자서명 검증 기능` |
-| 212 | 관련 화면 | `related_screen` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | 관련 화면명 | `사용자 관리 화면` |
-| 213 | 개별 개정 차수 | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | 개정 순번 (1, 2, 3...) | `1` |
-| 214 | 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성 중` | N | N | N | Y | 진행 상태 (작성 중, 검토 중, 승인 완료) | `작성 중` |
-| 215 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 216 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 217 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 218 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 219 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 205 | FDS Item ID | `fds_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | FDS item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 206 | FDS ID | `fds_id` | `uuid` | N | Y | `fds_spec.fds_id` | Y | - | N | N | N | Y | Parent FDS document identifier | `00000000-0000-0000-0000-000000000001` |
+| 207 | Item Type | `item_type` | `varchar(20)` | N | N | - | Y | `FUNCTION` | N | N | N | Y | Subtab classification (FUNCTION, SCREEN, INTERFACE) | `FUNCTION` |
+| 208 | FDS Item Number | `fds_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | FDS item management number | `FDS-001` |
+| 209 | Category | `category` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Function Category | `System Management` |
+| 210 | Item/Function | `feature_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Function name and main functionality | `Electronic Signature` |
+| 211 | Description | `description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed function description | `Electronic signature verification during user login` |
+| 212 | Related Screen | `related_screen` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Name of the related screen | `User Management Screen` |
+| 213 | Individual Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Revision sequence number (1, 2, 3...) | `1` |
+| 214 | Status | `status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | Progress status (Draft, Under Review, Approved) | `Draft` |
+| 215 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 216 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item author | `00000000-0000-0000-0000-000000000001` |
+| 217 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 218 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
+| 219 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-fds_interface"></a>
-### 17. FDS 인터페이스 정의 (`fds_interface`)
+### 17. FDS Interface Definition (`fds_interface`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | FDS의 시스템 간 인터페이스, 연동 데이터 및 전송 방식 관리 |
+| Description | Manages inter-system interfaces, exchanged data, and transmission methods in FDS documents |
 | Primary Key | `fds_interface_id` |
-| 주요 참조(FK) | `fds_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `fds_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 220 | FDS 인터페이스 ID | `fds_interface_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | FDS 인터페이스 레코드 고유 식별자 | `UUID` |
-| 221 | FDS ID | `fds_id` | `uuid` | N | Y | `fds_spec.fds_id` | Y | - | N | Y | N | Y | 상위 FDS 문서 식별자 | `UUID` |
-| 222 | 인터페이스 관리 번호 | `interface_id` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | FDS 문서 내 인터페이스 관리 번호 | `IF-001` |
-| 223 | 소스 시스템 | `source_system` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | 송신 시스템명 | `Sample System` |
-| 224 | 대상 시스템 | `target_system` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | 수신 시스템명 | `Target System` |
-| 225 | 연동 데이터 | `interface_data` | `text` | N | N | - | Y | - | N | N | N | Y | 전송 데이터 항목 | `자재 소비량, 배치 결과` |
-| 226 | 연동 주기 | `transfer_cycle` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | 실시간, 주기적, 이벤트 기반 등 | `실시간` |
-| 227 | 연동 방식 | `transfer_method` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | REST API, Message Queue 등 | `REST API` |
-| 228 | FDS 연계 번호 | `fds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연관 FDS 항목 번호의 화면 표시용 값 | `FDS-008` |
-| 229 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각(UTC) | `2026-08-26T10:00:00` |
-| 230 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 인터페이스 작성자 식별자 | `UUID` |
-| 231 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각(UTC) | `2026-08-26T10:00:00` |
-| 232 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 인터페이스 최종 수정자 식별자 | `UUID` |
-| 233 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 220 | FDS Interface ID | `fds_interface_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique FDS interface record identifier | `UUID` |
+| 221 | FDS ID | `fds_id` | `uuid` | N | Y | `fds_spec.fds_id` | Y | - | N | Y | N | Y | Parent FDS document identifier | `UUID` |
+| 222 | Interface Management Number | `interface_id` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Interface management number within the FDS document | `IF-001` |
+| 223 | Source System | `source_system` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Name of the sending system | `Sample System` |
+| 224 | Target System | `target_system` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Name of the receiving system | `Target System` |
+| 225 | Exchanged Data | `interface_data` | `text` | N | N | - | Y | - | N | N | N | Y | Data items to be transmitted | `Material consumption, batch results` |
+| 226 | Integration Frequency | `transfer_cycle` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Real-time, periodic, event-driven, etc. | `Real-time` |
+| 227 | Integration Method | `transfer_method` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | REST API, Message Queue, etc. | `REST API` |
+| 228 | Linked FDS Number | `fds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Display value of the related FDS item number | `FDS-008` |
+| 229 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T10:00:00` |
+| 230 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the interface author | `UUID` |
+| 231 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T10:00:00` |
+| 232 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who last modified the interface | `UUID` |
+| 233 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## DQ
 
 <a id="table-dq_assessment"></a>
-### 18. 설계 적격성 평가 (`dq_assessment`)
+### 18. Design Qualification Assessment (`dq_assessment`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 설계 적격성 평가 문서 헤더 관리 |
+| Description | Manages design qualification assessment document headers for each project |
 | Primary Key | `dq_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 234 | DQ ID | `dq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | DQ 평가 문서 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 235 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | 연관 Validation 프로젝트 ID | `00000000-0000-0000-0000-000000000001` |
-| 236 | DQ 번호 | `dq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | DQ 문서 번호 (예: DQ-VP-SYS-008-20260422) | `DQ-VP-SYS-008-20260422` |
-| 237 | 문서명 | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | 설계 적격성 평가 문서 제목 | `설계 적격성 평가 (URS → FDS/DDS 매핑)` |
-| 238 | 문서 버전 | `version` | `varchar(20)` | N | N | - | Y | `v1.0` | N | N | N | Y | DQ 문서 표준 버전 | `v1.0` |
-| 239 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | DQ 평가 문서 개정 순번 (예: 1, 2, 3...) | `1` |
-| 240 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | DQ 평가 문서 신규 생성 및 개정 사유 | `최초 작성` |
-| 241 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 DQ 평가 문서 버전 여부 (TRUE/FALSE) | `True` |
-| 242 | 문서 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성 중` | N | N | N | Y | 문서 상태 (작성 중, 검토 중, 승인 완료) | `작성 중` |
-| 243 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 244 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | DQ 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 245 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 246 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | DQ 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 247 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 234 | DQ ID | `dq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | DQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 235 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | Related validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 236 | DQ Number | `dq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | DQ document number (e.g., DQ-VP-SYS-008-20260422) | `DQ-VP-SYS-008-20260422` |
+| 237 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the design qualification assessment document | `Design Qualification Assessment (URS → FDS/DDS Mapping)` |
+| 238 | Document Version | `version` | `varchar(20)` | N | N | - | Y | `v1.0` | N | N | N | Y | Standard DQ document version | `v1.0` |
+| 239 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the DQ assessment document (e.g., 1, 2, 3...) | `1` |
+| 240 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating or revising the DQ assessment document | `Initial creation` |
+| 241 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest DQ assessment document version (TRUE/FALSE) | `True` |
+| 242 | Document Status | `status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | Document status (Draft, Under Review, Approved) | `Draft` |
+| 243 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 244 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the DQ author | `00000000-0000-0000-0000-000000000001` |
+| 245 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 246 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the DQ modifier | `00000000-0000-0000-0000-000000000001` |
+| 247 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-dq_item"></a>
-### 19. DQ 상세 평가 항목 (`dq_item`)
+### 19. DQ Detailed Assessment Item (`dq_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | URS와 FDS/DDS 설계의 적격성 평가 결과 관리 |
+| Description | Manages qualification assessment results for URS requirements and FDS/DDS designs |
 | Primary Key | `dq_item_id` |
-| 주요 참조(FK) | `dq_id, requirement_id, reviewed_by, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `dq_id, requirement_id, reviewed_by, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 248 | DQ 항목 ID | `dq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | DQ 세부 항목 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 249 | DQ ID | `dq_id` | `uuid` | N | Y | `dq_assessment.dq_id` | Y | - | N | N | N | Y | 상위 DQ 문서 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 250 | URS 항목 ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | N | N | Y | 매핑 대상 URS 식별자 (FK) | `00000000-0000-0000-0000-000000000001` |
-| 251 | URS 번호 | `urs_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | 화면 표시용 URS 번호 (예: URS-001) | `URS-001` |
-| 252 | URS 요구사항 | `urs_description` | `text` | N | N | - | Y | - | N | N | N | Y | URS 세부 요구사항 내용 | `사용자 로그인 및 전자서명 기능` |
-| 253 | FDS 연계 | `fds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연계된 FDS 번호 (예: FDS-001) | `FDS-001` |
-| 254 | FDS 기능 | `fds_feature_name` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | 연계된 FDS 기능명 | `전자서명 검증` |
-| 255 | DDS 연계 | `dds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연계된 DDS 설계 번호 | `DDS-001` |
-| 256 | DDS 설계 | `dds_description` | `text` | N | N | - | N | - | N | N | N | Y | 연계된 DDS 데이터베이스/컴포넌트 설계 | `User Auth Table Schema` |
-| 257 | 판정 | `result_status` | `varchar(20)` | N | N | - | Y | `검토 대기` | N | N | N | Y | 평가 판정 (PASS, FAIL, PENDING) | `PASS` |
-| 258 | 검토자 ID | `reviewed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | N | N | Y | 항목 검토 수행자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 259 | 비고 | `remarks` | `text` | N | N | - | N | - | N | N | N | Y | 검토 관련 특이사항 및 비고 | `FDS 및 DDS 설계 반영 완료 확인` |
-| 260 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 261 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 262 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 263 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 264 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 248 | DQ Item ID | `dq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | Detailed DQ item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 249 | DQ ID | `dq_id` | `uuid` | N | Y | `dq_assessment.dq_id` | Y | - | N | N | N | Y | Parent DQ document identifier | `00000000-0000-0000-0000-000000000001` |
+| 250 | URS Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | N | N | Y | Identifier of the URS requirement to be mapped (FK) | `00000000-0000-0000-0000-000000000001` |
+| 251 | URS Number | `urs_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | URS number for display in the UI (e.g., URS-001) | `URS-001` |
+| 252 | URS Requirement | `urs_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed URS requirement content | `User login and electronic signature functionality` |
+| 253 | FDS Link | `fds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Linked FDS number (e.g., FDS-001) | `FDS-001` |
+| 254 | FDS Function | `fds_feature_name` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Name of the linked FDS function | `Electronic signature verification` |
+| 255 | DDS Link | `dds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Linked DDS design number | `DDS-001` |
+| 256 | DDS Design | `dds_description` | `text` | N | N | - | N | - | N | N | N | Y | Linked DDS database/component design | `User Auth Table Schema` |
+| 257 | Outcome | `result_status` | `varchar(20)` | N | N | - | Y | `Pending Review` | N | N | N | Y | Assessment outcome (PASS, FAIL, PENDING) | `PASS` |
+| 258 | Reviewer ID | `reviewed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | N | N | Y | Identifier of the user who reviewed the item | `00000000-0000-0000-0000-000000000001` |
+| 259 | Remarks | `remarks` | `text` | N | N | - | N | - | N | N | N | Y | Review-related observations and remarks | `Confirmed incorporation into FDS and DDS designs` |
+| 260 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 261 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item author | `00000000-0000-0000-0000-000000000001` |
+| 262 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 263 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
+| 264 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## FRA
 
 <a id="table-fra_assessment"></a>
-### 20. 기능 위험평가 (`fra_assessment`)
+### 20. Functional Risk Assessment (`fra_assessment`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 기능 위험평가 문서 헤더 관리 |
+| Description | Manages functional risk assessment document headers for each project |
 | Primary Key | `fra_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 265 | FRA ID | `fra_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | FRA 평가 문서 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 266 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | 연관 Validation 프로젝트 ID | `00000000-0000-0000-0000-000000000001` |
-| 267 | FRA 번호 | `fra_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | FRA 문서 번호 (예: FRA-VP-SYS-008-20260422) | `FRA-VP-SYS-008-20260422` |
-| 268 | 문서명 | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | FMEA 기반 기능 위험평가 문서 제목 | `FMEA 기반 기능 위험평가` |
-| 269 | 문서 버전 | `version` | `varchar(20)` | N | N | - | Y | `v1.0` | N | N | N | Y | FRA 문서 표준 버전 | `v1.0` |
-| 270 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | FRA 평가 문서 개정 순번 (예: 1, 2, 3...) | `1` |
-| 271 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | FRA 평가 문서 신규 생성 및 개정 사유 | `최초 작성` |
-| 272 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 FRA 평가 문서 버전 여부 (TRUE/FALSE) | `True` |
-| 273 | 문서 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성 중` | N | N | N | Y | 문서 상태 (작성 중, 검토 중, 승인 완료) | `작성 중` |
-| 274 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 275 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | FRA 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 276 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 277 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | FRA 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 278 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 265 | FRA ID | `fra_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | FRA assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 266 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | Related validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 267 | FRA Number | `fra_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | FRA document number (e.g., FRA-VP-SYS-008-20260422) | `FRA-VP-SYS-008-20260422` |
+| 268 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the FMEA-based functional risk assessment document | `FMEA-Based Functional Risk Assessment` |
+| 269 | Document Version | `version` | `varchar(20)` | N | N | - | Y | `v1.0` | N | N | N | Y | Standard FRA document version | `v1.0` |
+| 270 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the FRA assessment document (e.g., 1, 2, 3...) | `1` |
+| 271 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating or revising the FRA assessment document | `Initial creation` |
+| 272 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest FRA assessment document version (TRUE/FALSE) | `True` |
+| 273 | Document Status | `status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | Document status (Draft, Under Review, Approved) | `Draft` |
+| 274 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 275 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the FRA author | `00000000-0000-0000-0000-000000000001` |
+| 276 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 277 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the FRA modifier | `00000000-0000-0000-0000-000000000001` |
+| 278 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-fra_item"></a>
-### 21. FRA 위험 상세 항목 (`fra_item`)
+### 21. FRA Detailed Risk Item (`fra_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 기능별 위험 시나리오, 위험도 및 완화 전략 관리 |
+| Description | Manages risk scenarios, risk scores, and mitigation strategies for each function |
 | Primary Key | `fra_item_id` |
-| 주요 참조(FK) | `fra_id, requirement_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `fra_id, requirement_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 279 | 위험 항목 ID | `fra_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | FRA 위험 세부 항목 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 280 | FRA ID | `fra_id` | `uuid` | N | Y | `fra_assessment.fra_id` | Y | - | N | N | N | Y | 상위 FRA 문서 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 281 | URS 항목 ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | N | - | N | N | N | Y | 매핑 URS 요구사항 식별자 (FK) | `00000000-0000-0000-0000-000000000001` |
-| 282 | URS 참조번호 | `urs_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | 화면 표시용 URS 참조번호 (예: URS-001) | `URS-001` |
-| 283 | 기능명 | `feature_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 위험 평가 대상 기능명 | `전자서명` |
-| 284 | 위험 시나리오 | `risk_scenario` | `text` | N | N | - | Y | - | N | N | N | Y | FMEA 위험 발생 시나리오 설명 | `전자서명 시 비밀번호 검증 미수행` |
-| 285 | 제품영향 (PI) | `pi_score` | `varchar(10)` | N | N | - | Y | `H` | N | N | N | Y | Product Impact (H, M, L) | `H` |
-| 286 | 발생가능성 (LL) | `ll_score` | `varchar(10)` | N | N | - | Y | `H` | N | N | N | Y | Likelihood of Occurrence (H, M, L) | `M` |
-| 287 | 탐지가능성 (DL) | `dl_score` | `varchar(10)` | N | N | - | Y | `H` | N | N | N | Y | Detectability (H, M, L) | `L` |
-| 288 | 위험도 수치 (RV) | `risk_value` | `integer` | N | N | - | N | `1` | N | N | N | Y | PI, LL, DL 조합 산출 위험값 (RV) | `1` |
-| 289 | 위험 등급 | `risk_level` | `varchar(20)` | N | N | - | Y | `LOW` | N | Y | N | Y | 산출된 위험도 등급. LOW, MEDIUM, HIGH | `HIGH` |
-| 290 | 완화 전략 | `mitigation_strategy` | `varchar(20)` | N | N | - | Y | `Test` | N | N | N | Y | 위험 완화 전략 (Test, SOP, No Action) | `Test` |
-| 291 | 연결 테스트 | `test_reference` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연계 검증 테스트 코드 (예: OQ-AT-01) | `OQ-AT-01` |
-| 292 | 진행 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성 중` | N | N | N | Y | 위험 항목 상태 (작성 중, 검토 완료) | `작성 중` |
-| 293 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 294 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 295 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 296 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 297 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 279 | Risk Item ID | `fra_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | Detailed FRA risk item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 280 | FRA ID | `fra_id` | `uuid` | N | Y | `fra_assessment.fra_id` | Y | - | N | N | N | Y | Parent FRA document identifier | `00000000-0000-0000-0000-000000000001` |
+| 281 | URS Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | N | - | N | N | N | Y | Identifier of the mapped URS requirement (FK) | `00000000-0000-0000-0000-000000000001` |
+| 282 | URS Reference Number | `urs_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | URS reference number for display in the UI (e.g., URS-001) | `URS-001` |
+| 283 | Function Name | `feature_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Name of the function being assessed for risk | `Electronic Signature` |
+| 284 | Risk Scenario | `risk_scenario` | `text` | N | N | - | Y | - | N | N | N | Y | Description of the FMEA risk occurrence scenario | `Password verification not performed during electronic signing` |
+| 285 | Product Impact (PI) | `pi_score` | `varchar(10)` | N | N | - | Y | `H` | N | N | N | Y | Product Impact (H, M, L) | `H` |
+| 286 | Likelihood of Occurrence (LL) | `ll_score` | `varchar(10)` | N | N | - | Y | `H` | N | N | N | Y | Likelihood of Occurrence (H, M, L) | `M` |
+| 287 | Detectability (DL) | `dl_score` | `varchar(10)` | N | N | - | Y | `H` | N | N | N | Y | Detectability (H, M, L) | `L` |
+| 288 | Risk Value (RV) | `risk_value` | `integer` | N | N | - | N | `1` | N | N | N | Y | Risk value (RV) calculated from the combination of PI, LL, and DL | `1` |
+| 289 | Risk Rating | `risk_level` | `varchar(20)` | N | N | - | Y | `LOW` | N | Y | N | Y | Calculated risk rating: LOW, MEDIUM, HIGH | `HIGH` |
+| 290 | Mitigation Strategy | `mitigation_strategy` | `varchar(20)` | N | N | - | Y | `Test` | N | N | N | Y | Risk mitigation strategy (Test, SOP, No Action) | `Test` |
+| 291 | Linked Test | `test_reference` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Linked verification test code (e.g., OQ-AT-01) | `OQ-AT-01` |
+| 292 | Progress Status | `status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | Risk item status (Draft, Review Completed) | `Draft` |
+| 293 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 294 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item author | `00000000-0000-0000-0000-000000000001` |
+| 295 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 296 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
+| 297 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## IQ
 
 <a id="table-iq_assessment"></a>
-### 22. 설치 적격성 평가 (`iq_assessment`)
+### 22. Installation Qualification Assessment (`iq_assessment`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 설치 적격성 평가 문서 헤더 관리 |
+| Description | Manages installation qualification assessment document headers for each project |
 | Primary Key | `iq_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 298 | IQ ID | `iq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | IQ 평가 문서 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 299 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | 연관 Validation 프로젝트 ID | `00000000-0000-0000-0000-000000000001` |
-| 300 | IQ 번호 | `iq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | IQ 문서 번호 (예: IQ-VP-SYS-010-20260529) | `IQ-VP-SYS-010-20260529` |
-| 301 | 문서명 | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | 설치 적격성 평가 문서 제목 | `Installation Qualification` |
-| 302 | 문서 표시 버전 | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | IQ 평가 문서 표시 버전 (예: v1.0, v1.1) | `v1.0` |
-| 303 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | IQ 평가 문서 개정 순번 (예: 1, 2, 3...) | `1` |
-| 304 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | IQ 평가 문서 신규 생성 및 개정 사유 | `최초 작성` |
-| 305 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 IQ 평가 문서 버전 여부 (TRUE/FALSE) | `True` |
-| 306 | 프로토콜 상태 | `protocol_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | IQ 프로토콜 상태. DRAFT, REVIEW, APPROVED | `APPROVED` |
-| 307 | 레코드 상태 | `record_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | IQ 수행 레코드 상태. 프로토콜 APPROVED 이후 DRAFT, REVIEW, APPROVED 순으로 진행 | `DRAFT` |
-| 308 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 309 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | IQ 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 310 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 311 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | IQ 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 312 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 298 | IQ ID | `iq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | IQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 299 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | Related validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 300 | IQ Number | `iq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | IQ document number (e.g., IQ-VP-SYS-010-20260529) | `IQ-VP-SYS-010-20260529` |
+| 301 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the installation qualification assessment document | `Installation Qualification` |
+| 302 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the IQ assessment document (e.g., v1.0, v1.1) | `v1.0` |
+| 303 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the IQ assessment document (e.g., 1, 2, 3...) | `1` |
+| 304 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating or revising the IQ assessment document | `Initial creation` |
+| 305 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest IQ assessment document version (TRUE/FALSE) | `True` |
+| 306 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | IQ protocol status: DRAFT, REVIEW, APPROVED | `APPROVED` |
+| 307 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | IQ execution record status. After the protocol is APPROVED, progresses through DRAFT, REVIEW, and APPROVED. | `DRAFT` |
+| 308 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 309 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the IQ author | `00000000-0000-0000-0000-000000000001` |
+| 310 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 311 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the IQ modifier | `00000000-0000-0000-0000-000000000001` |
+| 312 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-iq_item"></a>
-### 23. IQ 상세 테스트 항목 (`iq_item`)
+### 23. IQ Detailed Test Item (`iq_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | IQ 테스트 절차, 결과, 증적 및 수행자 관리 |
+| Description | Manages IQ test procedures, results, evidence, and executors |
 | Primary Key | `iq_item_id` |
-| 주요 참조(FK) | `iq_id, executed_by, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `iq_id, executed_by, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 313 | IQ 항목 ID | `iq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | IQ 세부 테스트 항목 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 314 | IQ ID | `iq_id` | `uuid` | N | Y | `iq_assessment.iq_id` | Y | - | N | N | N | Y | 상위 IQ 문서 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 315 | 절차 번호 | `step_no` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | 테스트 수행 절차 번호 (예: 01, 02) | `1` |
-| 316 | 테스트 ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | 테스트 항목 ID (예: IQ-NEW-01) | `IQ-NEW-01` |
-| 317 | 테스트 케이스 | `test_case` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | 하드웨어 설치, 소프트웨어 설치 등 | `하드웨어 설치` |
-| 318 | URS 연계 | `urs_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | 매핑 URS 번호 (예: URS-001) | `URS-001` |
-| 319 | 테스트 내용 | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | 테스트 검증 수행 상세 절차 | `설치될 서버의 하드웨어 사양이 URS를 충족하는지 확인` |
-| 320 | 기대 결과 | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | 테스트 성공 기준 및 기대 결과 | `하드웨어 사양이 URS에 명시된 요구사항과 일치해야 함` |
-| 321 | 프로토콜 상태 | `protocol_status` | `varchar(20)` | N | N | - | Y | `승인완료` | N | N | N | Y | 항목별 프로토콜 승인 상태 | `승인완료` |
-| 322 | 실제 결과 | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | 테스트 수행 후 실제 결과 기록 | `IQ 테스트1 결과` |
-| 323 | 판정 | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | 최종 테스트 판정 (Pass, Fail, 미실행) | `Pass` |
-| 324 | 수행자 ID | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | N | N | Y | 테스트 수행자 식별자 (FK) | `00000000-0000-0000-0000-000000000001` |
-| 325 | 수행일 | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 테스트 수행 완료 일시 | `2026-06-22T00:00:00` |
-| 326 | 레코드 상태 | `record_status` | `varchar(20)` | N | N | - | Y | `작성중` | N | N | N | Y | 항목별 레코드 승인 상태 | `승인완료` |
-| 327 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 328 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 329 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 330 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 331 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 313 | IQ Item ID | `iq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | Detailed IQ test item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 314 | IQ ID | `iq_id` | `uuid` | N | Y | `iq_assessment.iq_id` | Y | - | N | N | N | Y | Parent IQ document identifier | `00000000-0000-0000-0000-000000000001` |
+| 315 | Procedure Number | `step_no` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Test execution procedure number (e.g., 01, 02) | `1` |
+| 316 | Test ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Test item ID (e.g., IQ-NEW-01) | `IQ-NEW-01` |
+| 317 | Test Case | `test_case` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Hardware installation, software installation, etc. | `Hardware Installation` |
+| 318 | URS Link | `urs_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Mapped URS number (e.g., URS-001) | `URS-001` |
+| 319 | Test Details | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed procedure for executing the verification test | `Verify that the hardware specifications of the server to be installed meet the URS requirements` |
+| 320 | Expected Result | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | Test success criteria and expected results | `Hardware specifications must match the requirements specified in the URS` |
+| 321 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `Approved` | N | N | N | Y | Protocol approval status for each item | `Approved` |
+| 322 | Actual Result | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | Record of actual results after test execution | `IQ Test 1 results` |
+| 323 | Outcome | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Final test outcome (Pass, Fail, Not Executed) | `Pass` |
+| 324 | Actor ID | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | N | N | Y | Test executor identifier (FK) | `00000000-0000-0000-0000-000000000001` |
+| 325 | Executed At | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Date and time when test execution was completed | `2026-06-22T00:00:00` |
+| 326 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | Record approval status for each item | `Approved` |
+| 327 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 328 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item author | `00000000-0000-0000-0000-000000000001` |
+| 329 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 330 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
+| 331 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## OQ
 
 <a id="table-oq_assessment"></a>
-### 24. 운전 적격성 평가 (`oq_assessment`)
+### 24. Operational Qualification Assessment (`oq_assessment`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 운전 적격성 평가 문서 헤더 관리 |
+| Description | Manages operational qualification assessment document headers for each project |
 | Primary Key | `oq_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 332 | OQ ID | `oq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | OQ 평가 문서 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 333 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | 연관 Validation 프로젝트 ID | `00000000-0000-0000-0000-000000000001` |
-| 334 | OQ 번호 | `oq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | OQ 문서 번호 (예: OQ-VP-SYS-010-20260529) | `OQ-VP-SYS-010-20260529` |
-| 335 | 문서명 | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | 운전 적격성 평가 문서 제목 | `Operational Qualification` |
-| 336 | 문서 표시 버전 | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | OQ 평가 문서 표시 버전 (예: v1.0, v1.1) | `v1.0` |
-| 337 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | OQ 평가 문서 개정 순번 (예: 1, 2, 3...) | `1` |
-| 338 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | OQ 평가 문서 신규 생성 및 개정 사유 | `최초 작성` |
-| 339 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 OQ 평가 문서 버전 여부 (TRUE/FALSE) | `True` |
-| 340 | 프로토콜 상태 | `protocol_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | OQ 프로토콜 상태. DRAFT, REVIEW, APPROVED | `APPROVED` |
-| 341 | 레코드 상태 | `record_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | OQ 수행 레코드 상태. 프로토콜 APPROVED 이후 DRAFT, REVIEW, APPROVED 순으로 진행 | `DRAFT` |
-| 342 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 343 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | OQ 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 344 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 345 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | OQ 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 346 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 332 | OQ ID | `oq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | OQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 333 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | Related validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 334 | OQ Number | `oq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | OQ document number (e.g., OQ-VP-SYS-010-20260529) | `OQ-VP-SYS-010-20260529` |
+| 335 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the operational qualification assessment document | `Operational Qualification` |
+| 336 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the OQ assessment document (e.g., v1.0, v1.1) | `v1.0` |
+| 337 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the OQ assessment document (e.g., 1, 2, 3...) | `1` |
+| 338 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating or revising the OQ assessment document | `Initial creation` |
+| 339 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest OQ assessment document version (TRUE/FALSE) | `True` |
+| 340 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | OQ protocol status: DRAFT, REVIEW, APPROVED | `APPROVED` |
+| 341 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | OQ execution record status. After the protocol is APPROVED, progresses through DRAFT, REVIEW, and APPROVED. | `DRAFT` |
+| 342 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 343 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the OQ author | `00000000-0000-0000-0000-000000000001` |
+| 344 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 345 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the OQ modifier | `00000000-0000-0000-0000-000000000001` |
+| 346 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-oq_item"></a>
-### 25. OQ 상세 테스트 항목 (`oq_item`)
+### 25. OQ Detailed Test Item (`oq_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | OQ 테스트 절차, 결과, 증적 및 수행자 관리 |
+| Description | Manages OQ test procedures, results, evidence, and executors |
 | Primary Key | `oq_item_id` |
-| 주요 참조(FK) | `oq_id, executed_by, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `oq_id, executed_by, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 347 | OQ 항목 ID | `oq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | OQ 세부 테스트 항목 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 348 | OQ ID | `oq_id` | `uuid` | N | Y | `oq_assessment.oq_id` | Y | - | N | N | N | Y | 상위 OQ 문서 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 349 | 절차 번호 | `step_no` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | 테스트 수행 절차 번호 (예: 01, 02, 03) | `1` |
-| 350 | 테스트 ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | 테스트 항목 ID (예: OQ-AT-L01) | `OQ-AT-L01` |
-| 351 | 테스트 케이스 | `test_case` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Audit Trail, 사용자 관리, 백업 및 복구 등 | `Audit Trail` |
-| 352 | URS 연계 | `urs_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | 매핑 URS 번호 (예: URS-001) | `URS-001` |
-| 353 | 테스트 내용 | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | 테스트 검증 수행 상세 절차 | `사용자 데이터 변경 시 감사추적 자동 생성` |
-| 354 | 기대 결과 | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | 테스트 성공 기준 및 기대 결과 | `변경 전/후 값, 사용자, 날짜/시간, IP 기록` |
-| 355 | 프로토콜 상태 | `protocol_status` | `varchar(20)` | N | N | - | Y | `승인완료` | N | N | N | Y | 항목별 프로토콜 승인 상태 | `승인완료` |
-| 356 | 실제 결과 | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | 테스트 수행 후 실제 결과 기록 | `실제 결과 Test` |
-| 357 | 판정 | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | 최종 테스트 판정 (Pass, Fail, 미실행) | `Pass` |
-| 358 | 수행자 ID | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | N | N | Y | 테스트 수행자 식별자 (FK) | `00000000-0000-0000-0000-000000000001` |
-| 359 | 수행일 | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 테스트 수행 완료 일시 | `2026-06-22T00:00:00` |
-| 360 | 레코드 상태 | `record_status` | `varchar(20)` | N | N | - | Y | `작성중` | N | N | N | Y | 항목별 레코드 승인 상태 | `승인완료` |
-| 361 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 362 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 363 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 364 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 365 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 347 | OQ Item ID | `oq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | Detailed OQ test item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 348 | OQ ID | `oq_id` | `uuid` | N | Y | `oq_assessment.oq_id` | Y | - | N | N | N | Y | Parent OQ document identifier | `00000000-0000-0000-0000-000000000001` |
+| 349 | Procedure Number | `step_no` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Test execution procedure number (e.g., 01, 02, 03) | `1` |
+| 350 | Test ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Test item ID (e.g., OQ-AT-L01) | `OQ-AT-L01` |
+| 351 | Test Case | `test_case` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Audit Trail, user management, backup and recovery, etc. | `Audit Trail` |
+| 352 | URS Link | `urs_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Mapped URS number (e.g., URS-001) | `URS-001` |
+| 353 | Test Details | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed procedure for executing the verification test | `Automatically generate an audit trail when user data changes` |
+| 354 | Expected Result | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | Test success criteria and expected results | `Record before/after values, user, date/time, and IP address` |
+| 355 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `Approved` | N | N | N | Y | Protocol approval status for each item | `Approved` |
+| 356 | Actual Result | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | Record of actual results after test execution | `Actual result Test` |
+| 357 | Outcome | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Final test outcome (Pass, Fail, Not Executed) | `Pass` |
+| 358 | Actor ID | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | N | N | Y | Test executor identifier (FK) | `00000000-0000-0000-0000-000000000001` |
+| 359 | Executed At | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Date and time when test execution was completed | `2026-06-22T00:00:00` |
+| 360 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | Record approval status for each item | `Approved` |
+| 361 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 362 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item author | `00000000-0000-0000-0000-000000000001` |
+| 363 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 364 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
+| 365 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## PQ
 
 <a id="table-pq_assessment"></a>
-### 26. 성능 적격성 평가 (`pq_assessment`)
+### 26. Performance Qualification Assessment (`pq_assessment`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 성능 적격성 평가 문서 헤더 및 수행계획 관리 |
+| Description | Manages performance qualification assessment document headers and execution plans for each project |
 | Primary Key | `pq_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 366 | PQ ID | `pq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | PQ 평가 문서 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 367 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | 연관 Validation 프로젝트 ID | `00000000-0000-0000-0000-000000000001` |
-| 368 | PQ 번호 | `pq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | PQ 문서 번호 (예: PQ-VP-SYS-008-20260422) | `PQ-VP-SYS-008-20260422` |
-| 369 | 문서명 | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | 성능 적격성 평가 문서 제목 | `Performance Qualification` |
-| 370 | PQ 시작 예정일 | `start_scheduled_date` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | PQ 시작 예정 기준 (예: OQ 완료 + 5영업일) | `OQ 완료 + 5영업일` |
-| 371 | PQ 완료 목표일 | `target_completion_date` | `date` | N | N | - | N | - | N | N | N | Y | PQ 완료 목표 일자 | `2024-04-15T00:00:00` |
-| 372 | 수행 방식 | `execution_method` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | PQ 수행 방식 (예: 실제 생산 데이터 3배치 이상) | `실제 생산 데이터 3배치 이상` |
-| 373 | 주요 수행자 | `primary_executor` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 주요 수행 담당 팀/부서 (예: 프로세스 오너 (생산팀)) | `프로세스 오너 (생산팀)` |
-| 374 | 문서 표시 버전 | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | PQ 평가 문서 표시 버전 (예: v1.0, v1.1) | `v1.0` |
-| 375 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | PQ 평가 문서 개정 순번 (예: 1, 2, 3...) | `1` |
-| 376 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | PQ 평가 문서 신규 생성 및 개정 사유 | `최초 작성` |
-| 377 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 PQ 평가 문서 버전 여부 (TRUE/FALSE) | `True` |
-| 378 | 문서 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성중` | N | N | N | Y | PQ 평가 전체 진행 상태 (수행 대기 중, 진행 중, 완료) | `PQ 수행 대기 중` |
-| 379 | 프로토콜 상태 | `protocol_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | PQ 프로토콜 상태. DRAFT, REVIEW, APPROVED | `APPROVED` |
-| 380 | 레코드 상태 | `record_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | PQ 수행 레코드 상태. 프로토콜 APPROVED 이후 DRAFT, REVIEW, APPROVED 순으로 진행 | `DRAFT` |
-| 381 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 382 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | PQ 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 383 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 384 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | PQ 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 385 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 366 | PQ ID | `pq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | PQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 367 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | Related validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 368 | PQ Number | `pq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | PQ document number (e.g., PQ-VP-SYS-008-20260422) | `PQ-VP-SYS-008-20260422` |
+| 369 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the performance qualification assessment document | `Performance Qualification` |
+| 370 | Planned PQ Start Date | `start_scheduled_date` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Basis for the planned PQ start date (e.g., OQ completion + 5 business days) | `OQ completion + 5 business days` |
+| 371 | Target PQ Completion Date | `target_completion_date` | `date` | N | N | - | N | - | N | N | N | Y | Target date for PQ completion | `2024-04-15T00:00:00` |
+| 372 | Execution Method | `execution_method` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | PQ execution method (e.g., actual production data from at least 3 batches) | `Actual production data from at least 3 batches` |
+| 373 | Primary Executor | `primary_executor` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Team/department primarily responsible for execution (e.g., Process Owner (Production Team)) | `Process Owner (Production Team)` |
+| 374 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the PQ assessment document (e.g., v1.0, v1.1) | `v1.0` |
+| 375 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the PQ assessment document (e.g., 1, 2, 3...) | `1` |
+| 376 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating or revising the PQ assessment document | `Initial creation` |
+| 377 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest PQ assessment document version (TRUE/FALSE) | `True` |
+| 378 | Document Status | `status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | Overall PQ assessment progress status (Awaiting Execution, In Progress, Completed) | `Awaiting PQ Execution` |
+| 379 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | PQ protocol status: DRAFT, REVIEW, APPROVED | `APPROVED` |
+| 380 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | PQ execution record status. After the protocol is APPROVED, progresses through DRAFT, REVIEW, APPROVED. | `DRAFT` |
+| 381 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 382 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the PQ author | `00000000-0000-0000-0000-000000000001` |
+| 383 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 384 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the PQ modifier | `00000000-0000-0000-0000-000000000001` |
+| 385 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-pq_item"></a>
-### 27. PQ 상세 테스트 항목 (`pq_item`)
+### 27. PQ Detailed Test Item (`pq_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | PQ 테스트 절차, 결과, 증적 및 수행자 관리 |
+| Description | Manages PQ test procedures, results, evidence, and executors |
 | Primary Key | `pq_item_id` |
-| 주요 참조(FK) | `pq_id, executed_by, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `pq_id, executed_by, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 386 | PQ 항목 ID | `pq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | PQ 세부 테스트 항목 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 387 | PQ ID | `pq_id` | `uuid` | N | Y | `pq_assessment.pq_id` | Y | - | N | N | N | Y | 상위 PQ 문서 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 388 | 절차 번호 | `step_no` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | 테스트 수행 절차 번호 (예: 01, 02) | `1` |
-| 389 | 카테고리 | `category` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | PQ 평가 카테고리 (예: 연속 배치 검증, 데이터 완전성 등) | `연속 배치 검증` |
-| 390 | 테스트 내용 | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | PQ 테스트 검증 수행 상세 절차 | `연속 3배치 이상 생산 공정 정상 완료 검증` |
-| 391 | 기대 결과 | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | 테스트 성공 기준 및 기대 결과 | `모든 배치가 사양에 맞게 정상 생산 완료되어야 함` |
-| 392 | 실제 결과 | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | 테스트 수행 후 실제 결과 기록 | `연속 3배치 정상 완료 확인` |
-| 393 | 판정 | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | 최종 테스트 판정 (Pass, Fail, 미실행) | `Pass` |
-| 394 | 수행자 ID | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | N | N | Y | 테스트 수행자 식별자 (FK) | `00000000-0000-0000-0000-000000000001` |
-| 395 | 수행일 | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 테스트 수행 완료 일시 | `2026-08-26T00:00:00` |
-| 396 | 진행 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성중` | N | N | N | Y | 항목별 진행 상태 (작성중, 승인완료) | `작성중` |
-| 397 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 398 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 399 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 400 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 401 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 386 | PQ Item ID | `pq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | Detailed PQ test item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 387 | PQ ID | `pq_id` | `uuid` | N | Y | `pq_assessment.pq_id` | Y | - | N | N | N | Y | Parent PQ document identifier | `00000000-0000-0000-0000-000000000001` |
+| 388 | Procedure Number | `step_no` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Test execution procedure number (e.g., 01, 02) | `1` |
+| 389 | Category | `category` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | PQ assessment category (e.g., consecutive batch verification, data integrity, etc.) | `Consecutive Batch Verification` |
+| 390 | Test Details | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed procedure for executing the PQ verification test | `Verify successful completion of the production process for at least 3 consecutive batches` |
+| 391 | Expected Result | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | Test success criteria and expected results | `All batches must complete production successfully in accordance with specifications` |
+| 392 | Actual Result | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | Record of actual results after test execution | `Confirmed successful completion of 3 consecutive batches` |
+| 393 | Outcome | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Final test outcome (Pass, Fail, Not Executed) | `Pass` |
+| 394 | Actor ID | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | N | N | Y | Test executor identifier (FK) | `00000000-0000-0000-0000-000000000001` |
+| 395 | Executed At | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Date and time when test execution was completed | `2026-08-26T00:00:00` |
+| 396 | Progress Status | `status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | Progress status for each item (Draft, Approved) | `Draft` |
+| 397 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 398 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item author | `00000000-0000-0000-0000-000000000001` |
+| 399 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 400 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
+| 401 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## RTM
 
 <a id="table-rtm_assessment"></a>
-### 28. 요구사항 추적 매트릭스 (`rtm_assessment`)
+### 28. Requirements Traceability Matrix (`rtm_assessment`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 요구사항 추적성과 산출물 커버리지 집계 및 승인 시점의 RTM 스냅샷 관리 |
+| Description | Manages project-level requirements traceability, aggregated deliverable coverage, and RTM snapshots at the time of approval |
 | Primary Key | `rtm_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 402 | RTM ID | `rtm_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | RTM 평가 문서 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 403 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | 연관 Validation 프로젝트 ID | `00000000-0000-0000-0000-000000000001` |
-| 404 | RTM 번호 | `rtm_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | RTM 문서 번호 (예: RTM-VP-SYS-008-20260422) | `RTM-VP-SYS-008-20260422` |
-| 405 | 문서명 | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | 요구사항 추적 매트릭스 문서 제목 | `요구사항 추적 매트릭스 (자동 생성)` |
-| 406 | URS 전체 건수 | `total_urs_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 프로젝트 전체 URS 요구사항 건수 | `8` |
-| 407 | FRA 연계율 | `fra_link_rate` | `numeric(5,2)` | N | N | - | N | `0` | N | N | N | Y | FRA 리스크 평가 연계율 (%) | `88` |
-| 408 | IQ 커버리지 | `iq_coverage_rate` | `numeric(5,2)` | N | N | - | N | `0` | N | N | N | Y | IQ 테스트 커버리지 (%) | `0` |
-| 409 | OQ 커버리지 | `oq_coverage_rate` | `numeric(5,2)` | N | N | - | N | `0` | N | N | N | Y | OQ 테스트 커버리지 (%) | `44` |
-| 410 | 전체 평균 커버리지 | `avg_coverage_rate` | `numeric(5,2)` | N | N | - | N | `0` | N | N | N | Y | 전체 산출물 통합 평균 커버리지 (%) | `44` |
-| 411 | 문서 표시 버전 | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | RTM 평가 문서 표시 버전 (예: v1.0, v1.1) | `v1.0` |
-| 412 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | RTM 평가 문서 개정 순번 (예: 1, 2, 3...) | `1` |
-| 413 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | RTM 평가 문서 신규 생성 및 개정 사유 | `최초 작성` |
-| 414 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 RTM 평가 문서 버전 여부 (TRUE/FALSE) | `True` |
-| 415 | 문서 상태 | `status` | `varchar(20)` | N | N | - | Y | `작성중` | N | N | N | Y | RTM 진행 상태 (작성중, 승인완료) | `작성중` |
-| 416 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 417 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | RTM 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 418 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 419 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | RTM 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 420 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 402 | RTM ID | `rtm_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | RTM assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 403 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | Related validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 404 | RTM Number | `rtm_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | RTM document number (e.g., RTM-VP-SYS-008-20260422) | `RTM-VP-SYS-008-20260422` |
+| 405 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the requirements traceability matrix document | `Requirements Traceability Matrix (Automatically Generated)` |
+| 406 | Total URS Count | `total_urs_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Total number of URS requirements in the project | `8` |
+| 407 | FRA Linkage Rate | `fra_link_rate` | `numeric(5,2)` | N | N | - | N | `0` | N | N | N | Y | FRA risk assessment linkage rate (%) | `88` |
+| 408 | IQ Coverage | `iq_coverage_rate` | `numeric(5,2)` | N | N | - | N | `0` | N | N | N | Y | IQ test coverage (%) | `0` |
+| 409 | OQ Coverage | `oq_coverage_rate` | `numeric(5,2)` | N | N | - | N | `0` | N | N | N | Y | OQ test coverage (%) | `44` |
+| 410 | Overall Average Coverage | `avg_coverage_rate` | `numeric(5,2)` | N | N | - | N | `0` | N | N | N | Y | Integrated average coverage across all deliverables (%) | `44` |
+| 411 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the RTM assessment document (e.g., v1.0, v1.1) | `v1.0` |
+| 412 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the RTM assessment document (e.g., 1, 2, 3...) | `1` |
+| 413 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating or revising the RTM assessment document | `Initial creation` |
+| 414 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest RTM assessment document version (TRUE/FALSE) | `True` |
+| 415 | Document Status | `status` | `varchar(20)` | N | N | - | Y | `Draft` | N | N | N | Y | RTM progress status (Draft, Approved) | `Draft` |
+| 416 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 417 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the RTM author | `00000000-0000-0000-0000-000000000001` |
+| 418 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 419 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the RTM modifier | `00000000-0000-0000-0000-000000000001` |
+| 420 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-rtm_item"></a>
-### 29. RTM 상세 추적 항목 (`rtm_item`)
+### 29. RTM Detailed Traceability Item (`rtm_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | traceability_link를 기준으로 생성된 URS별 FRA, FDS, DDS, IQ, OQ, PQ 추적 결과 및 승인 시점의 상세 스냅샷 관리 |
+| Description | Manages FRA, FDS, DDS, IQ, OQ, and PQ traceability results for each URS requirement generated from traceability_link, and detailed snapshots at the time of approval |
 | Primary Key | `rtm_item_id` |
-| 주요 참조(FK) | `rtm_id, requirement_id, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `rtm_id, requirement_id, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 421 | RTM 항목 ID | `rtm_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | RTM 매트릭스 항목 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 422 | RTM ID | `rtm_id` | `uuid` | N | Y | `rtm_assessment.rtm_id` | Y | - | N | N | N | Y | 상위 RTM 문서 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 423 | URS 항목 ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | N | N | Y | 매핑 URS 요구사항 식별자 (FK) | `00000000-0000-0000-0000-000000000001` |
-| 424 | URS 번호 | `urs_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | 화면 표시용 URS 번호 (예: URS-001) | `URS-001` |
-| 425 | 항목/기능 | `feature_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | URS 요구사항 기능명 | `전자서명 서명자·일시·의미 기록` |
-| 426 | 요구사항 내용 | `requirement_desc` | `text` | N | N | - | Y | - | N | N | N | Y | URS 세부 요구사항 내용 | `전자서명 시 서명자 ID, 서명 일시가 기록되어야 한다.` |
-| 427 | 채택 여부 | `adoption_status` | `varchar(10)` | N | N | - | Y | `O` | N | N | N | Y | URS 채택 여부 (O, X) | `O` |
-| 428 | FRA 매핑 | `fra_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연계 FRA 번호 (예: FRA-001, N/A) | `N/A` |
-| 429 | FDS 매핑 | `fds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연계 FDS 번호 (예: FDS-001, 매핑 실패) | `매핑 실패` |
-| 430 | DDS 매핑 | `dds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연계 DDS 번호 (예: DDS-001, 매핑 실패) | `매핑 실패` |
-| 431 | IQ 결과 | `iq_result` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연계 IQ 테스트 항목 번호 (예: IQ-NEW-07) | `IQ-NEW-07` |
-| 432 | OQ 결과 | `oq_result` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연계 OQ 테스트 항목 번호 (예: OQ-AT-L01, 매핑 실패) | `매핑 실패` |
-| 433 | PQ 결과 | `pq_result` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 연계 PQ 테스트 항목 번호 (예: PQ-01, N/A) | `N/A` |
-| 434 | 항목 커버리지 | `item_coverage_rate` | `numeric(5,2)` | N | N | - | Y | `0` | N | N | N | Y | 해당 URS 항목의 산출물 커버리지 비율 (%) | `50` |
-| 435 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 436 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 437 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 438 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 439 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 421 | RTM Item ID | `rtm_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | RTM matrix item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 422 | RTM ID | `rtm_id` | `uuid` | N | Y | `rtm_assessment.rtm_id` | Y | - | N | N | N | Y | Parent RTM document identifier | `00000000-0000-0000-0000-000000000001` |
+| 423 | URS Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | N | N | Y | Identifier of the mapped URS requirement (FK) | `00000000-0000-0000-0000-000000000001` |
+| 424 | URS Number | `urs_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | URS number for display in the UI (e.g., URS-001) | `URS-001` |
+| 425 | Item/Function | `feature_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | URS requirement function name | `Record electronic signature signer, date/time, and meaning` |
+| 426 | Requirement Content | `requirement_desc` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed URS requirement content | `The signer ID and signing date/time must be recorded when an electronic signature is executed.` |
+| 427 | Is Adopted | `adoption_status` | `varchar(10)` | N | N | - | Y | `O` | N | N | N | Y | Whether the URS requirement is adopted (O, X) | `O` |
+| 428 | FRA Mapping | `fra_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Linked FRA number (e.g., FRA-001, N/A) | `N/A` |
+| 429 | FDS Mapping | `fds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Linked FDS number (e.g., FDS-001, Mapping Failed) | `Mapping Failed` |
+| 430 | DDS Mapping | `dds_mapping` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Linked DDS number (e.g., DDS-001, Mapping Failed) | `Mapping Failed` |
+| 431 | IQ Result | `iq_result` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Linked IQ test item number (e.g., IQ-NEW-07) | `IQ-NEW-07` |
+| 432 | OQ Result | `oq_result` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Linked OQ test item number (e.g., OQ-AT-L01, Mapping Failed) | `Mapping Failed` |
+| 433 | PQ Result | `pq_result` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Linked PQ test item number (e.g., PQ-01, N/A) | `N/A` |
+| 434 | Item Coverage | `item_coverage_rate` | `numeric(5,2)` | N | N | - | Y | `0` | N | N | N | Y | Deliverable coverage percentage for the URS item (%) | `50` |
+| 435 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 436 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item author | `00000000-0000-0000-0000-000000000001` |
+| 437 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 438 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
+| 439 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## VSR
 
 <a id="table-vsr_assessment"></a>
-### 30. 밸리데이션 종합 보고서 (`vsr_assessment`)
+### 30. Validation Summary Report (`vsr_assessment`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 최종 밸리데이션 결론과 종합 보고서 관리 |
+| Description | Manages the final validation conclusion and summary report for each project |
 | Primary Key | `vsr_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 440 | VSR ID | `vsr_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | VSR 평가 문서 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 441 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | 연관 Validation 프로젝트 ID | `00000000-0000-0000-0000-000000000001` |
-| 442 | VSR 번호 | `vsr_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | VSR 문서 번호 (예: VSR-VP-SYS-008-20260422) | `VSR-VP-SYS-008-20260422` |
-| 443 | 문서명 | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | 밸리데이션 종합 보고서 제목 | `Validation Summary Report` |
-| 444 | 밸리데이션 결론 | `overall_conclusion` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | 최종 적합성 결론 (적합, 조건부 적합, 부적합) | `조건부 적합 (Conditionally Acceptable)` |
-| 445 | 결론 상세 설명 | `conclusion_remarks` | `text` | N | N | - | N | - | N | N | N | Y | 결론 사유 및 조건사항 (예: OQ-GMP-02 일탈 해결 완료 후 최종 승인 가능) | `OQ-GMP-02 일탈 해결 완료 후 최종 승인 가능` |
-| 446 | 문서 표시 버전 | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | VSR 평가 문서 표시 버전 (예: v1.0, v1.1) | `v1.0` |
-| 447 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | VSR 평가 문서 개정 순번 (예: 1, 2, 3...) | `1` |
-| 448 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | VSR 평가 문서 신규 생성 및 개정 사유 | `최초 작성` |
-| 449 | 현재 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 활성화된 최신 VSR 평가 문서 버전 여부 (TRUE/FALSE) | `True` |
-| 450 | 문서 상태 | `status` | `varchar(20)` | N | N | - | Y | `검토중` | N | N | N | Y | VSR 진행 상태 (작성중, 검토중, 승인완료) | `검토중` |
-| 451 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 452 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | VSR 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 453 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 454 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | VSR 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 455 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 440 | VSR ID | `vsr_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | VSR assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 441 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | N | N | Y | Related validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 442 | VSR Number | `vsr_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | VSR document number (e.g., VSR-VP-SYS-008-20260422) | `VSR-VP-SYS-008-20260422` |
+| 443 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the validation summary report | `Validation Summary Report` |
+| 444 | Validation Conclusion | `overall_conclusion` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Final acceptability conclusion (Acceptable, Conditionally Acceptable, Unacceptable) | `Conditionally Acceptable (Conditionally Acceptable)` |
+| 445 | Detailed Conclusion | `conclusion_remarks` | `text` | N | N | - | N | - | N | N | N | Y | Reasons and conditions for the conclusion (e.g., final approval possible after resolution of deviation OQ-GMP-02) | `Final approval possible after resolution of deviation OQ-GMP-02` |
+| 446 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the VSR assessment document (e.g., v1.0, v1.1) | `v1.0` |
+| 447 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision sequence number of the VSR assessment document (e.g., 1, 2, 3...) | `1` |
+| 448 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for creating or revising the VSR assessment document | `Initial creation` |
+| 449 | Is Current Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently active latest VSR assessment document version (TRUE/FALSE) | `True` |
+| 450 | Document Status | `status` | `varchar(20)` | N | N | - | Y | `Under Review` | N | N | N | Y | VSR progress status (Draft, Under Review, Approved) | `Under Review` |
+| 451 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 452 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the VSR author | `00000000-0000-0000-0000-000000000001` |
+| 453 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 454 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the VSR modifier | `00000000-0000-0000-0000-000000000001` |
+| 455 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-vsr_item"></a>
-### 31. VSR 활동 요약 항목 (`vsr_item`)
+### 31. VSR Activity Summary Item (`vsr_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 밸리데이션 활동별 문서, 결과, 일탈 및 승인 정보 요약 관리 |
+| Description | Manages summaries of documents, results, deviations, and approval information for each validation activity |
 | Primary Key | `vsr_item_id` |
-| 주요 참조(FK) | `vsr_id, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `vsr_id, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 456 | VSR 항목 ID | `vsr_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | VSR 활동 요약 항목 식별자 (PK) | `00000000-0000-0000-0000-000000000001` |
-| 457 | VSR ID | `vsr_id` | `uuid` | N | Y | `vsr_assessment.vsr_id` | Y | - | N | N | N | Y | 상위 VSR 문서 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 458 | 활동 구분 | `activity_code` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | 밸리데이션 활동 구분 (VP, QIA, VA, URS, FDS, DQ, FRA, IQ, OQ, PQ, RTM) | `URS` |
-| 459 | 문서 번호 | `doc_no` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | 해당 단계 문서 번호 | `VP-SYS-008-20260422 · URS` |
-| 460 | 개정 차수 | `revision_no` | `varchar(20)` | N | N | - | Y | `1` | N | N | N | Y | 문서 개정 차수 (REV) | `2.1` |
-| 461 | 수행일 | `execution_date` | `date` | N | N | - | N | - | N | N | N | Y | 활동 수행 완료일자 | `2024-02-15T00:00:00` |
-| 462 | 성공 건수 | `pass_count` | `integer` | N | N | - | N | - | N | N | N | Y | PASS 테스트/요구사항 건수 | `125` |
-| 463 | 실패 건수 | `fail_count` | `integer` | N | N | - | N | - | N | N | N | Y | FAIL 건수 | `0` |
-| 464 | 일탈 건수 | `deviation_info` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | 일탈 발생 및 해결 수량 (예: 3건(해결2), 1(미결)) | - |
-| 465 | 결론/상태 | `item_status` | `varchar(20)` | N | N | - | Y | `대기` | N | N | N | Y | 해당 문서/활동 결론 (승인완료, 검토중, 대기) | `승인완료` |
-| 466 | 승인자명 | `approver_name` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | 최종 승인자 성명 | `홍길동` |
-| 467 | 승인일 | `approval_date` | `date` | N | N | - | N | - | N | N | N | Y | 최종 승인 일자 | `2024-02-20T00:00:00` |
-| 468 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각 (UTC) | `2026-08-26T00:00:00` |
-| 469 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 작성자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 470 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각 (UTC) | `2026-08-26T00:00:00` |
-| 471 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 항목 수정자 식별자 | `00000000-0000-0000-0000-000000000001` |
-| 472 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 456 | VSR Item ID | `vsr_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | N | N | Y | VSR activity summary item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 457 | VSR ID | `vsr_id` | `uuid` | N | Y | `vsr_assessment.vsr_id` | Y | - | N | N | N | Y | Parent VSR document identifier | `00000000-0000-0000-0000-000000000001` |
+| 458 | Activity Type | `activity_code` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Validation activity type (VP, QIA, VA, URS, FDS, DQ, FRA, IQ, OQ, PQ, RTM) | `URS` |
+| 459 | Document Number | `doc_no` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Document number for the corresponding stage | `VP-SYS-008-20260422 · URS` |
+| 460 | Revision Number | `revision_no` | `varchar(20)` | N | N | - | Y | `1` | N | N | N | Y | Document revision number (REV) | `2.1` |
+| 461 | Executed At | `execution_date` | `date` | N | N | - | N | - | N | N | N | Y | Activity execution completion date | `2024-02-15T00:00:00` |
+| 462 | Pass Count | `pass_count` | `integer` | N | N | - | N | - | N | N | N | Y | Number of PASS tests/requirements | `125` |
+| 463 | Fail Count | `fail_count` | `integer` | N | N | - | N | - | N | N | N | Y | Number of FAIL results | `0` |
+| 464 | Deviation Count | `deviation_info` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Number of deviations raised and resolved (e.g., 3 deviations (2 resolved), 1 (open)) | - |
+| 465 | Conclusion/Status | `item_status` | `varchar(20)` | N | N | - | Y | `Pending` | N | N | N | Y | Conclusion for the document/activity (Approved, Under Review, Pending) | `Approved` |
+| 466 | Approver Name | `approver_name` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Full name of the final approver | `Hong Gil-dong` |
+| 467 | Approval Date | `approval_date` | `date` | N | N | - | N | - | N | N | N | Y | Final approval date | `2024-02-20T00:00:00` |
+| 468 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
+| 469 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item author | `00000000-0000-0000-0000-000000000001` |
+| 470 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
+| 471 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
+| 472 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## Workflow
 
 <a id="table-workflow_instance"></a>
-### 32. Workflow 인스턴스 (`workflow_instance`)
+### 32. Workflow Instance (`workflow_instance`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 문서별 검토·승인 Workflow 진행 정보 관리 |
+| Description | Manages review and approval workflow progress information for each document |
 | Primary Key | `workflow_instance_id` |
-| 주요 참조(FK) | `requested_by, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `requested_by, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 473 | Workflow 인스턴스 ID | `workflow_instance_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 문서별 검토·승인 Workflow 고유 식별자 | `UUID` |
-| 474 | 대상 테이블명 | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Workflow 대상 문서의 물리 테이블명 | `fds_spec` |
-| 475 | 대상 레코드 ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | N | N | Y | Workflow 대상 문서 Revision 행의 PK값 | `UUID` |
-| 476 | 대상 문서 버전 | `target_version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | 검토·승인 대상 문서 Revision의 표시 버전 | `v1.0` |
-| 477 | 상신자 ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | 문서를 검토·승인 절차에 상신한 사용자 | `UUID` |
-| 478 | 상신 시각 | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 문서가 검토·승인 절차에 상신된 시각 | `2026-08-31T15:00:00` |
-| 479 | Workflow 상태 | `workflow_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | N | N | Y | 전체 Workflow 상태. DRAFT, IN_PROGRESS, APPROVED, REJECTED, CANCELLED | `IN_PROGRESS` |
-| 480 | 현재 단계 순서 | `current_step_order` | `integer` | N | N | - | Y | `1` | N | N | N | Y | 현재 처리 중인 검토·승인 단계 순서 | `1` |
-| 481 | 완료 시각 | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 최종 승인·반려 또는 취소로 Workflow가 종료된 시각 | `2026-08-31T17:00:00` |
-| 482 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각(UTC) | `2026-08-31T15:00:00` |
-| 483 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Workflow 레코드 생성자 | `UUID` |
-| 484 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각(UTC) | `2026-08-31T16:00:00` |
-| 485 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Workflow 레코드 최종 수정자 | `UUID` |
-| 486 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 473 | Workflow Instance ID | `workflow_instance_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the document's review and approval workflow | `UUID` |
+| 474 | Target Table Name | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Physical table name of the document subject to the workflow | `fds_spec` |
+| 475 | Target Record ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | N | N | Y | Primary key value of the document revision row subject to the workflow | `UUID` |
+| 476 | Target Document Version | `target_version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the document revision subject to review and approval | `v1.0` |
+| 477 | Submitted By ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | User who submitted the document for review and approval | `UUID` |
+| 478 | Submitted At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time when the document was submitted for review and approval | `2026-08-31T15:00:00` |
+| 479 | Workflow Status | `workflow_status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | N | N | Y | Overall workflow status: DRAFT, IN_PROGRESS, APPROVED, REJECTED, CANCELLED | `IN_PROGRESS` |
+| 480 | Current Step Order | `current_step_order` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Order of the review/approval step currently being processed | `1` |
+| 481 | Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the workflow ended through final approval, rejection, or cancellation | `2026-08-31T17:00:00` |
+| 482 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-31T15:00:00` |
+| 483 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Creator of the workflow record | `UUID` |
+| 484 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-31T16:00:00` |
+| 485 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | User who last modified the workflow record | `UUID` |
+| 486 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-workflow_step"></a>
-### 33. Workflow 단계 (`workflow_step`)
+### 33. Workflow Step (`workflow_step`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | Workflow 내 단계별 처리 상태 및 담당자 관리 |
+| Description | Manages processing statuses and assignees for individual workflow steps |
 | Primary Key | `workflow_step_id` |
-| 주요 참조(FK) | `workflow_instance_id, assignee_id, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `workflow_instance_id, assignee_id, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 487 | Workflow 단계 ID | `workflow_step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Workflow 검토·승인 단계 고유 식별자. 활성 데이터는 (workflow_instance_id, step_order) 조합의 중복 등록을 허용하지 않음 | `UUID` |
-| 488 | Workflow 인스턴스 ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | Y | - | N | Y | N | Y | 단계가 소속된 Workflow 식별자 | `UUID` |
-| 489 | 단계 순서 | `step_order` | `integer` | N | N | - | Y | - | N | Y | N | Y | 동일 Workflow 내 검토·승인 처리 순서 | `1` |
-| 490 | 단계 유형 | `step_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | 처리 단계 유형. REVIEW 또는 APPROVE | `REVIEW` |
-| 491 | 단계명 | `step_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | 화면에 표시할 검토·승인 단계명 | `품질 검토` |
-| 492 | 담당자 ID | `assignee_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 해당 단계를 처리하도록 지정된 사용자 | `UUID` |
-| 493 | 단계 상태 | `step_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | 단계 상태. PENDING, IN_PROGRESS, APPROVED, REJECTED, SKIPPED | `PENDING` |
-| 494 | 처리 기한 | `due_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 해당 단계의 검토·승인 처리 예정 기한 | `2026-09-02T18:00:00` |
-| 495 | 처리 완료 시각 | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 해당 단계가 승인·반려 등으로 완료된 시각 | `2026-09-01T10:00:00` |
-| 496 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각(UTC) | `2026-08-31T15:00:00` |
-| 497 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Workflow 단계 생성자 | `UUID` |
-| 498 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 최종 수정 시각(UTC) | `2026-08-31T16:00:00` |
-| 499 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Workflow 단계 최종 수정자 | `UUID` |
-| 500 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 소프트 삭제 시각 | - |
+| 487 | Workflow Step ID | `workflow_step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique workflow review/approval step identifier. Duplicate (workflow_instance_id, step_order) combinations are not allowed in active data. | `UUID` |
+| 488 | Workflow Instance ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | Y | - | N | Y | N | Y | Identifier of the workflow to which the step belongs | `UUID` |
+| 489 | Step Order | `step_order` | `integer` | N | N | - | Y | - | N | Y | N | Y | Review/approval processing order within the same workflow | `1` |
+| 490 | Step Type | `step_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Processing step type: REVIEW or APPROVE | `REVIEW` |
+| 491 | Step Name | `step_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Review/approval step name displayed in the UI | `Quality Review` |
+| 492 | Assignee ID | `assignee_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User assigned to process this step | `UUID` |
+| 493 | Step Status | `step_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | Step status: PENDING, IN_PROGRESS, APPROVED, REJECTED, SKIPPED | `PENDING` |
+| 494 | Due Date | `due_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Scheduled deadline for reviewing/approving this step | `2026-09-02T18:00:00` |
+| 495 | Action Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the step was completed through approval, rejection, or another outcome | `2026-09-01T10:00:00` |
+| 496 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-31T15:00:00` |
+| 497 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Creator of the workflow step | `UUID` |
+| 498 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-31T16:00:00` |
+| 499 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | User who last modified the workflow step | `UUID` |
+| 500 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-approval_action"></a>
-### 34. 승인 처리 이력 (`approval_action`)
+### 34. Approval Action History (`approval_action`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 검토·승인·반려 등 단계별 실제 처리 이력 관리 |
+| Description | Manages the history of actual actions at each step, such as review, approval, and rejection |
 | Primary Key | `approval_action_id` |
-| 주요 참조(FK) | `workflow_step_id, actor_id, signature_id` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `workflow_step_id, actor_id, signature_id` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 501 | 승인 처리 이력 ID | `approval_action_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 검토·승인 처리 이력 고유 식별자 | `UUID` |
-| 502 | Workflow 단계 ID | `workflow_step_id` | `uuid` | N | Y | `workflow_step.workflow_step_id` | Y | - | N | Y | N | Y | 처리 이력이 발생한 Workflow 단계 | `UUID` |
-| 503 | 처리 유형 | `action_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | 수행한 처리 유형. SUBMIT, REVIEW, APPROVE, REJECT, CANCEL | `APPROVE` |
-| 504 | 처리자 ID | `actor_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 실제 검토·승인·반려 처리를 수행한 사용자 | `UUID` |
-| 505 | 처리 의견 | `action_comment` | `text` | N | N | - | N | - | N | N | N | Y | 검토·승인 처리 시 입력한 의견 | `검토 결과 이상 없음` |
-| 506 | 반려 사유 | `rejection_reason` | `text` | N | N | - | N | - | N | N | N | Y | REJECT 처리 시 입력하는 반려 사유 | `증적 파일 보완 필요` |
-| 507 | 전자서명 ID | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | 승인·반려 처리와 연결된 전자서명 기록 | `UUID` |
-| 508 | 처리 시각 | `acted_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | 상신·검토·승인·반려가 실제 처리된 시각 | `2026-09-01T10:00:00` |
-| 509 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 레코드 생성 시각(UTC) | `2026-09-01T10:00:00` |
+| 501 | Approval Action History ID | `approval_action_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique review/approval action history identifier | `UUID` |
+| 502 | Workflow Step ID | `workflow_step_id` | `uuid` | N | Y | `workflow_step.workflow_step_id` | Y | - | N | Y | N | Y | Workflow step where the action occurred | `UUID` |
+| 503 | Action Type | `action_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | Type of action performed: SUBMIT, REVIEW, APPROVE, REJECT, CANCEL | `APPROVE` |
+| 504 | Actor ID | `actor_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who actually performed the review, approval, or rejection | `UUID` |
+| 505 | Action Comments | `action_comment` | `text` | N | N | - | N | - | N | N | N | Y | Comments entered during review/approval | `No issues found during review` |
+| 506 | Reason for Rejection | `rejection_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason entered when performing a REJECT action | `Additional evidence files required` |
+| 507 | Electronic Signature ID | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature record linked to the approval/rejection action | `UUID` |
+| 508 | Action Timestamp | `acted_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when submission, review, approval, or rejection was actually performed | `2026-09-01T10:00:00` |
+| 509 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-09-01T10:00:00` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## Traceability
 
 <a id="table-traceability_link"></a>
-### 35. 공통 추적 관계 (`traceability_link`)
+### 35. Common Traceability Link (`traceability_link`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | URS, FDS, DQ, FRA, IQ, OQ, PQ 항목 간 추적 관계 관리 |
+| Description | Manages traceability relationships among URS, FDS, DQ, FRA, IQ, OQ, and PQ items |
 | Primary Key | `traceability_link_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 510 | 추적 관계 ID | `traceability_link_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 산출물 항목 간 추적 관계 고유 식별자. 활성 데이터는 (project_id, source_entity_type, source_entity_id, target_entity_type, target_entity_id, link_type) 조합의 중복 등록을 허용하지 않음 | `UUID` |
-| 511 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | 추적 관계가 속한 프로젝트 ID | `UUID` |
-| 512 | 출발 엔터티 유형 | `source_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 출발 대상 유형. REQUIREMENT, FDS_ITEM, DDS_ITEM, DQ_ITEM, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM | `REQUIREMENT` |
-| 513 | 출발 엔터티 ID | `source_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | source_entity_type에 해당하는 테이블의 PK값. 다형 참조이므로 물리 FK는 설정하지 않음 | `UUID` |
-| 514 | 연결 엔터티 유형 | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 연결 대상 유형. REQUIREMENT, FDS_ITEM, DDS_ITEM, DQ_ITEM, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM | `IQ_ITEM` |
-| 515 | 연결 엔터티 ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | target_entity_type에 해당하는 테이블의 PK값. 다형 참조이므로 물리 FK는 설정하지 않음 | `UUID` |
-| 516 | 관계 유형 | `link_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | IMPLEMENTED_BY, ASSESSED_BY, VERIFIED_BY, MITIGATED_BY | `VERIFIED_BY` |
-| 517 | 연결 근거 | `link_reason` | `text` | N | N | - | N | - | N | N | N | Y | 두 산출물 항목을 연결한 업무적 근거 | `URS 요구사항을 IQ 시험으로 검증` |
-| 518 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 추적 관계 생성 시각(UTC) | `2026-09-01T10:00:00` |
-| 519 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 추적 관계를 생성한 사용자 ID | `UUID` |
-| 520 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 추적 관계 최종 수정 시각(UTC) | `2026-09-01T10:00:00` |
-| 521 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 추적 관계를 최종 수정한 사용자 ID | `UUID` |
-| 522 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 추적 관계 소프트 삭제 시각 | - |
+| 510 | Traceability Link ID | `traceability_link_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of a traceability relationship between deliverable items. Duplicate (project_id, source_entity_type, source_entity_id, target_entity_type, target_entity_id, link_type) combinations are not allowed in active data. | `UUID` |
+| 511 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | ID of the project to which the traceability relationship belongs | `UUID` |
+| 512 | Source Entity Type | `source_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Source entity type: REQUIREMENT, FDS_ITEM, DDS_ITEM, DQ_ITEM, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM | `REQUIREMENT` |
+| 513 | Source Entity ID | `source_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | Primary key value of the table corresponding to source_entity_type. No physical FK is defined because this is a polymorphic reference. | `UUID` |
+| 514 | Linked Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Linked entity type: REQUIREMENT, FDS_ITEM, DDS_ITEM, DQ_ITEM, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM | `IQ_ITEM` |
+| 515 | Linked Entity ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | Primary key value of the table corresponding to target_entity_type. No physical FK is defined because this is a polymorphic reference. | `UUID` |
+| 516 | Link Type | `link_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | IMPLEMENTED_BY, ASSESSED_BY, VERIFIED_BY, MITIGATED_BY | `VERIFIED_BY` |
+| 517 | Link Rationale | `link_reason` | `text` | N | N | - | N | - | N | N | N | Y | Business rationale for linking the two deliverable items | `Verify the URS requirement through an IQ test` |
+| 518 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Traceability link creation timestamp (UTC) | `2026-09-01T10:00:00` |
+| 519 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who created the traceability link | `UUID` |
+| 520 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Traceability link last modification timestamp (UTC) | `2026-09-01T10:00:00` |
+| 521 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last modified the traceability link | `UUID` |
+| 522 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Traceability link soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## DDS
 
 <a id="table-dds_spec"></a>
-### 41. 상세 설계 명세서 (`dds_spec`)
+### 41. Detailed Design Specification (`dds_spec`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 프로젝트별 DDS 문서 헤더, 버전 및 승인 상태 관리 |
+| Description | Manages DDS document headers, versions, and approval statuses for each project |
 | Primary Key | `dds_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 587 | DDS ID | `dds_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | DDS 문서 고유 식별자 | `UUID` |
-| 588 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | DDS가 속한 Validation 프로젝트 | `UUID` |
-| 589 | DDS 번호 | `dds_no` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | DDS 문서 번호 | `DDS-VP-SYS-001` |
-| 590 | 문서명 | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | 상세 설계 명세서 제목 | `Detailed Design Specification` |
-| 591 | 문서 버전 | `version` | `varchar(20)` | N | N | - | Y | `v1.0` | N | N | N | Y | DDS 문서 표시 버전 | `v1.0` |
-| 592 | 개정 순번 | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | DDS 개정 순번 | `1` |
-| 593 | 개정 사유 | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | DDS 신규 작성 또는 개정 사유 | `최초 작성` |
-| 594 | 최신 버전 여부 | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 현재 유효한 최신 DDS 버전 여부 | `True` |
-| 595 | 문서 상태 | `status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | DDS 문서 상태. DRAFT, REVIEW, APPROVED, REJECTED | `APPROVED` |
-| 596 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS 생성 시각(UTC) | `2026-09-01T10:00:00` |
-| 597 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | DDS 작성 사용자 | `UUID` |
-| 598 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS 최종 수정 시각(UTC) | `2026-09-01T10:00:00` |
-| 599 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | DDS 최종 수정 사용자 | `UUID` |
-| 600 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | DDS 소프트 삭제 시각 | - |
+| 587 | DDS ID | `dds_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique DDS document identifier | `UUID` |
+| 588 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Validation project to which the DDS belongs | `UUID` |
+| 589 | DDS Number | `dds_no` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | DDS document number | `DDS-VP-SYS-001` |
+| 590 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the detailed design specification | `Detailed Design Specification` |
+| 591 | Document Version | `version` | `varchar(20)` | N | N | - | Y | `v1.0` | N | N | N | Y | DDS document display version | `v1.0` |
+| 592 | Revision Sequence Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | DDS revision sequence number | `1` |
+| 593 | Reason for Revision | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for initial creation or revision of the DDS | `Initial creation` |
+| 594 | Is Latest Version | `is_current_version` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether this is the currently valid latest DDS version | `True` |
+| 595 | Document Status | `status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | DDS document status: DRAFT, REVIEW, APPROVED, REJECTED | `APPROVED` |
+| 596 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS creation timestamp (UTC) | `2026-09-01T10:00:00` |
+| 597 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who authored the DDS | `UUID` |
+| 598 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS last modification timestamp (UTC) | `2026-09-01T10:00:00` |
+| 599 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the DDS | `UUID` |
+| 600 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | DDS soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-dds_item"></a>
-### 42. DDS 상세 항목 (`dds_item`)
+### 42. DDS Detailed Item (`dds_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | DDS의 데이터베이스, 인터페이스 및 컴포넌트 상세 설계 항목 관리 |
+| Description | Manages detailed database, interface, and component design items in DDS documents |
 | Primary Key | `dds_item_id` |
-| 주요 참조(FK) | `dds_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `dds_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 601 | DDS 항목 ID | `dds_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | DDS 상세 항목 고유 식별자 | `UUID` |
-| 602 | DDS ID | `dds_id` | `uuid` | N | Y | `dds_spec.dds_id` | Y | - | N | Y | N | Y | 상위 DDS 문서 식별자 | `UUID` |
-| 603 | DDS 항목 번호 | `item_no` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | DDS 상세 항목 관리 번호 | `DDS-001` |
-| 604 | 설계 유형 | `design_type` | `varchar(30)` | N | N | - | Y | `COMPONENT` | N | Y | N | Y | DATABASE, COMPONENT, INTERFACE, SECURITY, BATCH | `DATABASE` |
-| 605 | 설계명 | `design_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 상세 설계 항목명 | `사용자 인증 테이블 설계` |
-| 606 | 설계 설명 | `description` | `text` | N | N | - | Y | - | N | N | N | Y | DDS 상세 설계 내용 | `사용자 인증 및 권한 테이블 구조` |
-| 607 | 상태 | `status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | DDS 항목 상태. DRAFT, REVIEW, APPROVED | `APPROVED` |
-| 608 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS 항목 생성 시각(UTC) | `09/01/2026 10:00:00` |
-| 609 | 작성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | DDS 항목 작성 사용자 | `UUID` |
-| 610 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS 항목 최종 수정 시각(UTC) | `09/01/2026 10:00:00` |
-| 611 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | DDS 항목 최종 수정 사용자 | `UUID` |
-| 612 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | DDS 항목 소프트 삭제 시각 | - |
+| 601 | DDS Item ID | `dds_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique DDS detailed item identifier | `UUID` |
+| 602 | DDS ID | `dds_id` | `uuid` | N | Y | `dds_spec.dds_id` | Y | - | N | Y | N | Y | Parent DDS document identifier | `UUID` |
+| 603 | DDS Item Number | `item_no` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | DDS detailed item management number | `DDS-001` |
+| 604 | Design Type | `design_type` | `varchar(30)` | N | N | - | Y | `COMPONENT` | N | Y | N | Y | DATABASE, COMPONENT, INTERFACE, SECURITY, BATCH | `DATABASE` |
+| 605 | Design Name | `design_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Detailed design item name | `User Authentication Table Design` |
+| 606 | Design Description | `description` | `text` | N | N | - | Y | - | N | N | N | Y | DDS detailed design content | `User authentication and permission table structure` |
+| 607 | Status | `status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | Y | N | Y | DDS item status: DRAFT, REVIEW, APPROVED | `APPROVED` |
+| 608 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS item creation timestamp (UTC) | `09/01/2026 10:00:00` |
+| 609 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who authored the DDS item | `UUID` |
+| 610 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS item last modification timestamp (UTC) | `09/01/2026 10:00:00` |
+| 611 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the DDS item | `UUID` |
+| 612 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | DDS item soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## Deviation
 
 <a id="table-deviation"></a>
-### 43. 일탈 관리 (`deviation`)
+### 43. Deviation Management (`deviation`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 문서 및 시험 수행 중 발생한 일탈과 조사·해결·승인 상태 관리 |
+| Description | Manages deviations arising in documents or during test execution and their investigation, resolution, and approval statuses |
 | Primary Key | `deviation_id` |
-| 주요 참조(FK) | `project_id, resolved_by, approved_by, created_by, updated_by` |
-| GxP 중요도 | Critical |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, resolved_by, approved_by, created_by, updated_by` |
+| GxP Criticality | Critical |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 613 | 일탈 ID | `deviation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 일탈 고유 식별자 | `UUID` |
-| 614 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | 일탈이 발생한 Validation 프로젝트 | `UUID` |
-| 615 | 발생 대상 유형 | `source_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 일탈 발생 대상 유형. IQ_ITEM, OQ_ITEM, PQ_ITEM 등 | `OQ_ITEM` |
-| 616 | 발생 대상 ID | `source_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | 대상 엔터티 PK값. 다형 참조이므로 물리 FK는 설정하지 않음 | `UUID` |
-| 617 | 일탈 번호 | `deviation_no` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 프로젝트 내 일탈 관리 번호 | `DEV-001` |
-| 618 | 일탈 제목 | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 일탈 제목 | `예상 결과 불일치` |
-| 619 | 일탈 설명 | `description` | `text` | N | N | - | Y | - | N | N | N | Y | 일탈 내용 및 발생 상황 | `OQ 수행 중 예상 결과와 실제 결과 불일치` |
-| 620 | 심각도 | `severity` | `varchar(20)` | N | N | - | Y | `MINOR` | N | Y | N | Y | 일탈 심각도. MINOR, MAJOR, CRITICAL | `MAJOR` |
-| 621 | 일탈 상태 | `deviation_status` | `varchar(20)` | N | N | - | Y | `OPEN` | N | Y | N | Y | OPEN, INVESTIGATING, RESOLVED, CLOSED, CANCELLED | `OPEN` |
-| 622 | 해결 내용 | `resolution` | `text` | N | N | - | N | - | N | N | N | Y | 일탈 원인 조사 및 해결 내용 | `설정값 수정 후 재시험 완료` |
-| 623 | 해결 시각 | `resolved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 일탈 해결 완료 시각 | `09/03/2026 15:00:00` |
-| 624 | 해결자 ID | `resolved_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 일탈 해결 처리 사용자 | `UUID` |
-| 625 | 승인 시각 | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 일탈 종결 승인 시각 | `09/03/2026 17:00:00` |
-| 626 | 승인자 ID | `approved_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 일탈 종결 승인 사용자 | `UUID` |
-| 627 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 일탈 생성 시각(UTC) | `09/01/2026 10:00:00` |
-| 628 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 일탈 등록 사용자 | `UUID` |
-| 629 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 일탈 최종 수정 시각(UTC) | `09/01/2026 10:00:00` |
-| 630 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 일탈 최종 수정 사용자 | `UUID` |
-| 631 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 일탈 소프트 삭제 시각 | - |
+| 613 | Deviation ID | `deviation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique deviation identifier | `UUID` |
+| 614 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Validation project in which the deviation occurred | `UUID` |
+| 615 | Source Entity Type | `source_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Type of entity where the deviation occurred: IQ_ITEM, OQ_ITEM, PQ_ITEM, etc. | `OQ_ITEM` |
+| 616 | Source Entity ID | `source_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | Primary key value of the target entity. No physical FK is defined because this is a polymorphic reference. | `UUID` |
+| 617 | Deviation Number | `deviation_no` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Deviation management number within the project | `DEV-001` |
+| 618 | Deviation Title | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Deviation Title | `Mismatch with Expected Result` |
+| 619 | Deviation Description | `description` | `text` | N | N | - | Y | - | N | N | N | Y | Deviation details and circumstances of occurrence | `Mismatch between expected and actual results during OQ execution` |
+| 620 | Severity | `severity` | `varchar(20)` | N | N | - | Y | `MINOR` | N | Y | N | Y | Deviation severity: MINOR, MAJOR, CRITICAL | `MAJOR` |
+| 621 | Deviation Status | `deviation_status` | `varchar(20)` | N | N | - | Y | `OPEN` | N | Y | N | Y | OPEN, INVESTIGATING, RESOLVED, CLOSED, CANCELLED | `OPEN` |
+| 622 | Resolution Details | `resolution` | `text` | N | N | - | N | - | N | N | N | Y | Investigation of the deviation's cause and resolution details | `Retesting completed after correcting configuration values` |
+| 623 | Resolved At | `resolved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when deviation resolution was completed | `09/03/2026 15:00:00` |
+| 624 | Resolved By ID | `resolved_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who resolved the deviation | `UUID` |
+| 625 | Approved At | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deviation closure approval timestamp | `09/03/2026 17:00:00` |
+| 626 | Approver ID | `approved_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who approved deviation closure | `UUID` |
+| 627 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Deviation creation timestamp (UTC) | `09/01/2026 10:00:00` |
+| 628 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the deviation | `UUID` |
+| 629 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Deviation last modification timestamp (UTC) | `09/01/2026 10:00:00` |
+| 630 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the deviation | `UUID` |
+| 631 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deviation soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## Report
 
 <a id="table-report_generation"></a>
-### 44. 리포트 생성 작업 (`report_generation`)
+### 44. Report Generation Job (`report_generation`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | Audit 및 운영 리포트의 생성 요청, 실행 상태, 실패, 재시도 및 결과 파일 관리 |
+| Description | Manages generation requests, execution statuses, failures, retries, and output files for audit and operational reports |
 | Primary Key | `report_generation_id` |
-| 주요 참조(FK) | `project_id, requested_by, result_file_id, report_schedule_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 리포트 생성 결과 및 실행이력을 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, requested_by, result_file_id, report_schedule_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain report generation results and execution history for the required audit period |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 632 | 리포트 생성 ID | `report_generation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 리포트 생성 작업 고유 식별자 | `UUID` |
-| 633 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | 프로젝트 단위 리포트인 경우 연결하며 전체 시스템 또는 조직 단위 리포트는 NULL 허용 | `UUID` |
-| 634 | 리포트 유형 | `report_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 리포트 유형. AUDIT_TRAIL, PROJECT_STATUS, WORKFLOW_STATUS, DEVIATION_STATUS, TRACEABILITY, SYSTEM_OPERATION | `AUDIT_TRAIL` |
-| 635 | 리포트명 | `report_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 사용자에게 표시되는 생성 리포트명 | `2026년 8월 Audit Trail 리포트` |
-| 636 | 실행 방식 | `execution_type` | `varchar(20)` | N | N | - | Y | `ON_DEMAND` | N | Y | N | Y | 실행 방식. ON_DEMAND는 사용자 요청, SCHEDULED는 정기 배치 실행 | `ON_DEMAND` |
-| 637 | 조회 시작일시 | `period_from` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 리포트 원천 데이터 조회 시작일시. 조회기간이 없는 리포트는 NULL 허용 | `2026-08-01 00:00:00+00` |
-| 638 | 조회 종료일시 | `period_to` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 리포트 원천 데이터 조회 종료일시. period_from보다 빠를 수 없음 | `2026-08-31 23:59:59+00` |
-| 639 | 조회 조건 | `report_parameters` | `jsonb` | N | N | - | N | - | N | N | N | Y | 조직, 프로젝트, 사용자, 작업 유형, 상태 등 리포트 생성 조건을 JSON으로 저장 | `{"action_types":["CREATE","UPDATE"]}` |
-| 640 | 출력 형식 | `output_format` | `varchar(20)` | N | N | - | Y | `PDF` | N | Y | N | Y | 출력 파일 형식. PDF, XLSX, CSV | `PDF` |
-| 641 | 생성 상태 | `generation_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | 처리 상태. PENDING, PROCESSING, COMPLETED, RETRY_WAIT, FAILED, CANCELLED | `PENDING` |
-| 642 | 요청자 ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자 요청 시 요청자 ID. 시스템 또는 정기 배치 생성 시 NULL 허용 | `UUID` |
-| 643 | 요청 시각 | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | 리포트 생성 요청이 접수되거나 배치 작업이 등록된 시각 | `2026-09-02 15:00:00+00` |
-| 644 | 실행 시작 시각 | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 리포트 생성 Worker가 실제 작업을 시작한 시각 | `2026-09-02 15:00:05+00` |
-| 645 | 실행 완료 시각 | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 리포트 생성 성공 또는 최종 실패로 작업이 종료된 시각 | `2026-09-02 15:01:30+00` |
-| 646 | 결과 파일 ID | `result_file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | Y | Y | N | Y | 생성 완료된 리포트 파일 ID. COMPLETED 상태에서는 필수이며 완료 전에는 NULL 허용 | `UUID` |
-| 647 | 재시도 횟수 | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 최초 실행 실패 후 수행한 재시도 횟수. 0 이상이어야 함 | `0` |
-| 648 | 최대 재시도 횟수 | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | 자동 재시도 최대 허용 횟수. 0 이상이어야 함 | `3` |
-| 649 | 다음 재시도 시각 | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | RETRY_WAIT 상태 작업의 다음 실행 예정 시각 | `2026-09-02 15:10:00+00` |
-| 650 | 오류 코드 | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | 실패 원인을 분류하는 시스템 오류 코드 | `REPORT_FILE_CREATE_FAILED` |
-| 651 | 오류 메시지 | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | 리포트 생성 실패 상세 내용. 비밀번호, 토큰 등 민감정보는 저장하지 않음 | `결과 파일 저장 중 오류 발생` |
-| 652 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 리포트 생성 작업 레코드 생성 시각(UTC) | `2026-09-02 15:00:00+00` |
-| 653 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자가 생성한 경우 사용자 ID를 저장하며 시스템·배치가 생성한 경우 NULL 허용 | `UUID` |
-| 654 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 리포트 생성 작업 최종 수정 시각(UTC) | `2026-09-02 15:01:30+00` |
-| 655 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자 수정 시 사용자 ID를 저장하며 시스템·배치 처리 시 NULL 허용 | `UUID` |
-| 656 | 리포트 일정 ID | `report_schedule_id` | `uuid` | N | Y | `report_schedule.report_schedule_id` | N | - | N | Y | N | Y | 정기 실행으로 생성된 경우 원본 리포트 일정 ID 저장. 사용자 요청 실행은 NULL 허용 | `UUID` |
+| 632 | Report Generation ID | `report_generation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique report generation job identifier | `UUID` |
+| 633 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Linked for project-level reports. NULL allowed for system-wide or organization-level reports. | `UUID` |
+| 634 | Report Type | `report_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Report type: AUDIT_TRAIL, PROJECT_STATUS, WORKFLOW_STATUS, DEVIATION_STATUS, TRACEABILITY, SYSTEM_OPERATION | `AUDIT_TRAIL` |
+| 635 | Report Name | `report_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Name of the generated report displayed to the user | `August 2026 Audit Trail Report` |
+| 636 | Execution Mode | `execution_type` | `varchar(20)` | N | N | - | Y | `ON_DEMAND` | N | Y | N | Y | Execution mode: ON_DEMAND for user requests; SCHEDULED for scheduled batch execution | `ON_DEMAND` |
+| 637 | Reporting Period Start | `period_from` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Start date/time for querying the report's source data. NULL allowed for reports without a reporting period. | `2026-08-01 00:00:00+00` |
+| 638 | Reporting Period End | `period_to` | `timestamptz` | N | N | - | N | - | N | N | N | Y | End date/time for querying the report's source data. Cannot be earlier than period_from. | `2026-08-31 23:59:59+00` |
+| 639 | Query Criteria | `report_parameters` | `jsonb` | N | N | - | N | - | N | N | N | Y | Stores report generation criteria, such as organization, project, user, action type, and status, as JSON | `{"action_types":["CREATE","UPDATE"]}` |
+| 640 | Output Format | `output_format` | `varchar(20)` | N | N | - | Y | `PDF` | N | Y | N | Y | Output file format: PDF, XLSX, CSV | `PDF` |
+| 641 | Generation Status | `generation_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | Processing status: PENDING, PROCESSING, COMPLETED, RETRY_WAIT, FAILED, CANCELLED | `PENDING` |
+| 642 | Requested By ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Requester ID for user requests. NULL allowed for generation by the system or scheduled batch jobs. | `UUID` |
+| 643 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when the report generation request was received or the batch job was registered | `2026-09-02 15:00:00+00` |
+| 644 | Execution Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the report generation worker actually started processing | `2026-09-02 15:00:05+00` |
+| 645 | Execution Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the report generation job ended in success or final failure | `2026-09-02 15:01:30+00` |
+| 646 | Result File ID | `result_file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | Y | Y | N | Y | ID of the generated report file. Required in COMPLETED status; NULL allowed before completion. | `UUID` |
+| 647 | Retry Count | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of retries after the initial execution failed. Must be 0 or greater. | `0` |
+| 648 | Maximum Retry Count | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | Maximum number of automatic retries allowed. Must be 0 or greater. | `3` |
+| 649 | Next Retry At | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Next scheduled execution time for a job in RETRY_WAIT status | `2026-09-02 15:10:00+00` |
+| 650 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | System error code categorizing the cause of failure | `REPORT_FILE_CREATE_FAILED` |
+| 651 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Details of report generation failure. Sensitive information such as passwords and tokens is not stored. | `An error occurred while saving the result file` |
+| 652 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Report generation job record creation timestamp (UTC) | `2026-09-02 15:00:00+00` |
+| 653 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when created by a user. NULL allowed when created by the system or a batch job. | `UUID` |
+| 654 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Report generation job last modification timestamp (UTC) | `2026-09-02 15:01:30+00` |
+| 655 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when modified by a user. NULL allowed for system/batch processing. | `UUID` |
+| 656 | Report Schedule ID | `report_schedule_id` | `uuid` | N | Y | `report_schedule.report_schedule_id` | N | - | N | Y | N | Y | Stores the original report schedule ID when generated by a scheduled execution. NULL allowed for user-requested executions. | `UUID` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-report_schedule"></a>
-### 50. 리포트 실행 일정 (`report_schedule`)
+### 50. Report Schedule (`report_schedule`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | Audit 및 운영 리포트의 실행주기, 조회기간, 출력형식, 다음 실행시각 및 활성 상태 관리 |
+| Description | Manages execution frequencies, reporting periods, output formats, next execution times, and active statuses for audit and operational reports |
 | Primary Key | `report_schedule_id` |
-| 주요 참조(FK) | `project_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 실행 일정과 변경이력을 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain execution schedules and change history for the required audit period |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 744 | 리포트 일정 ID | `report_schedule_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 정기 리포트 실행 일정 고유 식별자 | `UUID` |
-| 745 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | 프로젝트 단위 리포트 일정인 경우 연결하며 조직·시스템 단위는 NULL 허용 | `UUID` |
-| 746 | 일정명 | `schedule_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 사용자에게 표시되는 정기 리포트 일정명 | `월간 Audit Trail 리포트` |
-| 747 | 리포트 유형 | `report_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 리포트 유형. AUDIT_TRAIL, PROJECT_STATUS, WORKFLOW_STATUS, DEVIATION_STATUS, TRACEABILITY, SYSTEM_OPERATION | `AUDIT_TRAIL` |
-| 748 | 실행주기 유형 | `schedule_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | 실행주기 유형. DAILY, WEEKLY, MONTHLY, CRON | `MONTHLY` |
-| 749 | 실행주기 설정 | `schedule_expression` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | 실행일·요일·시각 또는 Cron 표현식 등 실행주기 설정값 | `0 0 1 * *` |
-| 750 | 조회기간 유형 | `period_type` | `varchar(30)` | N | N | - | Y | `PREVIOUS_MONTH` | N | N | N | Y | 원천 데이터 조회기간 산정 기준. PREVIOUS_DAY, PREVIOUS_WEEK, PREVIOUS_MONTH, CUSTOM | `PREVIOUS_MONTH` |
-| 751 | 조회 조건 | `report_parameters` | `jsonb` | N | N | - | N | - | N | N | N | Y | 조직, 프로젝트, 사용자, 작업유형, 상태 등 정기 리포트 조회 조건 | `{"action_types":["CREATE","UPDATE"]}` |
-| 752 | 출력 형식 | `output_format` | `varchar(20)` | N | N | - | Y | `PDF` | N | Y | N | Y | 출력 파일 형식. PDF, XLSX, CSV | `PDF` |
-| 753 | 다음 실행 시각 | `next_run_at` | `timestamptz` | N | N | - | Y | - | N | Y | N | Y | 해당 일정이 다음으로 실행될 예정 시각 | `2026-10-01 00:00:00+00` |
-| 754 | 마지막 실행 시각 | `last_run_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 해당 일정이 마지막으로 실행된 시각 | `2026-09-01 00:00:00+00` |
-| 755 | 마지막 생성 작업 ID | `last_report_generation_id` | `uuid` | N | Y | `report_generation.report_generation_id` | N | - | N | Y | N | Y | 해당 일정으로 가장 최근 생성된 리포트 작업 | `UUID` |
-| 756 | 사용 여부 | `is_active` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | 정기 리포트 일정의 활성 여부 | `True` |
-| 757 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 리포트 일정 생성 시각(UTC) | `2026-09-02 18:00:00+00` |
-| 758 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 리포트 일정을 등록한 사용자 | `UUID` |
-| 759 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 리포트 일정 최종 수정 시각(UTC) | `2026-09-02 18:00:00+00` |
-| 760 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | 리포트 일정을 최종 수정한 사용자 | `UUID` |
-| 761 | 삭제시각 | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 리포트 일정 소프트 삭제 시각 | - |
+| 744 | Report Schedule ID | `report_schedule_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique scheduled report execution schedule identifier | `UUID` |
+| 745 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Linked for project-level report schedules. NULL allowed for organization-level or system-level schedules. | `UUID` |
+| 746 | Schedule Name | `schedule_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Name of the scheduled report schedule displayed to the user | `Monthly Audit Trail Report` |
+| 747 | Report Type | `report_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Report type: AUDIT_TRAIL, PROJECT_STATUS, WORKFLOW_STATUS, DEVIATION_STATUS, TRACEABILITY, SYSTEM_OPERATION | `AUDIT_TRAIL` |
+| 748 | Schedule Type | `schedule_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | Schedule type: DAILY, WEEKLY, MONTHLY, CRON | `MONTHLY` |
+| 749 | Schedule Expression | `schedule_expression` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Scheduling configuration, such as an execution date, day of the week, time, or Cron expression | `0 0 1 * *` |
+| 750 | Reporting Period Type | `period_type` | `varchar(30)` | N | N | - | Y | `PREVIOUS_MONTH` | N | N | N | Y | Basis for calculating the source data reporting period: PREVIOUS_DAY, PREVIOUS_WEEK, PREVIOUS_MONTH, CUSTOM | `PREVIOUS_MONTH` |
+| 751 | Query Criteria | `report_parameters` | `jsonb` | N | N | - | N | - | N | N | N | Y | Query criteria for scheduled reports, such as organization, project, user, action type, and status | `{"action_types":["CREATE","UPDATE"]}` |
+| 752 | Output Format | `output_format` | `varchar(20)` | N | N | - | Y | `PDF` | N | Y | N | Y | Output file format: PDF, XLSX, CSV | `PDF` |
+| 753 | Next Run At | `next_run_at` | `timestamptz` | N | N | - | Y | - | N | Y | N | Y | Next scheduled execution time for this schedule | `2026-10-01 00:00:00+00` |
+| 754 | Last Run At | `last_run_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when this schedule was last executed | `2026-09-01 00:00:00+00` |
+| 755 | Last Report Generation Job ID | `last_report_generation_id` | `uuid` | N | Y | `report_generation.report_generation_id` | N | - | N | Y | N | Y | Most recent report generation job created by this schedule | `UUID` |
+| 756 | Is Active | `is_active` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether the scheduled report schedule is active | `True` |
+| 757 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Report schedule creation timestamp (UTC) | `2026-09-02 18:00:00+00` |
+| 758 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the report schedule | `UUID` |
+| 759 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Report schedule last modification timestamp (UTC) | `2026-09-02 18:00:00+00` |
+| 760 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the report schedule | `UUID` |
+| 761 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Report schedule soft deletion timestamp | - |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## AI
 
 <a id="table-ai_generation_job"></a>
-### 45. AI 생성 작업 (`ai_generation_job`)
+### 45. AI Generation Job (`ai_generation_job`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | AI 생성 요청, 모델, 입력조건, 실행상태, 실패·재시도 관리 |
+| Description | Manages AI generation requests, models, input parameters, execution statuses, failures, and retries |
 | Primary Key | `ai_job_id` |
-| 주요 참조(FK) | `project_id, requested_by, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, requested_by, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 657 | AI 작업 ID | `ai_job_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI 생성 작업 식별자 | `UUID` |
-| 658 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | 프로젝트 연결 | `UUID` |
-| 659 | 작업 유형 | `job_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | ITEM_GENERATION, DOCUMENT_GENERATION | `ITEM_GENERATION` |
-| 660 | 대상 엔터티 유형 | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM, OQ_REPORT, PQ_REPORT, VSR_REPORT | `REQUIREMENT` |
-| 661 | 대상 엔터티 ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | 생성 대상 식별자 | `UUID` |
-| 662 | AI 모델명 | `model_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | GPT, Claude, Gemini | `GPT-5` |
-| 663 | 입력 파라미터 | `input_parameters` | `jsonb` | N | N | - | Y | - | N | N | N | Y | 생성 조건 JSON 저장 | `JSON` |
-| 664 | 생성 상태 | `generation_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | PENDING, PROCESSING, COMPLETED, FAILED, RETRY_WAIT, CANCELLED | `COMPLETED` |
-| 665 | 요청자 ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 생성 요청 사용자 | `UUID` |
-| 666 | 요청 시각 | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | 요청 접수 시각 | `2026-09-02T00:00:00` |
-| 667 | 실행 시작 시각 | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI 처리 시작 시각 | `2026-09-02T00:00:00` |
-| 668 | 실행 완료 시각 | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI 처리 완료 시각 | `2026-09-02T00:00:00` |
-| 669 | 재시도 횟수 | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 재실행 횟수 | `0` |
-| 670 | 최대 재시도 횟수 | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | 재시도 상한 | `3` |
-| 671 | 다음 재시도 시각 | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | 재시도 예정 시각 | `2026-09-02T15:10:00` |
-| 672 | 오류 코드 | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | 실패 원인 코드 | `LLM_TIMEOUT` |
-| 673 | 오류 메시지 | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | 실패 상세 메시지 | `모델 응답시간 초과` |
-| 674 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 생성 시각 | `2026-09-02T00:00:00` |
-| 675 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 생성 사용자 | `UUID` |
-| 676 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 수정 시각 | `2026-09-02T00:00:00` |
-| 677 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 수정 사용자 | `UUID` |
+| 657 | AI Job ID | `ai_job_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI generation job identifier | `UUID` |
+| 658 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Project link | `UUID` |
+| 659 | Action Type | `job_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | ITEM_GENERATION, DOCUMENT_GENERATION | `ITEM_GENERATION` |
+| 660 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM, OQ_REPORT, PQ_REPORT, VSR_REPORT | `REQUIREMENT` |
+| 661 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Identifier of the generation target | `UUID` |
+| 662 | AI Model Name | `model_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | GPT, Claude, Gemini | `GPT-5` |
+| 663 | Input Parameters | `input_parameters` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Stores generation criteria as JSON | `JSON` |
+| 664 | Generation Status | `generation_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | PENDING, PROCESSING, COMPLETED, FAILED, RETRY_WAIT, CANCELLED | `COMPLETED` |
+| 665 | Requested By ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User requesting generation | `UUID` |
+| 666 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when the request was received | `2026-09-02T00:00:00` |
+| 667 | Execution Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing start time | `2026-09-02T00:00:00` |
+| 668 | Execution Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing completion time | `2026-09-02T00:00:00` |
+| 669 | Retry Count | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of re-executions | `0` |
+| 670 | Maximum Retry Count | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | Retry limit | `3` |
+| 671 | Next Retry At | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Scheduled retry time | `2026-09-02T15:10:00` |
+| 672 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Failure cause code | `LLM_TIMEOUT` |
+| 673 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Detailed failure message | `Model response timed out` |
+| 674 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation timestamp | `2026-09-02T00:00:00` |
+| 675 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who created the record | `UUID` |
+| 676 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Modification timestamp | `2026-09-02T00:00:00` |
+| 677 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who modified the record | `UUID` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-ai_generation_result"></a>
-### 46. AI 생성 결과 (`ai_generation_result`)
+### 46. AI Generation Result (`ai_generation_result`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | AI 생성 결과 집합 및 채택 상태 관리 |
+| Description | Manages AI-generated result sets and adoption statuses |
 | Primary Key | `ai_result_id` |
-| 주요 참조(FK) | `ai_job_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `ai_job_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 678 | AI 결과 ID | `ai_result_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI 결과 식별자 | `UUID` |
-| 679 | AI 작업 ID | `ai_job_id` | `uuid` | N | Y | `ai_generation_job.ai_job_id` | Y | - | N | Y | N | Y | 상위 AI 작업 | `UUID` |
-| 680 | 결과 제목 | `result_title` | `varchar(300)` | N | N | - | N | - | N | N | N | Y | 결과 제목 | `OQ 테스트 초안` |
-| 681 | 선택 여부 | `is_selected` | `boolean` | N | N | - | Y | `N` | N | Y | N | Y | 사용자 채택 여부 | `True` |
-| 682 | 반영 여부 | `is_applied` | `boolean` | N | N | - | Y | `N` | N | Y | N | Y | 실제 산출물 반영 여부 | `True` |
-| 683 | 선택 사용자 ID | `selected_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 채택 사용자 | `UUID` |
-| 684 | 선택 시각 | `selected_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 채택 시각 | `2026-09-02T00:00:00` |
-| 685 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 생성 시각 | `2026-09-02T00:00:00` |
-| 686 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 생성 사용자 | `UUID` |
-| 687 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 수정 시각 | `2026-09-02T00:00:00` |
-| 688 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 수정 사용자 | `UUID` |
+| 678 | AI Result ID | `ai_result_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI result identifier | `UUID` |
+| 679 | AI Job ID | `ai_job_id` | `uuid` | N | Y | `ai_generation_job.ai_job_id` | Y | - | N | Y | N | Y | Parent AI job | `UUID` |
+| 680 | Result Title | `result_title` | `varchar(300)` | N | N | - | N | - | N | N | N | Y | Result Title | `OQ Test Draft` |
+| 681 | Is Selected | `is_selected` | `boolean` | N | N | - | Y | `N` | N | Y | N | Y | Whether adopted by the user | `True` |
+| 682 | Is Applied | `is_applied` | `boolean` | N | N | - | Y | `N` | N | Y | N | Y | Whether applied to the actual deliverable | `True` |
+| 683 | Selected By ID | `selected_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who adopted the result | `UUID` |
+| 684 | Selected At | `selected_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the result was adopted | `2026-09-02T00:00:00` |
+| 685 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation timestamp | `2026-09-02T00:00:00` |
+| 686 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who created the record | `UUID` |
+| 687 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Modification timestamp | `2026-09-02T00:00:00` |
+| 688 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who modified the record | `UUID` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 <a id="table-ai_result_item"></a>
-### 47. AI 생성 결과 항목 (`ai_result_item`)
+### 47. AI Generation Result Item (`ai_result_item`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | AI가 생성한 URS/FRA/IQ/OQ/PQ 항목 및 문서 섹션 상세 관리 |
+| Description | Manages details of AI-generated URS/FRA/IQ/OQ/PQ items and document sections |
 | Primary Key | `ai_result_item_id` |
-| 주요 참조(FK) | `ai_result_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 감사 가능 기간 보존 |
+| Key References (FK) | `ai_result_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 689 | AI 결과 항목 ID | `ai_result_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 결과 항목 식별자 | `UUID` |
-| 690 | AI 결과 ID | `ai_result_id` | `uuid` | N | Y | `ai_generation_result.ai_result_id` | Y | - | N | Y | N | Y | 상위 결과 참조 | `UUID` |
-| 691 | 항목 순번 | `item_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | 결과 표시 순서 | `1` |
-| 692 | 항목 유형 | `item_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT, FRA_SCENARIO, IQ_TEST, OQ_TEST, PQ_TEST, DOCUMENT_SECTION | `REQUIREMENT` |
-| 693 | 제목 | `title` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | 생성 항목 제목 | `전자서명 기록` |
-| 694 | 본문 내용 | `content` | `text` | N | N | - | Y | - | N | N | N | Y | 생성 결과 본문 | `내용` |
-| 695 | 적용 대상 유형 | `target_entity_type` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | REQUIREMENT, FRA_ITEM, IQ_ITEM 등 | `REQUIREMENT` |
-| 696 | 적용 대상 ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | 실제 저장 대상 PK | `UUID` |
-| 697 | 채택 여부 | `is_selected` | `boolean` | N | N | - | Y | `N` | N | Y | N | Y | 사용자 채택 여부 | `True` |
-| 698 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 생성 시각 | `2026-09-02T00:00:00` |
-| 699 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 생성 사용자 | `UUID` |
-| 700 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 수정 시각 | `2026-09-02T00:00:00` |
-| 701 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 수정 사용자 | `UUID` |
+| 689 | AI Result Item ID | `ai_result_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Result item identifier | `UUID` |
+| 690 | AI Result ID | `ai_result_id` | `uuid` | N | Y | `ai_generation_result.ai_result_id` | Y | - | N | Y | N | Y | Reference to the parent result | `UUID` |
+| 691 | Item Order | `item_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Result display order | `1` |
+| 692 | Item Type | `item_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT, FRA_SCENARIO, IQ_TEST, OQ_TEST, PQ_TEST, DOCUMENT_SECTION | `REQUIREMENT` |
+| 693 | Title | `title` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | Title of the generated item | `Electronic Signature Record` |
+| 694 | Body Content | `content` | `text` | N | N | - | Y | - | N | N | N | Y | Body of the generated result | `Content` |
+| 695 | Application Target Type | `target_entity_type` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | REQUIREMENT, FRA_ITEM, IQ_ITEM, etc. | `REQUIREMENT` |
+| 696 | Application Target ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Primary key of the actual storage target | `UUID` |
+| 697 | Is Adopted | `is_selected` | `boolean` | N | N | - | Y | `N` | N | Y | N | Y | Whether adopted by the user | `True` |
+| 698 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation timestamp | `2026-09-02T00:00:00` |
+| 699 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who created the record | `UUID` |
+| 700 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Modification timestamp | `2026-09-02T00:00:00` |
+| 701 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who modified the record | `UUID` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
 
 ## Notification
 
 <a id="table-notification_delivery"></a>
-### 48. 알림 발송 (`notification_delivery`)
+### 48. Notification Delivery (`notification_delivery`)
 
-| 항목 | 정의 |
+| Item | Definition |
 |---|---|
-| 설명 | 검토·승인 요청, 처리 지연 및 시스템 업무 알림의 발송 대상, 발송 상태, 실패 및 재시도 이력 관리 |
+| Description | Manages recipients, delivery statuses, failures, and retry history for review/approval requests, processing delay notices, and system operation notifications |
 | Primary Key | `notification_delivery_id` |
-| 주요 참조(FK) | `project_id, workflow_instance_id, workflow_step_id, recipient_id, created_by, updated_by` |
-| GxP 중요도 | High |
-| Audit 대상 | Y |
-| 보존/삭제 원칙 | 알림 발송 내용과 실행이력을 감사 가능 기간 보존 |
+| Key References (FK) | `project_id, workflow_instance_id, workflow_step_id, recipient_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain notification content and execution history for the required audit period |
 
-#### 컬럼 정의
+#### Column Definitions
 
-> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `민감`: 개인/민감정보
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
 
-| No | 논리 컬럼명 | 물리 컬럼명 | 타입 | PK | FK | 참조 | NN | Default | UQ | IDX | 민감 | Audit | 설명/업무 규칙 | 예시값 |
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 702 | 알림 발송 ID | `notification_delivery_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | 알림 발송 작업 고유 식별자 | `UUID` |
-| 703 | 프로젝트 ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | 프로젝트 관련 알림인 경우 연결하며 시스템 공통 알림은 NULL 허용 | `UUID` |
-| 704 | Workflow 인스턴스 ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | 검토·승인 Workflow 관련 알림인 경우 연결 | `UUID` |
-| 705 | Workflow 단계 ID | `workflow_step_id` | `uuid` | N | Y | `workflow_step.workflow_step_id` | N | - | N | Y | N | Y | 검토·승인 단계 관련 알림인 경우 연결 | `UUID` |
-| 706 | 알림 유형 | `notification_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | 알림 업무 유형. APPROVAL_REQUEST, REVIEW_REQUEST, DUE_REMINDER, OVERDUE, REJECTION, COMPLETION, SYSTEM | `OVERDUE` |
-| 707 | 발송 채널 | `delivery_channel` | `varchar(20)` | N | N | - | Y | `EMAIL` | N | Y | N | Y | 발송 채널. EMAIL, MESSENGER, PUSH, IN_APP | `EMAIL` |
-| 708 | 수신자 ID | `recipient_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | Y | Y | 알림을 수신하는 사용자 ID | `UUID` |
-| 709 | 알림 제목 | `notification_title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | 사용자에게 발송되는 알림 제목 | `검토 처리기한 초과 안내` |
-| 710 | 알림 내용 | `notification_content` | `text` | N | N | - | Y | - | N | N | N | Y | 사용자에게 발송되는 알림 본문. 비밀번호, 토큰 등 민감정보 저장 금지 | `FDS 검토 처리기한이 초과되었습니다.` |
-| 711 | 발송 상태 | `delivery_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | 발송 상태. PENDING, PROCESSING, SENT, RETRY_WAIT, FAILED, CANCELLED | `PENDING` |
-| 712 | 발송 예정 시각 | `scheduled_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | 알림 발송 예정 시각. 즉시 발송은 NULL 허용 | `2026-09-02 18:00:00+00` |
-| 713 | 발송 시각 | `sent_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | 외부 발송 채널에 정상 전달된 시각 | `2026-09-02 18:00:05+00` |
-| 714 | 재시도 횟수 | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | 최초 발송 실패 이후 재시도한 횟수. 0 이상 | `0` |
-| 715 | 최대 재시도 횟수 | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | 자동 발송 재시도 최대 허용 횟수. 0 이상 | `3` |
-| 716 | 다음 재시도 시각 | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | RETRY_WAIT 상태 알림의 다음 발송 예정 시각 | `2026-09-02 18:10:00+00` |
-| 717 | 오류 코드 | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | 알림 발송 실패 원인을 분류하는 시스템 오류 코드 | `EMAIL_SEND_TIMEOUT` |
-| 718 | 오류 메시지 | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | 알림 발송 실패 상세 내용. 인증정보 등 민감정보 저장 금지 | `메일 서버 응답시간 초과` |
-| 719 | 생성시각 | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 알림 발송 작업 생성 시각(UTC) | `2026-09-02 18:00:00+00` |
-| 720 | 생성자 ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자 생성 시 사용자 ID를 저장하며 시스템·배치 생성 시 NULL 허용 | `UUID` |
-| 721 | 수정시각 | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | 알림 발송 작업 최종 수정 시각(UTC) | `2026-09-02 18:00:05+00` |
-| 722 | 수정자 ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | 사용자 수정 시 사용자 ID를 저장하며 시스템·배치 처리 시 NULL 허용 | `UUID` |
+| 702 | Notification Delivery ID | `notification_delivery_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique notification delivery job identifier | `UUID` |
+| 703 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Linked for project-related notifications. NULL allowed for system-wide notifications. | `UUID` |
+| 704 | Workflow Instance ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Linked for notifications related to a review/approval workflow | `UUID` |
+| 705 | Workflow Step ID | `workflow_step_id` | `uuid` | N | Y | `workflow_step.workflow_step_id` | N | - | N | Y | N | Y | Linked for notifications related to a review/approval step | `UUID` |
+| 706 | Notification Type | `notification_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Business type of the notification: APPROVAL_REQUEST, REVIEW_REQUEST, DUE_REMINDER, OVERDUE, REJECTION, COMPLETION, SYSTEM | `OVERDUE` |
+| 707 | Delivery Channel | `delivery_channel` | `varchar(20)` | N | N | - | Y | `EMAIL` | N | Y | N | Y | Delivery channel: EMAIL, MESSENGER, PUSH, IN_APP | `EMAIL` |
+| 708 | Recipient ID | `recipient_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | Y | Y | ID of the user receiving the notification | `UUID` |
+| 709 | Notification Title | `notification_title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Title of the notification sent to the user | `Review Deadline Overdue Notice` |
+| 710 | Notification Content | `notification_content` | `text` | N | N | - | Y | - | N | N | N | Y | Body of the notification sent to the user. Sensitive information such as passwords and tokens must not be stored. | `The FDS review deadline has passed.` |
+| 711 | Delivery Status | `delivery_status` | `varchar(20)` | N | N | - | Y | `PENDING` | N | Y | N | Y | Delivery status: PENDING, PROCESSING, SENT, RETRY_WAIT, FAILED, CANCELLED | `PENDING` |
+| 712 | Scheduled Delivery At | `scheduled_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Scheduled notification delivery time. NULL allowed for immediate delivery. | `2026-09-02 18:00:00+00` |
+| 713 | Sent At | `sent_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the notification was successfully handed off to the external delivery channel | `2026-09-02 18:00:05+00` |
+| 714 | Retry Count | `retry_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of retries after the initial delivery failed. Must be 0 or greater. | `0` |
+| 715 | Maximum Retry Count | `max_retry_count` | `integer` | N | N | - | Y | `3` | N | N | N | Y | Maximum number of automatic delivery retries allowed. Must be 0 or greater. | `3` |
+| 716 | Next Retry At | `next_retry_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Next scheduled delivery time for a notification in RETRY_WAIT status | `2026-09-02 18:10:00+00` |
+| 717 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | System error code categorizing the cause of notification delivery failure | `EMAIL_SEND_TIMEOUT` |
+| 718 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Details of notification delivery failure. Sensitive information such as authentication credentials must not be stored. | `Mail server response timed out` |
+| 719 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Notification delivery job creation timestamp (UTC) | `2026-09-02 18:00:00+00` |
+| 720 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when created by a user. NULL allowed when created by the system or a batch job. | `UUID` |
+| 721 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Notification delivery job last modification timestamp (UTC) | `2026-09-02 18:00:05+00` |
+| 722 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when modified by a user. NULL allowed for system/batch processing. | `UUID` |
 
-[↑ 맨 위로](#dvt-데이터-테이블-정의서)
+[↑ Back to Top](#data-table-specifications)
 
 ---
