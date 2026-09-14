@@ -36,7 +36,7 @@ The comprehensive schema is divided into 16 topics, with ERD images illustrating
 ---
 
 ## 1. Organization, User, and Global Role Management
-<img width="1650" height="1066" alt="image" src="https://github.com/user-attachments/assets/d1f9d215-dafa-46ae-b7ff-75f4bad5b622" />
+<img width="2350" height="1379" alt="image" src="https://github.com/user-attachments/assets/1755134a-3392-4f03-9a6e-afdef68f9698" />
 Link : https://drawsql.app/teams/minho-kim/diagrams/01-organization-user-and-global-role-management
 
 ### Structural Overview
