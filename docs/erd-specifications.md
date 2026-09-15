@@ -2,7 +2,7 @@
 
 This document organizes the complete data model of the Validation Management Platform by business domain.
 
-The complex overall schema is divided into 16 topics, with ERD images showing the major tables and relationships in each domain. Each section includes a relationship structure for quickly understanding complex connector lines, an overview of the domain structure, and a summary of each table's role.
+The complex overall schema is divided into 16 topics, with ERD images showing the main tables and relationships in each area. Each section includes a relationship diagram to help readers understand complex connections at a glance, a structural overview, and a summary of each table’s role.
 
 > [!NOTE]
 > This repository is public material intended to share examples of data modeling and system design.
@@ -11,8 +11,11 @@ The complex overall schema is divided into 16 topics, with ERD images showing th
 >
 > Before applying this model to a production environment, separately review the organization's business policies, security standards, personal data protection requirements, data retention policies, and applicable regulatory requirements.
 
+> **For an overview of the entire structure**  
+> Refer to the [Overall ERD Diagram](./erd-overview.md), which groups all 54 tables by business area.
+
 > **For detailed column information**  
-> See the [Data Dictionary](./data-dictionary.md) for each table's columns, data types, PKs and FKs, nullability, default values, and business rules.
+> For the columns, data types, PKs and FKs, nullability, default values, and business rules of each table, refer to the [Data Dictionary](./data-dictionary.md).
 
 ## Table of Contents
 
@@ -35,35 +38,39 @@ The complex overall schema is divided into 16 topics, with ERD images showing th
 
 ---
 
+The diagrams below provide a simple view of the main table connections and business flows. For detailed relationships, refer to the ERD image and link in each area.
+
 ## Overall Structure at a Glance
 
 ```text
-Configure organizations and users
+Organization and user setup
     ↓
-Identify systems and equipment
+System and equipment identification
     ↓
-Create a Validation project
+Validation project creation
     ↓
-Configure project participants and activities
+Project participant and activity setup
     ↓
-Perform QIA and vendor audit
+QIA and vendor audit
     ↓
 URS → FDS → DDS → DQ
     ↓
-Perform FRA risk assessment
+FRA risk assessment
     ↓
-Perform IQ → OQ → PQ qualification testing
+IQ → OQ → PQ qualification testing
     ↓
-Verify traceability and generate the RTM
+Traceability verification and RTM generation
     ↓
-Review deviations and prepare the VSR
+Deviation review and VSR preparation
     ↓
-Close the project
+Project closure
 ```
 
-Most business data is connected around `validation_project`. Workflow, electronic signatures, evidence files, and the Audit Trail are common control functions applied throughout the process rather than belonging to a single stage.
+The sequence above is an example to help explain the business process, rather than a fixed execution order. The actual activities to perform and their activation conditions are determined by `project_activity` and `activity_dependency`.
 
-Major document-based deliverables separate document headers from detail items.
+Most business data is connected around `validation_project`. Workflow, electronic signatures, evidence files, and Audit Trail are common control functions that apply throughout the process rather than belonging to a single stage.
+
+The main document-based deliverables are managed with separate document headers and detail items.
 
 ```text
 fds_spec       → fds_item / fds_interface
@@ -78,7 +85,7 @@ vsr_assessment → vsr_item
 ```
 
 > [!IMPORTANT]
-> Some relationships in `workflow_instance`, `electronic_signature`, `audit_trail`, `traceability_link`, `evidence_link`, `deviation`, and AI-related tables use polymorphic references that store a target type together with a target ID. The application or service layer must validate target entities that cannot be represented by physical foreign keys.
+> Some relationships in `workflow_instance`, `electronic_signature`, `audit_trail`, `traceability_link`, `evidence_link`, `deviation`, and AI-related tables use polymorphic references that store the target type and target ID together. The validity of target entities not represented by physical FKs must be checked at the application or service layer.
 
 ---
 
@@ -94,14 +101,14 @@ organization
        ├─ user_role ─ role
        └─ user_group_member ─ user_group
                                   └─ group_role ─ role
-                                       └─ validation_project (when scope is PROJECT)
+                                       └─ validation_project (PROJECT scope)
 ```
 
 ### Structure Overview
 
 This structure manages user accounts by organization and assigns global permissions to individual users through the role master and user-to-role mappings.
 
-Global roles apply across the system. Project participation and responsibilities are managed separately in `project_member`.
+`role` is the role master shared by global and project role assignments. `user_role` manages each user’s global roles, while `project_member` manages participation and responsibilities for each project. The scope of group assignments is distinguished by `group_role.scope_type` and `project_id`. `group_role.is_active` indicates whether the role assignment is active.
 
 ### Summary of Table Roles
 
@@ -109,7 +116,7 @@ Global roles apply across the system. Project participation and responsibilities
 |---|---|
 | `organization` | Manages basic information for customers or operating organizations and serves as the basis for distinguishing user affiliation |
 | `app_user` | Manages user accounts, basic profiles, affiliated organizations, and account status |
-| `role` | Defines global roles and permission scopes that apply across the system |
+| `role` | Manages role codes, names, and descriptions shared by global and project role assignments |
 | `user_role` | Maps users to global roles in an N:M relationship and prevents duplicate assignment of the same role |
 | `user_group` | Manages organization-specific user group information and active status, serving as the group master for assigning permissions to multiple users at once |
 | `user_group_member` | Manages the N:M relationship between users and user groups, including membership status and membership start and end dates |
@@ -117,8 +124,8 @@ Global roles apply across the system. Project participation and responsibilities
 
 ### Key Points
 
-- `user_role` assigns a role directly to a user, while `group_role` applies a role collectively to group members.
-- Permissions with `GLOBAL` scope are distinguished from those with `PROJECT` scope that apply only to a specific project.
+- `user_role` assigns roles directly to users, while `group_role` applies roles collectively to group members.
+- Permissions with `GLOBAL` scope are distinguished from permissions with `PROJECT` scope that apply only to a specific project.
 - Global permissions and actual project participation roles are separate; project participants are managed in `project_member`.
 
 ---
@@ -157,9 +164,9 @@ Each project is linked to one target system. `project_member` maps users and rol
 
 ### Key Points
 
-- Multiple Validation projects, such as initial validation, change validation, and revalidation, can be created for one system or equipment asset.
-- The same user can participate under a different role in each project.
-- `app_user` and `role` are global reference data, while `project_member` represents the user's actual role assignment within a specific project.
+- Multiple Validation projects, such as initial validation, change validation, and revalidation, can be created for a single system or equipment asset.
+- The same user can participate in different roles across projects.
+- `app_user` and `role` are global reference data, while `project_member` represents the actual role assignment within a specific project.
 
 ---
 
@@ -199,9 +206,10 @@ This structure creates Validation projects for systems belonging to an organizat
 
 ### Key Points
 
-- `project_activity` represents the activities actually selected for a project from the activity master.
-- `activity_dependency` can represent not only sequence but also business conditions such as approval status, existence of traceability, test coverage of high-risk items, and unresolved deviations.
-- Project progress is calculated from the source status of individual activities.
+- `project_activity` represents the activities selected from the activity master for actual execution in a particular project.
+- `activity_dependency` expresses business conditions beyond a simple sequence, including approval status, the existence of traceability links, test coverage for high-risk items, and whether unresolved deviations exist.
+- `predecessor_activity_id` and `successor_activity_id` reference the same activity master in predecessor and successor roles, respectively. The predecessor ID may be NULL for conditions without a specific predecessor activity, such as checking whether all activities have been approved.
+- The application evaluates conditions by retrieving the actual activity and deliverable statuses for the project.
 
 ---
 
@@ -212,8 +220,9 @@ Link : https://drawsql.app/teams/minho-kim/diagrams/04-library-qia-and-vendor-au
 ### Relationship Structure
 
 ```text
+library_item (independent master: standard URS, IQ, and OQ items)
+
 organization
-  ├─ library_item (standard URS, IQ, and OQ items)
   └─ system_asset
        └─ validation_project
             ├─ qia_assessment
@@ -242,9 +251,9 @@ This structure organizes Validation projects around systems belonging to an orga
 
 ### Key Points
 
-- `library_item` is reusable reference data that is not directly dependent on a project.
-- QIA and vendor audits are assessment results belonging to a specific project, and QIA results are a major basis for determining the subsequent Validation scope and activities.
-- One QIA document can contain multiple module and process assessment items.
+- `library_item` has no organization or project FK, and no other table in the current dictionary references `library_item` through an FK. Reusing standard items in business processes is separate from a direct database connection.
+- QIA and vendor audits are assessment results associated with a specific project. QIA results are a key basis for determining the subsequent Validation scope and activities.
+- A single QIA document can contain multiple module and process assessment items.
 
 ---
 
@@ -261,7 +270,7 @@ validation_project
        ├─ fds_item
        └─ fds_interface
 
-requirement ─ traceability_link ─ fds_item
+requirement ─ traceability_link ─ fds_item (logical connection)
 ```
 
 ### Structure Overview
@@ -285,9 +294,9 @@ This structure organizes Validation projects around systems belonging to an orga
 
 ### Key Points
 
-- URS defines the functions users need, while FDS specifies how those requirements are implemented through functions, screens, and interfaces.
-- FDS separates the document header in `fds_spec`, functional details in `fds_item`, and interface details in `fds_interface`.
-- Formal traceability between URS and FDS detail items is managed in `traceability_link`.
+- URS defines the functionality users need, and FDS translates those requirements into functional, screen, and interface designs.
+- FDS is divided into the document header `fds_spec`, functional details in `fds_item`, and interface details in `fds_interface`.
+- Formal traceability between URS and FDS detail items is managed through polymorphic references in `traceability_link`. `fds_interface.source_system` and `target_system` are system-name strings, and `fds_mapping` is also a display value, so they should not be interpreted as FKs to `system_asset` or `fds_item`.
 
 ---
 
@@ -307,7 +316,7 @@ validation_project
   └─ dq_assessment
        └─ dq_item ─ requirement
 
-URS / FDS / DDS / DQ detail items ─ traceability_link ─ mutual traceability
+URS / FDS / DDS / DQ detail items ─ traceability_link (logical connection)
 ```
 
 ### Structure Overview
@@ -334,9 +343,9 @@ This structure organizes Validation projects around systems belonging to an orga
 
 ### Key Points
 
-- DDS is detailed design from an implementation perspective, while DQ evaluates whether the design satisfies the URS.
-- `dq_item` manages the design qualification decision and review result for each URS.
-- In addition to the FDS and DDS mapping values displayed in `dq_item`, formal generalized traceability between deliverables should be interpreted using `traceability_link`.
+- DDS provides detailed design from an implementation perspective, while DQ assesses whether the design satisfies the URS.
+- `dq_item` manages design qualification decisions and review results for each URS requirement.
+- Apart from the FDS and DDS mappings used for display in `dq_item`, formal, general-purpose traceability between deliverables is interpreted through `traceability_link`.
 
 ---
 
@@ -374,9 +383,9 @@ This structure organizes Validation projects around systems belonging to an orga
 
 ### Key Points
 
-- FRA prioritizes testing and controls according to risk level instead of testing every function with the same intensity.
-- Risk items are linked to a URS when applicable, but risk items without a direct URS link are also allowed.
-- Assessment results are used to determine the scope of subsequent IQ, OQ, and PQ testing and RTM coverage.
+- FRA is an assessment for prioritizing testing and controls according to risk level, rather than testing every function with the same intensity.
+- Risk items are linked to URS requirements when needed; risk items without a direct URS link are also allowed.
+- Assessment results are used to determine the scope of subsequent IQ, OQ, and PQ testing and to evaluate RTM coverage.
 
 ---
 
@@ -393,7 +402,7 @@ validation_project
   └─ pq_assessment ─ pq_item
 
 iq_item / oq_item / pq_item
-  └─ deviation (when a deviation occurs during testing)
+  └─ deviation (logical connection when a deviation occurs during testing)
 ```
 
 ### Structure Overview
@@ -420,9 +429,9 @@ The document header and detailed test items for each qualification are managed s
 
 ### Key Points
 
-- IQ verifies installation suitability, OQ verifies that functions meet defined specifications, and PQ verifies sustained performance under actual operating conditions.
-- Each test distinguishes approval of the protocol from approval of the actual execution record.
-- After testing under an approved protocol, actual results, qualification results, executor, and execution time are recorded, while discrepancies are managed in `deviation`.
+- IQ verifies installation suitability, OQ verifies that functions meet specifications, and PQ verifies sustained performance under actual operating conditions.
+- Each test distinguishes approval of the protocol, which defines the test procedure, from approval of the record, which contains the actual execution results.
+- Tests are performed using an approved protocol, after which the actual results, decisions, performers, and execution times are recorded. Discrepancies are managed in `deviation`.
 
 ---
 
@@ -439,7 +448,7 @@ requirement (URS)
   ├─ ASSESSED_BY    → dq_item
   └─ ASSESSED_BY    → fra_item
 
-All connections are managed centrally in traceability_link
+The logical connections above are managed in traceability_link
 ```
 
 ### Structure Overview
@@ -467,9 +476,9 @@ Each document is composed of a header and detail items. `traceability_link` conn
 
 ### Key Points
 
-- `traceability_link` is a generalized relationship table connecting a source entity to a target entity.
-- Representative relationship types are `IMPLEMENTED_BY`, `ASSESSED_BY`, `VERIFIED_BY`, and `MITIGATED_BY`.
-- Because this is a polymorphic reference structure, `source_entity_id` and `target_entity_id` may not have physical FKs to business tables; validity by entity type must be checked in the application layer.
+- `traceability_link` is a general-purpose relationship table connecting a source entity to a target entity.
+- Typical relationship types are `IMPLEMENTED_BY`, `ASSESSED_BY`, `VERIFIED_BY`, and `MITIGATED_BY`.
+- Because these are polymorphic references, `source_entity_id` and `target_entity_id` may not have physical FKs to the target business tables. Validity for each type must be checked at the application layer.
 
 ---
 
@@ -485,9 +494,9 @@ requirement (URS)
   ├─ traceability_link → oq_item
   └─ traceability_link → pq_item
 
-Aggregate source traceability relationships
+Aggregate source traceability relationships (business flow)
   └─ rtm_assessment
-       └─ rtm_item (approval-time snapshot by URS)
+       └─ rtm_item (traceability items by URS)
 ```
 
 ### Structure Overview
@@ -511,13 +520,13 @@ This structure manages traceability between a Validation project's URS requireme
 | `pq_item` | Manages PQ performance test procedures and results under actual operating conditions |
 | `traceability_link` | Uses polymorphic references to manage verification relationships between URS and IQ, OQ, and PQ test items |
 | `rtm_assessment` | Manages RTM snapshots of total URS count, FRA linkage rate, IQ and OQ coverage, and overall average coverage for each project |
-| `rtm_item` | Manages detailed snapshots of FRA, FDS, and DDS mappings, IQ, OQ, and PQ results, and item-level coverage for each URS |
+| `rtm_item` | Manages detailed snapshots of FRA, FDS, and DDS mapping strings, IQ, OQ, and PQ test item reference strings, and item-level coverage for each URS requirement |
 
 ### Key Points
 
-- `traceability_link` contains the current source traceability relationships, whereas `rtm_assessment` and `rtm_item` are snapshots taken when the RTM is generated and approved.
-- Even if source relationships change later, the approved RTM results from that time can be preserved unchanged.
-- RTM is a regulatory traceability deliverable used to identify unlinked URS items, missing design, risk assessment, or testing, mapping failures, and item-level and overall coverage.
+- `traceability_link` holds the current operational source traceability relationships, while `rtm_assessment` and `rtm_item` are snapshots at the time of RTM generation and approval.
+- To preserve RTM results as they were at approval, the application must store snapshot values and enforce controls on changes after approval. The presence of FKs or version columns alone does not guarantee immutability.
+- RTM is a deliverable used to identify unlinked URS requirements, missing designs, risk assessments or tests, mapping failures, and coverage. The descriptions of `rtm_item.iq_result`, `oq_result`, and `pq_result` currently define them as strings containing test item numbers, so they should not be interpreted as direct FKs or test PASS/FAIL decision values.
 
 ---
 
@@ -533,7 +542,7 @@ project_activity approval status
 rtm_assessment traceability and coverage
         +
 deviation resolution and closure status
-        ↓
+        ↓ (business flow)
 vsr_assessment
   └─ vsr_item (result summary by activity)
         ↓
@@ -563,9 +572,10 @@ This structure consolidates Validation project activity results, RTM coverage, a
 
 ### Key Points
 
-- The VSR combines activity approvals, test results, RTM coverage, and unresolved deviations to reach the final conclusion.
-- Normal closure is determined by combining approval of selected activities, traceability, and deviation closure conditions.
-- Forced closure is separate from normal completion criteria and preserves the closure reason, requester, and processing time.
+- VSR is a document that draws a final conclusion by consolidating activity approval status, test results, RTM coverage, and unresolved deviations.
+- Normal closure is determined by considering approval of the selected activities, traceability, and deviation closure conditions together.
+- `validation_project.closure_type` distinguishes normal closure (NORMAL) from forced closure (FORCED). `closure_reason` is required for forced closure. `closure_requested_by` and `closure_requested_at` record the requester and request time, while `closed_at` records the final closure time. The closure requester references `app_user` through an FK.
+- Fields such as `vsr_item.activity_code`, `doc_no`, and `deviation_info` are summary values. There are no direct FKs to `project_activity`, `rtm_assessment`, or `deviation`.
 
 ---
 
@@ -581,8 +591,7 @@ validation_project
 
 workflow_instance
   └─ workflow_step
-       └─ approval_action
-            └─ electronic_signature
+       └─ approval_action ─ electronic_signature (when a signature exists)
 ```
 
 ### Structure Overview
@@ -597,20 +606,22 @@ Step assignees are designated according to project participants and roles. `work
 |---|---|
 | `organization` | Manages reference information for the customer or operating organization to which systems and users belong |
 | `app_user` | Manages document submitters, step assignees, actual processors, and electronic signers |
-| `role` | Manages role reference information applied to project participants and Workflow assignees |
+| `role` | Manages reference data for project participant roles; consulted by business logic when selecting Workflow assignees |
 | `system_asset` | Manages information about the system or equipment associated with the Validation project subject to review and approval |
 | `validation_project` | Manages the Validation project to which the Workflow and project participants belong |
 | `project_member` | Manages participating users, assigned roles, participation status, and participation period for each project |
 | `workflow_instance` | Manages submission information, current step, and overall status of the complete review and approval Workflow for each target document |
 | `workflow_step` | Manages step order, step type, assignee, due date, and status for each Workflow step |
 | `approval_action` | Manages actual actions such as submission, review, approval, rejection, and cancellation, including the processor and processing time |
-| `electronic_signature` | Manages signer, signature meaning, target version, content hash, and reauthentication result for review, approval, and rejection actions |
+| `electronic_signature` | Manages the signer, signature meaning, target version, content hash, and reauthentication result for submission, review, approval, and rejection |
 
 ### Key Points
 
-- `workflow_instance` manages overall progress, `workflow_step` manages each review or approval stage, and `approval_action` records the action actually performed.
-- `electronic_signature` provides identity verification and signature evidence for approval and rejection actions and preserves the target version and content hash.
-- The Audit Trail is separate from these concepts and records data changes made during processing.
+- `workflow_instance` manages overall progress, `workflow_step` manages individual review and approval steps, and `approval_action` manages the actual processing actions.
+- `electronic_signature` provides identity verification and signature evidence for approval and rejection actions, preserving the target version and content hash together.
+- `approval_action.signature_id` references an electronic signature and allows NULL. This does not mean a signature is required for every action record.
+- `workflow_instance` has no `project_id` FK, and `workflow_step` has no FK to `project_member` or `role`. The assignee directly references a user through `assignee_id`, and suitability for the project role must be checked by business logic.
+- Separately from these concepts, Audit Trail records the history of data changes that occur during processing.
 
 ---
 
@@ -621,10 +632,10 @@ Link : https://drawsql.app/teams/minho-kim/diagrams/13-file-evidence-and-file-cl
 ### Relationship Structure
 
 ```text
-file_cleanup_execution
-  └─ file_asset
-       └─ evidence_link
-            └─ each business document or test item
+file_asset
+  ├─ file_cleanup_execution (last cleanup operation)
+  └─ evidence_link
+       └─ business documents and test items (logical connection)
 ```
 
 ### Structure Overview
@@ -647,9 +658,10 @@ This structure manages metadata for attachments and test evidence used in a Vali
 
 ### Key Points
 
-- `file_asset` is the metadata for the file itself, while `evidence_link` expresses which business item the file supports as evidence.
-- Separating the two allows one file to be linked to multiple business items and one business item to have multiple files.
-- File cleanup does not arbitrarily delete evidence subject to regulatory retention. It is an operational function that removes temporary, expired, or orphaned files through a controlled process and records the results.
+- `file_asset` holds metadata about the file itself, while `evidence_link` identifies the business item for which that file serves as evidence.
+- Separating these two areas allows one file to be linked to multiple business items, or multiple files to be linked to one business item.
+- `file_asset.cleanup_execution_id` points only to the last cleanup execution and allows NULL. A cleanup execution is not a mandatory parent for every file, and the current definition does not include a separate N:M history table that preserves the full cleanup history for each file.
+- File cleanup is an operational function that cleans up temporary, expired, and orphaned files through controlled procedures and records the results; it is not a function for arbitrarily deleting evidence that must be retained under regulations.
 
 ---
 
@@ -662,7 +674,7 @@ Link : https://drawsql.app/teams/minho-kim/diagrams/14-report-notification-and-b
 ```text
 report_schedule
   └─ report_generation
-       └─ file_asset (generated output)
+       └─ file_asset (generated output file)
 
 workflow_instance / workflow_step
   └─ notification_delivery
@@ -682,7 +694,7 @@ This structure manages scheduled and manual generation of operational reports, d
 |---|---|
 | `organization` | Manages reference information for the customer or operating organization to which operational reports and users belong |
 | `app_user` | Manages report and backup requesters, notification recipients, and users who create or modify operational jobs |
-| `system_asset` | Manages systems or equipment subject to operational reports and backups |
+| `system_asset` | Manages reference data for systems and equipment linked to projects; has no direct FK relationship with the backup execution table |
 | `validation_project` | Provides the basis for project-level reports, notifications, and operational jobs |
 | `workflow_instance` | Manages complete review and approval Workflow information for documents that trigger notifications |
 | `workflow_step` | Manages step assignees and status used for approval-request, due-date, and overdue notifications |
@@ -694,9 +706,9 @@ This structure manages scheduled and manual generation of operational reports, d
 
 ### Key Points
 
-- This domain represents operational job requests, processing results, failures, and retry history rather than infrastructure configuration itself.
-- Asynchronous jobs generally follow `PENDING → PROCESSING → COMPLETED`; upon failure, they move to a retry-wait or final-failure state.
-- One recurring schedule can produce multiple report generation jobs, and generated outputs are linked to `file_asset`.
+- This area manages operational job requests, processing results, failures, and retry history as data, rather than the infrastructure configuration itself.
+- The success status for reports and backups is `COMPLETED`, while the success status for notification delivery is `SENT`. Notifications follow the `PENDING → PROCESSING → SENT` flow, with separate states for failure, retry, and cancellation.
+- A single recurring schedule can produce multiple report generation jobs, and the generated output is linked to `file_asset`.
 
 ---
 
@@ -710,9 +722,8 @@ Link : https://drawsql.app/teams/minho-kim/diagrams/15-ai-generation-job-and-res
 ai_generation_job
   └─ ai_generation_result
        └─ ai_result_item
-            └─ user review and selection
-                 └─ apply to actual business tables
-                      └─ formal review and approval Workflow
+
+Business flow: user review and selection → application to business data → formal review and approval
 ```
 
 ### Structure Overview
@@ -735,9 +746,10 @@ This structure manages AI generation requests for Validation project documents a
 
 ### Key Points
 
-- AI results do not become official deliverables immediately upon generation; they are applied to actual business tables only after user review and selection.
-- The generated source and applied result are separated, and the model, input conditions, selecting user, and application status are recorded.
-- Applied results must pass through the same formal review and approval Workflow as other business data.
+- AI results do not become official deliverables immediately upon generation. They are applied to actual business tables after user review and selection.
+- Original generated content is kept separate from the actual application result, and the model used, input conditions, selecting user, and application status are recorded.
+- The business principle is that applied results follow the same formal review and approval procedures as other business data. There is no direct FK from the AI result tables to Workflow.
+- `ai_generation_job.project_id` allows NULL, so not every generation job is required to be linked to a specific project.
 
 ---
 
@@ -750,11 +762,10 @@ Link : https://drawsql.app/teams/minho-kim/diagrams/16-audit-trail-management
 ```text
 organization
   └─ app_user
-       └─ audit_trail
+       └─ audit_trail (user actions)
 
-audit_trail
-  └─ target_table_name + target_record_id
-       └─ each audited business record (polymorphic reference)
+audit_trail (also records system and batch actions)
+  └─ target business record (logical connection)
 ```
 
 ### Structure Overview
@@ -774,18 +785,19 @@ This structure preserves major data changes made by users belonging to an organi
 ### Key Points
 
 ```text
-Who          actor_id / actor_type
-When         created_at
-What         target_table_name / target_record_id
-How          action_type
-Before       old_values
-After        new_values
-Why          reason_for_change
-From where   client_ip / request_uri / user_agent
-Which request request_id / session_id
-Which version target_version / target_revision_number
+Who             actor_id / actor_type
+When            created_at
+What            target_table_name / target_record_id
+How             action_type
+Before change   old_values
+After change    new_values
+Why             reason_for_change
+Where           client_ip / request_uri / user_agent
+Which request   request_id / session_id
+Which version   target_version / target_revision_number
 ```
 
-- Changes performed by users as well as system or batch jobs can be recorded; the user ID may be absent in the latter cases.
-- The Audit Trail records data changes and important system activities, whereas an electronic signature is evidence of a regulated signing action such as approval or rejection.
-- Even when data is deleted, its previous value can remain in the Audit Trail to preserve traceability of the change.
+- In addition to user-made changes, system or batch actions can also be recorded; in those cases, the user ID may be absent.
+- Audit Trail is the history of data changes and important system actions, while electronic signatures provide evidence of regulated signing actions such as approval and rejection.
+- The history of changes can be traced if the implementation stores existing values in Audit Trail upon deletion. Because `old_values` currently allows NULL, preservation of values before deletion must be ensured through business logic and recording policies.
+- `audit_trail` has no direct organization ID. The organizational scope of system and batch records without a user must be determined through another path, such as the target record.
