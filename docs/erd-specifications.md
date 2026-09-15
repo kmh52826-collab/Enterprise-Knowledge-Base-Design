@@ -49,10 +49,13 @@ Global roles define permissions that apply across the entire system. Project par
 
 | Table | Role |
 |---|---|
-| `organization` | Maintains basic information about client companies or operating organizations and serves as the reference table for user organizational affiliations |
-| `app_user` | Manages user accounts, basic profiles, organizational affiliations, and account statuses |
-| `role` | Defines global roles and permission scopes that apply across the entire system |
-| `user_role` | Manages many-to-many mappings between users and global roles and prevents duplicate assignment of the same role |
+| `organization` | Serves as the reference table for managing customer or operating organization information and identifying each user's organizational affiliation |
+| `app_user` | Manages user accounts, basic profiles, organizational affiliation, and account status |
+| `role` | Defines global roles and permission scopes applied across the system |
+| `user_role` | Manages the many-to-many relationship between users and global roles while preventing duplicate role assignments |
+| `user_group` | Manages organization-specific user group information and activation status, providing the basis for assigning roles to multiple users collectively |
+| `user_group_member` | Manages the many-to-many relationship between users and user groups, including membership status and membership start and end timestamps |
+| `group_role` | Assigns roles to user groups and manages whether each role applies globally or to a specific project |
 
 ---
 
