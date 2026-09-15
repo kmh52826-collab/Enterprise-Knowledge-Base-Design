@@ -1,3 +1,5 @@
+<a id="top"></a>
+
 # Data Table Specifications
 
 > Validation Management Platform Data Model Documentation  
@@ -13,8 +15,8 @@
 
 ## 1. Document Overview
 
-- Total tables: **51**
-- Total columns: **783**
+- Total tables: **54**
+- Total columns: **815**
 - Domains: **25**
 - Naming conventions: Tables and columns use `snake_case`; primary keys use entity-specific identifier columns.
 - Date/time conventions: Store UTC in the database; display dates and times in the user's or site's time zone.
@@ -40,58 +42,61 @@
 | 2 | Security | User | [`app_user`](#table-app_user) | `user_id` | `organization_id` | High | Y |
 | 3 | Security | Role | [`role`](#table-role) | `role_id` | - | High | Y |
 | 4 | Security | User Role | [`user_role`](#table-user_role) | `user_role_id` | `user_id, role_id` | High | Y |
-| 5 | Compliance | Electronic Signature | [`electronic_signature`](#table-electronic_signature) | `signature_id` | `signer_id` | Critical | Y |
-| 6 | Compliance | Audit Trail | [`audit_trail`](#table-audit_trail) | `audit_id` | `actor_id` | Critical | Y |
-| 7 | File | File Asset | [`file_asset`](#table-file_asset) | `file_id` | `uploader_id` | High | Y |
-| 8 | File | Evidence File Link | [`evidence_link`](#table-evidence_link) | `evidence_link_id` | `project_id, file_id, created_by, updated_by` | High | Y |
-| 9 | File | File Cleanup Execution History | [`file_cleanup_execution`](#table-file_cleanup_execution) | `file_cleanup_execution_id` | `requested_by, created_by, updated_by` | High | Y |
-| 10 | System | System/Equipment Identification Information | [`system_asset`](#table-system_asset) | `system_id` | `organization_id` | High | Y |
-| 11 | System | Backup Execution History | [`backup_execution`](#table-backup_execution) | `backup_execution_id` | `requested_by, created_by, updated_by` | Critical | Y |
-| 12 | Library | Library Item Master | [`library_item`](#table-library_item) | `library_id` | - | High | Y |
-| 13 | Validation | Validation Project | [`validation_project`](#table-validation_project) | `project_id` | `system_id, created_by, updated_by` | High | Y |
-| 14 | Validation | Project Member | [`project_member`](#table-project_member) | `project_member_id` | `project_id, user_id, role_id, created_by, updated_by` | High | Y |
-| 15 | Validation | Validation Activity Master | [`validation_activity`](#table-validation_activity) | `activity_id` | `created_by, updated_by` | High | Y |
-| 16 | Validation | Project Activity | [`project_activity`](#table-project_activity) | `project_activity_id` | `project_id, activity_id, created_by, updated_by` | Critical | Y |
-| 17 | Validation | Activity Dependency | [`activity_dependency`](#table-activity_dependency) | `activity_dependency_id` | `successor_activity_id, predecessor_activity_id, created_by, updated_by` | Critical | Y |
-| 18 | QIA | Quality Impact Assessment Header | [`qia_assessment`](#table-qia_assessment) | `qia_id` | `project_id` | High | Y |
-| 19 | QIA | QIA Module Detailed Assessment | [`qia_module_item`](#table-qia_module_item) | `qia_module_item_id` | `qia_id` | High | Y |
-| 20 | VA | Vendor Audit Assessment | [`vendor_audit`](#table-vendor_audit) | `audit_id` | `project_id` | High | Y |
-| 21 | URS | User Requirements Specification | [`requirement`](#table-requirement) | `requirement_id` | `project_id, created_by` | High | Y |
-| 22 | FDS | Functional Design Specification | [`fds_spec`](#table-fds_spec) | `fds_id` | `project_id, created_by, updated_by` | High | Y |
-| 23 | FDS | FDS Detailed Item | [`fds_item`](#table-fds_item) | `fds_item_id` | `fds_id, created_by, updated_by` | High | Y |
-| 24 | FDS | FDS Interface Definition | [`fds_interface`](#table-fds_interface) | `fds_interface_id` | `fds_id, created_by, updated_by` | High | Y |
-| 25 | DQ | Design Qualification Assessment | [`dq_assessment`](#table-dq_assessment) | `dq_id` | `project_id, created_by, updated_by` | High | Y |
-| 26 | DQ | DQ Detailed Assessment Item | [`dq_item`](#table-dq_item) | `dq_item_id` | `dq_id, requirement_id, reviewed_by, created_by, updated_by` | High | Y |
-| 27 | FRA | Functional Risk Assessment | [`fra_assessment`](#table-fra_assessment) | `fra_id` | `project_id, created_by, updated_by` | High | Y |
-| 28 | FRA | FRA Detailed Risk Item | [`fra_item`](#table-fra_item) | `fra_item_id` | `fra_id, requirement_id, created_by, updated_by` | High | Y |
-| 29 | IQ | Installation Qualification Assessment | [`iq_assessment`](#table-iq_assessment) | `iq_id` | `project_id, created_by, updated_by` | High | Y |
-| 30 | IQ | IQ Detailed Test Item | [`iq_item`](#table-iq_item) | `iq_item_id` | `iq_id, executed_by, created_by, updated_by` | High | Y |
-| 31 | OQ | Operational Qualification Assessment | [`oq_assessment`](#table-oq_assessment) | `oq_id` | `project_id, created_by, updated_by` | High | Y |
-| 32 | OQ | OQ Detailed Test Item | [`oq_item`](#table-oq_item) | `oq_item_id` | `oq_id, executed_by, created_by, updated_by` | High | Y |
-| 33 | PQ | Performance Qualification Assessment | [`pq_assessment`](#table-pq_assessment) | `pq_id` | `project_id, created_by, updated_by` | High | Y |
-| 34 | PQ | PQ Detailed Test Item | [`pq_item`](#table-pq_item) | `pq_item_id` | `pq_id, executed_by, created_by, updated_by` | High | Y |
-| 35 | RTM | Requirements Traceability Matrix | [`rtm_assessment`](#table-rtm_assessment) | `rtm_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 36 | RTM | RTM Detailed Traceability Item | [`rtm_item`](#table-rtm_item) | `rtm_item_id` | `rtm_id, requirement_id, created_by, updated_by` | Critical | Y |
-| 37 | VSR | Validation Summary Report | [`vsr_assessment`](#table-vsr_assessment) | `vsr_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 38 | VSR | VSR Activity Summary Item | [`vsr_item`](#table-vsr_item) | `vsr_item_id` | `vsr_id, created_by, updated_by` | Critical | Y |
-| 39 | Workflow | Workflow Instance | [`workflow_instance`](#table-workflow_instance) | `workflow_instance_id` | `requested_by, created_by, updated_by` | Critical | Y |
-| 40 | Workflow | Workflow Step | [`workflow_step`](#table-workflow_step) | `workflow_step_id` | `workflow_instance_id, assignee_id, created_by, updated_by` | Critical | Y |
-| 41 | Workflow | Approval Action History | [`approval_action`](#table-approval_action) | `approval_action_id` | `workflow_step_id, actor_id, signature_id` | Critical | Y |
-| 42 | Traceability | Common Traceability Link | [`traceability_link`](#table-traceability_link) | `traceability_link_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 43 | DDS | Detailed Design Specification | [`dds_spec`](#table-dds_spec) | `dds_id` | `project_id, created_by, updated_by` | High | Y |
-| 44 | DDS | DDS Detailed Item | [`dds_item`](#table-dds_item) | `dds_item_id` | `dds_id, created_by, updated_by` | High | Y |
-| 45 | Deviation | Deviation Management | [`deviation`](#table-deviation) | `deviation_id` | `project_id, resolved_by, approved_by, created_by, updated_by` | Critical | Y |
-| 46 | Report | Report Generation Job | [`report_generation`](#table-report_generation) | `report_generation_id` | `project_id, requested_by, result_file_id, report_schedule_id, created_by, updated_by` | High | Y |
-| 47 | Report | Report Schedule | [`report_schedule`](#table-report_schedule) | `report_schedule_id` | `project_id, created_by, updated_by` | High | Y |
-| 48 | AI | AI Generation Job | [`ai_generation_job`](#table-ai_generation_job) | `ai_job_id` | `project_id, requested_by, created_by, updated_by` | High | Y |
-| 49 | AI | AI Generation Result | [`ai_generation_result`](#table-ai_generation_result) | `ai_result_id` | `ai_job_id, created_by, updated_by` | High | Y |
-| 50 | AI | AI Generation Result Item | [`ai_result_item`](#table-ai_result_item) | `ai_result_item_id` | `ai_result_id, created_by, updated_by` | High | Y |
-| 51 | Notification | Notification Delivery | [`notification_delivery`](#table-notification_delivery) | `notification_delivery_id` | `project_id, workflow_instance_id, workflow_step_id, recipient_id, created_by, updated_by` | High | Y |
+| 5 | Security | User Group | [`user_group`](#table-user_group) | `user_group_id` | `organization_id, created_by, updated_by` | High | Y |
+| 6 | Security | User Group Member | [`user_group_member`](#table-user_group_member) | `user_group_member_id` | `user_group_id, user_id, created_by, updated_by` | High | Y |
+| 7 | Security | User Group Role | [`group_role`](#table-group_role) | `group_role_id` | `user_group_id, role_id, project_id, created_by, updated_by` | High | Y |
+| 8 | Compliance | Electronic Signature | [`electronic_signature`](#table-electronic_signature) | `signature_id` | `signer_id` | Critical | Y |
+| 9 | Compliance | Audit Trail | [`audit_trail`](#table-audit_trail) | `audit_id` | `actor_id` | Critical | Y |
+| 10 | File | File Asset | [`file_asset`](#table-file_asset) | `file_id` | `uploader_id` | High | Y |
+| 11 | File | Evidence File Link | [`evidence_link`](#table-evidence_link) | `evidence_link_id` | `project_id, file_id, created_by, updated_by` | High | Y |
+| 12 | File | File Cleanup Execution History | [`file_cleanup_execution`](#table-file_cleanup_execution) | `file_cleanup_execution_id` | `requested_by, created_by, updated_by` | High | Y |
+| 13 | System | System/Equipment Identification Information | [`system_asset`](#table-system_asset) | `system_id` | `organization_id` | High | Y |
+| 14 | System | Backup Execution History | [`backup_execution`](#table-backup_execution) | `backup_execution_id` | `requested_by, created_by, updated_by` | Critical | Y |
+| 15 | Library | Library Item Master | [`library_item`](#table-library_item) | `library_id` | - | High | Y |
+| 16 | Validation | Validation Project | [`validation_project`](#table-validation_project) | `project_id` | `system_id, created_by, updated_by` | High | Y |
+| 17 | Validation | Project Member | [`project_member`](#table-project_member) | `project_member_id` | `project_id, user_id, role_id, created_by, updated_by` | High | Y |
+| 18 | Validation | Validation Activity Master | [`validation_activity`](#table-validation_activity) | `activity_id` | `created_by, updated_by` | High | Y |
+| 19 | Validation | Project Activity | [`project_activity`](#table-project_activity) | `project_activity_id` | `project_id, activity_id, created_by, updated_by` | Critical | Y |
+| 20 | Validation | Activity Dependency | [`activity_dependency`](#table-activity_dependency) | `activity_dependency_id` | `successor_activity_id, predecessor_activity_id, created_by, updated_by` | Critical | Y |
+| 21 | QIA | Quality Impact Assessment Header | [`qia_assessment`](#table-qia_assessment) | `qia_id` | `project_id` | High | Y |
+| 22 | QIA | QIA Module Detailed Assessment | [`qia_module_item`](#table-qia_module_item) | `qia_module_item_id` | `qia_id` | High | Y |
+| 23 | VA | Vendor Audit Assessment | [`vendor_audit`](#table-vendor_audit) | `audit_id` | `project_id` | High | Y |
+| 24 | URS | User Requirements Specification | [`requirement`](#table-requirement) | `requirement_id` | `project_id, created_by` | High | Y |
+| 25 | FDS | Functional Design Specification | [`fds_spec`](#table-fds_spec) | `fds_id` | `project_id, created_by, updated_by` | High | Y |
+| 26 | FDS | FDS Detailed Item | [`fds_item`](#table-fds_item) | `fds_item_id` | `fds_id, created_by, updated_by` | High | Y |
+| 27 | FDS | FDS Interface Definition | [`fds_interface`](#table-fds_interface) | `fds_interface_id` | `fds_id, created_by, updated_by` | High | Y |
+| 28 | DQ | Design Qualification Assessment | [`dq_assessment`](#table-dq_assessment) | `dq_id` | `project_id, created_by, updated_by` | High | Y |
+| 29 | DQ | DQ Detailed Assessment Item | [`dq_item`](#table-dq_item) | `dq_item_id` | `dq_id, requirement_id, reviewed_by, created_by, updated_by` | High | Y |
+| 30 | FRA | Functional Risk Assessment | [`fra_assessment`](#table-fra_assessment) | `fra_id` | `project_id, created_by, updated_by` | High | Y |
+| 31 | FRA | FRA Detailed Risk Item | [`fra_item`](#table-fra_item) | `fra_item_id` | `fra_id, requirement_id, created_by, updated_by` | High | Y |
+| 32 | IQ | Installation Qualification Assessment | [`iq_assessment`](#table-iq_assessment) | `iq_id` | `project_id, created_by, updated_by` | High | Y |
+| 33 | IQ | IQ Detailed Test Item | [`iq_item`](#table-iq_item) | `iq_item_id` | `iq_id, executed_by, created_by, updated_by` | High | Y |
+| 34 | OQ | Operational Qualification Assessment | [`oq_assessment`](#table-oq_assessment) | `oq_id` | `project_id, created_by, updated_by` | High | Y |
+| 35 | OQ | OQ Detailed Test Item | [`oq_item`](#table-oq_item) | `oq_item_id` | `oq_id, executed_by, created_by, updated_by` | High | Y |
+| 36 | PQ | Performance Qualification Assessment | [`pq_assessment`](#table-pq_assessment) | `pq_id` | `project_id, created_by, updated_by` | High | Y |
+| 37 | PQ | PQ Detailed Test Item | [`pq_item`](#table-pq_item) | `pq_item_id` | `pq_id, executed_by, created_by, updated_by` | High | Y |
+| 38 | RTM | Requirements Traceability Matrix | [`rtm_assessment`](#table-rtm_assessment) | `rtm_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 39 | RTM | RTM Detailed Traceability Item | [`rtm_item`](#table-rtm_item) | `rtm_item_id` | `rtm_id, requirement_id, created_by, updated_by` | Critical | Y |
+| 40 | VSR | Validation Summary Report | [`vsr_assessment`](#table-vsr_assessment) | `vsr_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 41 | VSR | VSR Activity Summary Item | [`vsr_item`](#table-vsr_item) | `vsr_item_id` | `vsr_id, created_by, updated_by` | Critical | Y |
+| 42 | Workflow | Workflow Instance | [`workflow_instance`](#table-workflow_instance) | `workflow_instance_id` | `requested_by, created_by, updated_by` | Critical | Y |
+| 43 | Workflow | Workflow Step | [`workflow_step`](#table-workflow_step) | `workflow_step_id` | `workflow_instance_id, assignee_id, created_by, updated_by` | Critical | Y |
+| 44 | Workflow | Approval Action History | [`approval_action`](#table-approval_action) | `approval_action_id` | `workflow_step_id, actor_id, signature_id` | Critical | Y |
+| 45 | Traceability | Common Traceability Link | [`traceability_link`](#table-traceability_link) | `traceability_link_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 46 | DDS | Detailed Design Specification | [`dds_spec`](#table-dds_spec) | `dds_id` | `project_id, created_by, updated_by` | High | Y |
+| 47 | DDS | DDS Detailed Item | [`dds_item`](#table-dds_item) | `dds_item_id` | `dds_id, created_by, updated_by` | High | Y |
+| 48 | Deviation | Deviation Management | [`deviation`](#table-deviation) | `deviation_id` | `project_id, resolved_by, approved_by, created_by, updated_by` | Critical | Y |
+| 49 | Report | Report Generation Job | [`report_generation`](#table-report_generation) | `report_generation_id` | `project_id, requested_by, result_file_id, report_schedule_id, created_by, updated_by` | High | Y |
+| 50 | Report | Report Schedule | [`report_schedule`](#table-report_schedule) | `report_schedule_id` | `project_id, created_by, updated_by` | High | Y |
+| 51 | AI | AI Generation Job | [`ai_generation_job`](#table-ai_generation_job) | `ai_job_id` | `project_id, requested_by, created_by, updated_by` | High | Y |
+| 52 | AI | AI Generation Result | [`ai_generation_result`](#table-ai_generation_result) | `ai_result_id` | `ai_job_id, created_by, updated_by` | High | Y |
+| 53 | AI | AI Generation Result Item | [`ai_result_item`](#table-ai_result_item) | `ai_result_item_id` | `ai_result_id, created_by, updated_by` | High | Y |
+| 54 | Notification | Notification Delivery | [`notification_delivery`](#table-notification_delivery) | `notification_delivery_id` | `project_id, workflow_instance_id, workflow_step_id, recipient_id, created_by, updated_by` | High | Y |
 
 ## 4. Domain Navigation
 
 - **Organization**: [`organization`](#table-organization)
-- **Security**: [`app_user`](#table-app_user), [`role`](#table-role), [`user_role`](#table-user_role)
+- **Security**: [`app_user`](#table-app_user), [`role`](#table-role), [`user_role`](#table-user_role), [`user_group`](#table-user_group), [`user_group_member`](#table-user_group_member), [`group_role`](#table-group_role)
 - **Compliance**: [`electronic_signature`](#table-electronic_signature), [`audit_trail`](#table-audit_trail)
 - **File**: [`file_asset`](#table-file_asset), [`evidence_link`](#table-evidence_link), [`file_cleanup_execution`](#table-file_cleanup_execution)
 - **System**: [`system_asset`](#table-system_asset), [`backup_execution`](#table-backup_execution)
@@ -149,7 +154,7 @@
 | 20 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-01T00:00:00` |
 | 21 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T16:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
@@ -187,7 +192,7 @@
 | 12 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-01T00:00:00` |
 | 13 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T16:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
@@ -215,7 +220,7 @@
 | 25 | Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Detailed description of the role's permission scope | `System-wide administrative permissions` |
 | 26 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-01T00:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
@@ -242,14 +247,115 @@
 | 29 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | References role.role_id | `00000000-0000-0000-0000-000000000001` |
 | 30 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-01T00:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
+
+---
+
+<a id="table-user_group"></a>
+### 5. User Group (`user_group`)
+
+| Item | Definition |
+|---|---|
+| Description | Manages basic information and active status for user groups within each organization |
+| Primary Key | `user_group_id` |
+| Key References (FK) | `organization_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
+
+#### Column Definitions
+
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
+
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
+|---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
+| 784 | User Group ID | `user_group_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique user group identifier | `UUID` |
+| 785 | Organization ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | ID of the organization to which the user group belongs | `UUID` |
+| 786 | Group Code | `group_code` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | User group identification code within the organization. Duplicate (organization_id, group_code) combinations are not allowed in active data. | `QA_REVIEWER_GROUP` |
+| 787 | Group Name | `group_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | User group name displayed in the user interface | `QA Reviewer Group` |
+| 788 | Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the user group's purpose and scope | `QA reviewers responsible for Validation documents` |
+| 789 | Active | `is_active` | `boolean` | N | N | - | Y | `True` | N | Y | N | Y | Whether the user group is active | `True` |
+| 790 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group creation timestamp (UTC) | `2026-09-01T10:00:00` |
+| 791 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who registered the user group | `UUID` |
+| 792 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group last-modified timestamp (UTC) | `2026-09-01T10:00:00` |
+| 793 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last modified the user group | `UUID` |
+| 794 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | User group soft-deletion timestamp | - |
+
+[↑ Back to Top](#top)
+
+---
+
+<a id="table-user_group_member"></a>
+### 6. User Group Member (`user_group_member`)
+
+| Item | Definition |
+|---|---|
+| Description | Manages the N:M relationship between users and user groups, including membership status and period |
+| Primary Key | `user_group_member_id` |
+| Key References (FK) | `user_group_id, user_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
+
+#### Column Definitions
+
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
+
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
+|---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
+| 795 | Group Member ID | `user_group_member_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique membership mapping identifier between a user and a group. Duplicate (user_group_id, user_id) combinations are not allowed in active data. | `UUID` |
+| 796 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | Y | - | N | Y | N | Y | ID of the user group in which the user participates | `UUID` |
+| 797 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user participating in the user group | `UUID` |
+| 798 | Membership Status | `member_status` | `varchar(20)` | N | N | - | Y | `ACTIVE` | N | Y | N | Y | Group membership status. ACTIVE, INACTIVE, WITHDRAWN | `ACTIVE` |
+| 799 | Joined At | `joined_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Timestamp when participation in the user group began | `2026-09-01T10:00:00` |
+| 800 | Left At | `left_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Timestamp when participation in the user group ended. NULL while membership is current. | - |
+| 801 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group membership record creation timestamp (UTC) | `2026-09-01T10:00:00` |
+| 802 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who registered the group member | `UUID` |
+| 803 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group membership record last-modified timestamp (UTC) | `2026-09-01T10:00:00` |
+| 804 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last modified the group member record | `UUID` |
+| 805 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | User group membership record soft-deletion timestamp | - |
+
+[↑ Back to Top](#top)
+
+---
+
+<a id="table-group_role"></a>
+### 7. User Group Role (`group_role`)
+
+| Item | Definition |
+|---|---|
+| Description | Assigns roles to user groups and manages whether they apply globally or to a specific project |
+| Primary Key | `group_role_id` |
+| Key References (FK) | `user_group_id, role_id, project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audited | Y |
+| Retention/Deletion Policy | Retain for the period during which records must remain available for audit |
+
+#### Column Definitions
+
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: Personal/Sensitive Information
+
+| No | Logical Column Name | Physical Column Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description/Business Rules | Example Value |
+|---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
+| 806 | Group Role ID | `group_role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique mapping identifier between a user group and a role. Duplicate (user_group_id, role_id, scope_type, project_id) combinations are not allowed in active data. | `UUID` |
+| 807 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | Y | - | N | Y | N | Y | ID of the user group receiving the role | `UUID` |
+| 808 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | ID of the role assigned to the user group | `UUID` |
+| 809 | Scope Type | `scope_type` | `varchar(20)` | N | N | - | Y | `GLOBAL` | N | Y | N | Y | Role application scope. GLOBAL, PROJECT | `PROJECT` |
+| 810 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | ID of the Validation project to which the role applies when scope is PROJECT. NULL when scope is GLOBAL. | `UUID` |
+| 811 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group role mapping creation timestamp (UTC) | `2026-09-01T10:00:00` |
+| 812 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who assigned the role to the user group | `UUID` |
+| 813 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group role mapping last-modified timestamp (UTC) | `2026-09-01T10:00:00` |
+| 814 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last modified the user group role assignment | `UUID` |
+| 815 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | User group role mapping soft-deletion timestamp | - |
+
+[↑ Back to Top](#top)
 
 ---
 
 ## Compliance
 
 <a id="table-electronic_signature"></a>
-### 5. Electronic Signature (`electronic_signature`)
+### 8. Electronic Signature (`electronic_signature`)
 
 | Item | Definition |
 |---|---|
@@ -278,12 +384,12 @@
 | 40 | Reauthentication Method | `authentication_method` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Reauthentication method used to verify the signer's identity when executing the electronic signature | `PASSWORD` |
 | 41 | Reauthentication Result | `authentication_result` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Result of reauthentication when executing the electronic signature | `SUCCESS` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-audit_trail"></a>
-### 6. Audit Trail (`audit_trail`)
+### 9. Audit Trail (`audit_trail`)
 
 | Item | Definition |
 |---|---|
@@ -318,14 +424,14 @@
 | 57 | Request Path | `request_uri` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | UI or API request path that triggered the change. NULL allowed when no path exists, such as for system/batch processing. | `/api/fds/approve` |
 | 58 | Client Information | `user_agent` | `text` | N | N | - | N | - | N | N | Y | Y | Browser, operating system, or client application information for the change request | `Sample-Client/1.0` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## File
 
 <a id="table-file_asset"></a>
-### 7. File Asset (`file_asset`)
+### 10. File Asset (`file_asset`)
 
 | Item | Definition |
 |---|---|
@@ -357,12 +463,12 @@
 | 71 | Cleaned Up At | `cleaned_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when cleanup of the actual stored file and its metadata was completed | `2026-09-09 19:00:00+00` |
 | 72 | Cleanup Failure Reason | `cleanup_error_message` | `text` | N | N | - | N | - | N | N | N | Y | Detailed reason for failure to clean up an individual file. Sensitive information such as access keys must not be stored. | `No permission to access the file` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-evidence_link"></a>
-### 8. Evidence File Link (`evidence_link`)
+### 11. Evidence File Link (`evidence_link`)
 
 | Item | Definition |
 |---|---|
@@ -392,12 +498,12 @@
 | 533 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last modified the evidence link | `UUID` |
 | 534 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Evidence link soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-file_cleanup_execution"></a>
-### 9. File Cleanup Execution History (`file_cleanup_execution`)
+### 12. File Cleanup Execution History (`file_cleanup_execution`)
 
 | Item | Definition |
 |---|---|
@@ -437,14 +543,14 @@
 | 782 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | File cleanup execution history last modification timestamp (UTC) | `2026-09-02 01:05:00+00` |
 | 783 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when modified by a user. NULL allowed for system/batch processing. | `UUID` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## System
 
 <a id="table-system_asset"></a>
-### 10. System/Equipment Identification Information (`system_asset`)
+### 13. System/Equipment Identification Information (`system_asset`)
 
 | Item | Definition |
 |---|---|
@@ -480,12 +586,12 @@
 | 89 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-25T00:00:00` |
 | 90 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-25T00:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-backup_execution"></a>
-### 11. Backup Execution History (`backup_execution`)
+### 14. Backup Execution History (`backup_execution`)
 
 | Item | Definition |
 |---|---|
@@ -524,14 +630,14 @@
 | 742 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Backup execution history last modification timestamp (UTC) | `2026-09-02 18:20:00+00` |
 | 743 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when modified by a user. NULL allowed for system/batch processing. | `UUID` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## Library
 
 <a id="table-library_item"></a>
-### 12. Library Item Master (`library_item`)
+### 15. Library Item Master (`library_item`)
 
 | Item | Definition |
 |---|---|
@@ -561,14 +667,14 @@
 | 101 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-25T00:00:00` |
 | 102 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-25T00:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## Validation
 
 <a id="table-validation_project"></a>
-### 13. Validation Project (`validation_project`)
+### 16. Validation Project (`validation_project`)
 
 | Item | Definition |
 |---|---|
@@ -603,12 +709,12 @@
 | 118 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the project modifier | `00000000-0000-0000-0000-000000000001` |
 | 119 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-project_member"></a>
-### 14. Project Member (`project_member`)
+### 17. Project Member (`project_member`)
 
 | Item | Definition |
 |---|---|
@@ -638,12 +744,12 @@
 | 545 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last modified the project participation information | `UUID` |
 | 546 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Project participation information soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-validation_activity"></a>
-### 15. Validation Activity Master (`validation_activity`)
+### 18. Validation Activity Master (`validation_activity`)
 
 | Item | Definition |
 |---|---|
@@ -671,12 +777,12 @@
 | 555 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the activity master record | `UUID` |
 | 556 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Activity master soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-project_activity"></a>
-### 16. Project Activity (`project_activity`)
+### 19. Project Activity (`project_activity`)
 
 | Item | Definition |
 |---|---|
@@ -709,12 +815,12 @@
 | 570 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the project activity | `UUID` |
 | 571 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Project activity soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-activity_dependency"></a>
-### 17. Activity Dependency (`activity_dependency`)
+### 20. Activity Dependency (`activity_dependency`)
 
 | Item | Definition |
 |---|---|
@@ -747,14 +853,14 @@
 | 585 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the condition | `UUID` |
 | 586 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Condition soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## QIA
 
 <a id="table-qia_assessment"></a>
-### 18. Quality Impact Assessment Header (`qia_assessment`)
+### 21. Quality Impact Assessment Header (`qia_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -788,12 +894,12 @@
 | 134 | Authoring/Review/Approval Status | `status` | `varchar(20)` | N | N | - | Y | `DRAFT` | N | N | N | Y | Document progress status (DRAFT, REVIEW, APPROVED, etc.) | `DRAFT` |
 | 135 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-qia_module_item"></a>
-### 19. QIA Module Detailed Assessment (`qia_module_item`)
+### 22. QIA Module Detailed Assessment (`qia_module_item`)
 
 | Item | Definition |
 |---|---|
@@ -831,14 +937,14 @@
 | 154 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T10:00:00` |
 | 155 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T10:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## VA
 
 <a id="table-vendor_audit"></a>
-### 20. Vendor Audit Assessment (`vendor_audit`)
+### 23. Vendor Audit Assessment (`vendor_audit`)
 
 | Item | Definition |
 |---|---|
@@ -875,14 +981,14 @@
 | 173 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
 | 174 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## URS
 
 <a id="table-requirement"></a>
-### 21. User Requirements Specification (`requirement`)
+### 24. User Requirements Specification (`requirement`)
 
 | Item | Definition |
 |---|---|
@@ -916,14 +1022,14 @@
 | 189 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-08-26T00:00:00` |
 | 190 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last modification timestamp (UTC) | `2026-08-26T00:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## FDS
 
 <a id="table-fds_spec"></a>
-### 22. Functional Design Specification (`fds_spec`)
+### 25. Functional Design Specification (`fds_spec`)
 
 | Item | Definition |
 |---|---|
@@ -955,12 +1061,12 @@
 | 203 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the FDS modifier | `00000000-0000-0000-0000-000000000001` |
 | 204 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-fds_item"></a>
-### 23. FDS Detailed Item (`fds_item`)
+### 26. FDS Detailed Item (`fds_item`)
 
 | Item | Definition |
 |---|---|
@@ -993,12 +1099,12 @@
 | 218 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
 | 219 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-fds_interface"></a>
-### 24. FDS Interface Definition (`fds_interface`)
+### 27. FDS Interface Definition (`fds_interface`)
 
 | Item | Definition |
 |---|---|
@@ -1030,14 +1136,14 @@
 | 232 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who last modified the interface | `UUID` |
 | 233 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## DQ
 
 <a id="table-dq_assessment"></a>
-### 25. Design Qualification Assessment (`dq_assessment`)
+### 28. Design Qualification Assessment (`dq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1069,12 +1175,12 @@
 | 246 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the DQ modifier | `00000000-0000-0000-0000-000000000001` |
 | 247 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-dq_item"></a>
-### 26. DQ Detailed Assessment Item (`dq_item`)
+### 29. DQ Detailed Assessment Item (`dq_item`)
 
 | Item | Definition |
 |---|---|
@@ -1109,14 +1215,14 @@
 | 263 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
 | 264 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## FRA
 
 <a id="table-fra_assessment"></a>
-### 27. Functional Risk Assessment (`fra_assessment`)
+### 30. Functional Risk Assessment (`fra_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1148,12 +1254,12 @@
 | 277 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the FRA modifier | `00000000-0000-0000-0000-000000000001` |
 | 278 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-fra_item"></a>
-### 28. FRA Detailed Risk Item (`fra_item`)
+### 31. FRA Detailed Risk Item (`fra_item`)
 
 | Item | Definition |
 |---|---|
@@ -1190,14 +1296,14 @@
 | 296 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
 | 297 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## IQ
 
 <a id="table-iq_assessment"></a>
-### 29. Installation Qualification Assessment (`iq_assessment`)
+### 32. Installation Qualification Assessment (`iq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1230,12 +1336,12 @@
 | 311 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the IQ modifier | `00000000-0000-0000-0000-000000000001` |
 | 312 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-iq_item"></a>
-### 30. IQ Detailed Test Item (`iq_item`)
+### 33. IQ Detailed Test Item (`iq_item`)
 
 | Item | Definition |
 |---|---|
@@ -1272,14 +1378,14 @@
 | 330 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
 | 331 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## OQ
 
 <a id="table-oq_assessment"></a>
-### 31. Operational Qualification Assessment (`oq_assessment`)
+### 34. Operational Qualification Assessment (`oq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1312,12 +1418,12 @@
 | 345 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the OQ modifier | `00000000-0000-0000-0000-000000000001` |
 | 346 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-oq_item"></a>
-### 32. OQ Detailed Test Item (`oq_item`)
+### 35. OQ Detailed Test Item (`oq_item`)
 
 | Item | Definition |
 |---|---|
@@ -1354,14 +1460,14 @@
 | 364 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
 | 365 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## PQ
 
 <a id="table-pq_assessment"></a>
-### 33. Performance Qualification Assessment (`pq_assessment`)
+### 36. Performance Qualification Assessment (`pq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1399,12 +1505,12 @@
 | 384 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the PQ modifier | `00000000-0000-0000-0000-000000000001` |
 | 385 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-pq_item"></a>
-### 34. PQ Detailed Test Item (`pq_item`)
+### 37. PQ Detailed Test Item (`pq_item`)
 
 | Item | Definition |
 |---|---|
@@ -1438,14 +1544,14 @@
 | 400 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
 | 401 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## RTM
 
 <a id="table-rtm_assessment"></a>
-### 35. Requirements Traceability Matrix (`rtm_assessment`)
+### 38. Requirements Traceability Matrix (`rtm_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1482,12 +1588,12 @@
 | 419 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the RTM modifier | `00000000-0000-0000-0000-000000000001` |
 | 420 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-rtm_item"></a>
-### 36. RTM Detailed Traceability Item (`rtm_item`)
+### 39. RTM Detailed Traceability Item (`rtm_item`)
 
 | Item | Definition |
 |---|---|
@@ -1524,14 +1630,14 @@
 | 438 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
 | 439 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## VSR
 
 <a id="table-vsr_assessment"></a>
-### 37. Validation Summary Report (`vsr_assessment`)
+### 40. Validation Summary Report (`vsr_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1565,12 +1671,12 @@
 | 454 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the VSR modifier | `00000000-0000-0000-0000-000000000001` |
 | 455 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-vsr_item"></a>
-### 38. VSR Activity Summary Item (`vsr_item`)
+### 41. VSR Activity Summary Item (`vsr_item`)
 
 | Item | Definition |
 |---|---|
@@ -1605,14 +1711,14 @@
 | 471 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | Identifier of the item modifier | `00000000-0000-0000-0000-000000000001` |
 | 472 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## Workflow
 
 <a id="table-workflow_instance"></a>
-### 39. Workflow Instance (`workflow_instance`)
+### 42. Workflow Instance (`workflow_instance`)
 
 | Item | Definition |
 |---|---|
@@ -1644,12 +1750,12 @@
 | 485 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | User who last modified the workflow record | `UUID` |
 | 486 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-workflow_step"></a>
-### 40. Workflow Step (`workflow_step`)
+### 43. Workflow Step (`workflow_step`)
 
 | Item | Definition |
 |---|---|
@@ -1681,12 +1787,12 @@
 | 499 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | N | N | Y | User who last modified the workflow step | `UUID` |
 | 500 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-approval_action"></a>
-### 41. Approval Action History (`approval_action`)
+### 44. Approval Action History (`approval_action`)
 
 | Item | Definition |
 |---|---|
@@ -1713,14 +1819,14 @@
 | 508 | Action Timestamp | `acted_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when submission, review, approval, or rejection was actually performed | `2026-09-01T10:00:00` |
 | 509 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation timestamp (UTC) | `2026-09-01T10:00:00` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## Traceability
 
 <a id="table-traceability_link"></a>
-### 42. Common Traceability Link (`traceability_link`)
+### 45. Common Traceability Link (`traceability_link`)
 
 | Item | Definition |
 |---|---|
@@ -1751,14 +1857,14 @@
 | 521 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last modified the traceability link | `UUID` |
 | 522 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Traceability link soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## DDS
 
 <a id="table-dds_spec"></a>
-### 43. Detailed Design Specification (`dds_spec`)
+### 46. Detailed Design Specification (`dds_spec`)
 
 | Item | Definition |
 |---|---|
@@ -1790,12 +1896,12 @@
 | 599 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the DDS | `UUID` |
 | 600 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | DDS soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-dds_item"></a>
-### 44. DDS Detailed Item (`dds_item`)
+### 47. DDS Detailed Item (`dds_item`)
 
 | Item | Definition |
 |---|---|
@@ -1825,14 +1931,14 @@
 | 611 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the DDS item | `UUID` |
 | 612 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | DDS item soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## Deviation
 
 <a id="table-deviation"></a>
-### 45. Deviation Management (`deviation`)
+### 48. Deviation Management (`deviation`)
 
 | Item | Definition |
 |---|---|
@@ -1869,14 +1975,14 @@
 | 630 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the deviation | `UUID` |
 | 631 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deviation soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## Report
 
 <a id="table-report_generation"></a>
-### 46. Report Generation Job (`report_generation`)
+### 49. Report Generation Job (`report_generation`)
 
 | Item | Definition |
 |---|---|
@@ -1919,12 +2025,12 @@
 | 655 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when modified by a user. NULL allowed for system/batch processing. | `UUID` |
 | 656 | Report Schedule ID | `report_schedule_id` | `uuid` | N | Y | `report_schedule.report_schedule_id` | N | - | N | Y | N | Y | Stores the original report schedule ID when generated by a scheduled execution. NULL allowed for user-requested executions. | `UUID` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-report_schedule"></a>
-### 47. Report Schedule (`report_schedule`)
+### 50. Report Schedule (`report_schedule`)
 
 | Item | Definition |
 |---|---|
@@ -1960,14 +2066,14 @@
 | 760 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified the report schedule | `UUID` |
 | 761 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Report schedule soft deletion timestamp | - |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## AI
 
 <a id="table-ai_generation_job"></a>
-### 48. AI Generation Job (`ai_generation_job`)
+### 51. AI Generation Job (`ai_generation_job`)
 
 | Item | Definition |
 |---|---|
@@ -2006,12 +2112,12 @@
 | 676 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Modification timestamp | `2026-09-02T00:00:00` |
 | 677 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who modified the record | `UUID` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-ai_generation_result"></a>
-### 49. AI Generation Result (`ai_generation_result`)
+### 52. AI Generation Result (`ai_generation_result`)
 
 | Item | Definition |
 |---|---|
@@ -2040,12 +2146,12 @@
 | 687 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Modification timestamp | `2026-09-02T00:00:00` |
 | 688 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who modified the record | `UUID` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 <a id="table-ai_result_item"></a>
-### 50. AI Generation Result Item (`ai_result_item`)
+### 53. AI Generation Result Item (`ai_result_item`)
 
 | Item | Definition |
 |---|---|
@@ -2076,14 +2182,14 @@
 | 700 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Modification timestamp | `2026-09-02T00:00:00` |
 | 701 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who modified the record | `UUID` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
 
 ## Notification
 
 <a id="table-notification_delivery"></a>
-### 51. Notification Delivery (`notification_delivery`)
+### 54. Notification Delivery (`notification_delivery`)
 
 | Item | Definition |
 |---|---|
@@ -2122,6 +2228,6 @@
 | 721 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Notification delivery job last modification timestamp (UTC) | `2026-09-02 18:00:05+00` |
 | 722 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Stores the user ID when modified by a user. NULL allowed for system/batch processing. | `UUID` |
 
-[↑ Back to Top](#data-table-specifications)
+[↑ Back to Top](#top)
 
 ---
