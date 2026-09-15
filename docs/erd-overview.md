@@ -10,22 +10,22 @@ Solid lines represent organizational relationships and business flows between ar
 flowchart TB
     subgraph BASE["Reference Data and Project Setup"]
         direction TB
-        SECURITY["① Organizations, Users, and Permissions
+        SECURITY["`**① Organizations, Users, and Permissions**
 organization
 app_user
 role
 user_role
 user_group
 user_group_member
-group_role"]
-        PROJECT["② Systems, Projects, and Participants
+group_role`"]
+        PROJECT["`**② Systems, Projects, and Participants**
 system_asset
 validation_project
-project_member"]
-        ACTIVITY["③ Activities and Dependencies
+project_member`"]
+        ACTIVITY["`**③ Activities and Dependencies**
 validation_activity
 project_activity
-activity_dependency"]
+activity_dependency`"]
         SECURITY --> PROJECT --> ACTIVITY
     end
 
@@ -33,77 +33,77 @@ activity_dependency"]
         direction TB
         subgraph DESIGN["Scope Assessment and Design"]
             direction LR
-            QIA["④ QIA and Vendor Audits
+            QIA["`**④ QIA and Vendor Audits**
 qia_assessment
 qia_module_item
-vendor_audit"]
-            URSFDS["⑤ URS and FDS
+vendor_audit`"]
+            URSFDS["`**⑤ URS and FDS**
 requirement
 fds_spec
 fds_item
-fds_interface"]
-            DDSDQ["⑥ DDS and DQ
+fds_interface`"]
+            DDSDQ["`**⑥ DDS and DQ**
 dds_spec
 dds_item
 dq_assessment
-dq_item"]
+dq_item`"]
             QIA --> URSFDS --> DDSDQ
         end
         subgraph VERIFICATION["Risk Assessment, Testing, and Traceability"]
             direction LR
-            FRA["⑦ FRA Risk Assessment
+            FRA["`**⑦ FRA Risk Assessment**
 fra_assessment
-fra_item"]
-            TEST["⑧ IQ, OQ, and PQ Testing
+fra_item`"]
+            TEST["`**⑧ IQ, OQ, and PQ Testing**
 iq_assessment
 iq_item
 oq_assessment
 oq_item
 pq_assessment
-pq_item"]
-            TRACE["⑨ Traceability and RTM
+pq_item`"]
+            TRACE["`**⑨ Traceability and RTM**
 traceability_link
 rtm_assessment
-rtm_item"]
+rtm_item`"]
             FRA --> TEST --> TRACE
         end
-        CLOSE["⑩ VSR and Deviations
+        CLOSE["`**⑩ VSR and Deviations**
 vsr_assessment
 vsr_item
-deviation"]
+deviation`"]
         DESIGN --> VERIFICATION --> CLOSE
     end
 
-    LIBRARY["⑪ Standard Library · Independent Master
-library_item"]
+    LIBRARY["`**⑪ Standard Library · Independent Master**
+library_item`"]
 
     subgraph COMMON["Common Functions Applied Across Business Processes"]
         direction TB
         subgraph CONTROL["Approval, Evidence, and Audit"]
             direction LR
-            WORKFLOW["⑫ Workflow and Electronic Signatures
+            WORKFLOW["`**⑫ Workflow and Electronic Signatures**
 workflow_instance
 workflow_step
 approval_action
-electronic_signature"]
-            FILES["⑬ Files, Evidence, and Cleanup
+electronic_signature`"]
+            FILES["`**⑬ Files, Evidence, and Cleanup**
 file_asset
 evidence_link
-file_cleanup_execution"]
-            AUDIT["⑯ Audit Trail
-audit_trail"]
+file_cleanup_execution`"]
+            AUDIT["`**⑯ Audit Trail**
+audit_trail`"]
         end
         subgraph SUPPORT["Operations and Authoring Support"]
             direction LR
-            OPS["⑭ Reports, Notifications, and Backups
+            OPS["`**⑭ Reports, Notifications, and Backups**
 report_generation
 report_schedule
 notification_delivery
-backup_execution"]
-            AI["⑮ AI Generation
+backup_execution`"]
+            AI["`**⑮ AI Generation**
 ai_generation_job
 ai_generation_result
-ai_result_item"]
+ai_result_item`"]
         end
         CONTROL ~~~ SUPPORT
     end
