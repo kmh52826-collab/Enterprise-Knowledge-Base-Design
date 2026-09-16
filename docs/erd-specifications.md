@@ -15,7 +15,7 @@ The complex overall schema is divided into 16 topics, with ERD images showing th
 > Refer to the [Overall ERD Diagram](./erd-overview.md), which groups all 54 tables by business area.
 
 > **For detailed column information**  
-> For the columns, data types, PKs and FKs, nullability, default values, constraints, and business rules of each table, refer to the [Data Dictionary](./data-dictionary.md).
+> For the columns, data types, PK·FK, nullability, default values, constraints, and business rules of each table, refer to the [Data Dictionary](./data-dictionary.md).
 
 ## Table of Contents
 
