@@ -15,7 +15,7 @@ The complex overall schema is divided into 16 topics, with ERD images showing th
 > Refer to the [Overall ERD Diagram](./erd-overview.md), which groups all 54 tables by business area.
 
 > **For detailed column information**  
-> For the columns, data types, PKs and FKs, nullability, default values, and business rules of each table, refer to the [Data Dictionary](./data-dictionary.md).
+> For the columns, data types, PKs and FKs, nullability, default values, constraints, and business rules of each table, refer to the [Data Dictionary](./data-dictionary.md).
 
 ## Table of Contents
 
@@ -125,7 +125,8 @@ This structure manages user accounts by organization and assigns global permissi
 ### Key Points
 
 - `user_role` assigns roles directly to users, while `group_role` applies roles collectively to group members.
-- Permissions with `GLOBAL` scope are distinguished from permissions with `PROJECT` scope that apply only to a specific project.
+- For `GLOBAL` scope, `project_id` is NULL. For `PROJECT` scope, which applies to a specific project, `project_id` is required.
+- `group_role` prevents duplicates among non-deleted mappings with `is_active=TRUE`. For `GLOBAL`, uniqueness is based on the group and role combination; for `PROJECT`, it is based on the group, role, and project combination.
 - Global permissions and actual project participation roles are separate; project participants are managed in `project_member`.
 
 ---
@@ -165,7 +166,7 @@ Each project is linked to one target system. `project_member` maps users and rol
 ### Key Points
 
 - Multiple Validation projects, such as initial validation, change validation, and revalidation, can be created for a single system or equipment asset.
-- The same user can participate in different roles across projects.
+- The same user can participate in different roles across projects. Duplicate project, user, and role combinations are not allowed among non-deleted membership records with `member_status=ACTIVE`.
 - `app_user` and `role` are global reference data, while `project_member` represents the actual role assignment within a specific project.
 
 ---
@@ -200,16 +201,18 @@ This structure creates Validation projects for systems belonging to an organizat
 | `app_user` | Manages users who create or modify projects, activities, and dependency conditions |
 | `system_asset` | Manages identifying information, GAMP category, GxP classification, and status of systems or equipment subject to Validation |
 | `validation_project` | Manages the scope, validation method, progress, and status of a Validation project for a target system |
-| `validation_activity` | Manages reference information and default display order for Validation activities such as VP, QIA, VA, URS, FDS, DDS, DQ, FRA, IQ, OQ, PQ, RTM, and VSR |
+| `validation_activity` | Manages master data and the default display order for Validation activities, including SYSTEM_IDENTIFICATION, VP, QIA, VA, URS, FDS, DDS, DQ, FRA, IQ, OQ, PQ, RTM, and VSR |
 | `project_activity` | Manages the activities to be performed in each project, including whether they are mandatory, whether they are active, and their progress status |
 | `activity_dependency` | Manages activation conditions for successor activities based on predecessor activities, required status, condition type, and evaluation order |
 
 ### Key Points
 
-- `project_activity` represents the activities selected from the activity master for actual execution in a particular project.
+- `project_activity` manages activities assigned to a project and uses `is_selected` to identify those selected for execution. Duplicate project and activity combinations are not allowed among non-deleted records, regardless of whether they are selected.
 - `activity_dependency` expresses business conditions beyond a simple sequence, including approval status, the existence of traceability links, test coverage for high-risk items, and whether unresolved deviations exist.
-- `predecessor_activity_id` and `successor_activity_id` reference the same activity master in predecessor and successor roles, respectively. The predecessor ID may be NULL for conditions without a specific predecessor activity, such as checking whether all activities have been approved.
-- The application evaluates conditions by retrieving the actual activity and deliverable statuses for the project.
+- `predecessor_activity_id` and `successor_activity_id` reference the same activity master in predecessor and successor roles, respectively. For `STATUS` conditions, the predecessor ID and `required_status` are required; for other conditions, `required_status` is NULL. The predecessor ID may be NULL for conditions without a specific predecessor activity, such as checking whether all activities have been approved.
+- The application evaluates conditions based on the project’s valid current revision. `CREATED` means that at least one deliverable specified by `condition_value` exists; the existence of a `project_activity` row alone does not satisfy the condition. System identification and VP activities, which have no document table, use the applicable condition types, such as context confirmation or activity selection.
+- `COMPLETED` is satisfied when the predecessor activity status is `COMPLETED` or `APPROVED` and the execution completion aggregation is valid. `APPROVED` is satisfied when the activity status is `APPROVED` and all current target deliverables have received final approval. Approval of a previous revision alone does not satisfy the approval condition for a new revision.
+- Evaluate non-deleted conditions with `is_active=TRUE`. All `REQUIRED` conditions for the same successor activity must be satisfied. `RECOMMENDED` conditions are advisory. A `SKIPPED` or unselected state does not automatically satisfy the required status. `ALL_SELECTED_APPROVED` checks selected activities excluding the successor activity itself, and an empty target set does not automatically satisfy the condition.
 
 ---
 
@@ -344,7 +347,7 @@ This structure organizes Validation projects around systems belonging to an orga
 ### Key Points
 
 - DDS provides detailed design from an implementation perspective, while DQ assesses whether the design satisfies the URS.
-- `dq_item` manages design qualification decisions and review results for each URS requirement.
+- `dq_item` manages design qualification decisions and review results for each URS requirement. The stored values for `result_status` are `PASS`, `FAIL`, and `PENDING`; new items start as `PENDING` (Pending Review).
 - Apart from the FDS and DDS mappings used for display in `dq_item`, formal, general-purpose traceability between deliverables is interpreted through `traceability_link`.
 
 ---
@@ -430,8 +433,10 @@ The document header and detailed test items for each qualification are managed s
 ### Key Points
 
 - IQ verifies installation suitability, OQ verifies that functions meet specifications, and PQ verifies sustained performance under actual operating conditions.
-- Each test distinguishes approval of the protocol, which defines the test procedure, from approval of the record, which contains the actual execution results.
-- Tests are performed using an approved protocol, after which the actual results, decisions, performers, and execution times are recorded. Discrepancies are managed in `deviation`.
+- Each test distinguishes approval of the protocol, which defines the test procedure, from approval of the record, which contains the actual execution results. Final approval of IQ, OQ, and PQ activities requires both `protocol_status` and `record_status` in the parent document to be `APPROVED`.
+- New IQ and OQ documents and items start as `DRAFT`. Item protocol and record statuses are synchronized with the corresponding parent document statuses within the same revision.
+- Test execution is allowed based on protocol approval in the current parent document. IQ and OQ execution is not allowed based solely on item statuses. Adding, modifying, or deleting items in an approved protocol requires a new revision starting as `DRAFT`. Actual results, decisions, performers, and execution times are recorded, and discrepancies are managed in `deviation`.
+- `pq_assessment.status` stores the execution progress states `수행 대기 중` (Awaiting Execution), `진행 중` (In Progress), and `완료` (Completed), with an initial value of `수행 대기 중` (Awaiting Execution). This is distinct from protocol and record approval statuses.
 
 ---
 
@@ -478,7 +483,8 @@ Each document is composed of a header and detail items. `traceability_link` conn
 
 - `traceability_link` is a general-purpose relationship table connecting a source entity to a target entity.
 - Typical relationship types are `IMPLEMENTED_BY`, `ASSESSED_BY`, `VERIFIED_BY`, and `MITIGATED_BY`.
-- Because these are polymorphic references, `source_entity_id` and `target_entity_id` may not have physical FKs to the target business tables. Validity for each type must be checked at the application layer.
+- Because these are polymorphic references, `source_entity_id` and `target_entity_id` have no physical FKs to the target business tables. Validity for each type must be checked at the application layer.
+- Duplicate combinations of project, source type/ID, target type/ID, and relationship type are not allowed among non-deleted traceability links.
 
 ---
 
@@ -572,9 +578,10 @@ This structure consolidates Validation project activity results, RTM coverage, a
 
 ### Key Points
 
-- VSR is a document that draws a final conclusion by consolidating activity approval status, test results, RTM coverage, and unresolved deviations.
+- VSR is a document that draws a final conclusion by consolidating activity approval status, test results, RTM coverage, and unresolved deviations. The activities summarized by `vsr_item.activity_code` include DDS. System identification is managed as project context, and the VSR itself is excluded from detailed aggregation.
 - Normal closure is determined by considering approval of the selected activities, traceability, and deviation closure conditions together.
-- `validation_project.closure_type` distinguishes normal closure (NORMAL) from forced closure (FORCED). `closure_reason` is required for forced closure. `closure_requested_by` and `closure_requested_at` record the requester and request time, while `closed_at` records the final closure time. The closure requester references `app_user` through an FK.
+- `validation_project.closure_type` distinguishes normal closure (NORMAL) from forced closure (FORCED). `closure_reason` is required for forced closure, and `closure_requested_by` and `closure_requested_at` must match the signer and signing timestamp of the closure request signature. `closed_at` is the final closure timestamp, and the closure requester references `app_user` through an FK.
+- Record the closure request signature as `SUBMIT`, targeting `validation_project` and the corresponding `project_id`. Assign a `CLOSE-n` version to each request and distinguish the signature meaning as `PROJECT_CLOSE_NORMAL` or `PROJECT_CLOSE_FORCED`. At final closure, compare the signature for that version, the preserved input, and the current request values. If the request details have changed, a new request version and a new signature are required.
 - Fields such as `vsr_item.activity_code`, `doc_no`, and `deviation_info` are summary values. There are no direct FKs to `project_activity`, `rtm_assessment`, or `deviation`.
 
 ---
@@ -598,7 +605,7 @@ workflow_instance
 
 This structure manages the Workflow from submission of a Validation project document through step-by-step review, approval, and rejection, together with electronic signature evidence.
 
-Step assignees are designated according to project participants and roles. `workflow_instance`, `workflow_step`, and `approval_action` manage the overall Workflow and actual processing history. Electronic signatures generated upon approval or rejection preserve the target document version and content hash.
+Assign step assignees based on project participants and roles, and manage the overall Workflow and actual action history through `workflow_instance`, `workflow_step`, and `approval_action`. Electronic signatures linked to submission, review, approval, and rejection preserve both the target document version and its content hash. Project closure request signatures are managed using a separate `CLOSE-n` request version.
 
 ### Summary of Table Roles
 
@@ -608,18 +615,20 @@ Step assignees are designated according to project participants and roles. `work
 | `app_user` | Manages document submitters, step assignees, actual processors, and electronic signers |
 | `role` | Manages reference data for project participant roles; consulted by business logic when selecting Workflow assignees |
 | `system_asset` | Manages information about the system or equipment associated with the Validation project subject to review and approval |
-| `validation_project` | Manages the Validation project to which the Workflow and project participants belong |
+| `validation_project` | Manages the Validation project to which documents under review or approval and project participants belong |
 | `project_member` | Manages participating users, assigned roles, participation status, and participation period for each project |
 | `workflow_instance` | Manages submission information, current step, and overall status of the complete review and approval Workflow for each target document |
 | `workflow_step` | Manages step order, step type, assignee, due date, and status for each Workflow step |
 | `approval_action` | Manages actual actions such as submission, review, approval, rejection, and cancellation, including the processor and processing time |
-| `electronic_signature` | Manages the signer, signature meaning, target version, content hash, and reauthentication result for submission, review, approval, and rejection |
+| `electronic_signature` | Manages the signer, signature meaning, target version, content hash, and reauthentication result for document submission, review, approval, rejection, and project closure requests |
 
 ### Key Points
 
 - `workflow_instance` manages overall progress, `workflow_step` manages individual review and approval steps, and `approval_action` manages the actual processing actions.
-- `electronic_signature` provides identity verification and signature evidence for approval and rejection actions, preserving the target version and content hash together.
-- `approval_action.signature_id` references an electronic signature and allows NULL. This does not mean a signature is required for every action record.
+- `electronic_signature` provides identity verification and signature evidence for document submission, review, approval, rejection, and project closure requests. When linking it to a Workflow action, verify that the actual actor matches the signer, that the target table, record, and version match, and that the action type matches the signature action.
+- `approval_action.signature_id` references an electronic signature and allows NULL. For `CANCEL`, record the cancellation reason and Audit Trail without a signature, set the Workflow to `CANCELLED`, and set the remaining incomplete steps to `SKIPPED`.
+- Create Workflow steps before submission and link `SUBMIT` to the first non-deleted step. Link `CANCEL` during execution to the current step, and cancellation before execution starts to the first step. Do not cancel a Workflow that has ended. These links do not mean that review or approval of the associated step is complete.
+- `workflow_step.step_type` is `REVIEW` or `APPROVE`; record `SUBMIT` and `CANCEL` in `approval_action.action_type`. Among non-deleted steps, `step_order` must be unique within the same Workflow.
 - `workflow_instance` has no `project_id` FK, and `workflow_step` has no FK to `project_member` or `role`. The assignee directly references a user through `assignee_id`, and suitability for the project role must be checked by business logic.
 - Separately from these concepts, Audit Trail records the history of data changes that occur during processing.
 
@@ -659,7 +668,7 @@ This structure manages metadata for attachments and test evidence used in a Vali
 ### Key Points
 
 - `file_asset` holds metadata about the file itself, while `evidence_link` identifies the business item for which that file serves as evidence.
-- Separating these two areas allows one file to be linked to multiple business items, or multiple files to be linked to one business item.
+- Separating these two areas allows one file to be linked to multiple business items, or multiple files to be linked to one business item. Duplicate combinations of project, file, target type/ID, and evidence type are not allowed among non-deleted evidence links.
 - `file_asset.cleanup_execution_id` points only to the last cleanup execution and allows NULL. A cleanup execution is not a mandatory parent for every file, and the current definition does not include a separate N:M history table that preserves the full cleanup history for each file.
 - File cleanup is an operational function that cleans up temporary, expired, and orphaned files through controlled procedures and records the results; it is not a function for arbitrarily deleting evidence that must be retained under regulations.
 
@@ -772,7 +781,7 @@ audit_trail (also records system and batch actions)
 
 This structure preserves major data changes made by users belonging to an organization and the processing history of system and batch jobs for audit purposes.
 
-`audit_trail` manages the action type, target table and record, values before and after the change, reason for change, actor, request and session information, and target document version. Audit targets are identified through polymorphic references, and system or batch jobs can be recorded without a user.
+`audit_trail` manages the action type, target table and record, before and after values, reason for change, actor, request and session information, and target document or project closure request version. Audit targets are identified through polymorphic references, and system or batch actions can be recorded without a user.
 
 ### Summary of Table Roles
 
@@ -780,7 +789,7 @@ This structure preserves major data changes made by users belonging to an organi
 |---|---|
 | `organization` | Manages reference information for the customer or operating organization to which audited users belong |
 | `app_user` | Manages user accounts and organizational affiliation for users who make major data changes |
-| `audit_trail` | Manages the actor, target, values before and after change, reason for change, request and session information, and document version for data creation, modification, deletion, and operational jobs |
+| `audit_trail` | Manages the actor, target, before and after values, reason for change, request and session information, and document or closure request version for data creation, modification, deletion, and operational actions |
 
 ### Key Points
 
@@ -798,6 +807,8 @@ Which version   target_version / target_revision_number
 ```
 
 - In addition to user-made changes, system or batch actions can also be recorded; in those cases, the user ID may be absent.
-- Audit Trail is the history of data changes and important system actions, while electronic signatures provide evidence of regulated signing actions such as approval and rejection.
+- Audit Trail is the history of data changes and important system actions, while electronic signatures provide signature evidence for actions such as submission, review, approval, rejection, and project closure requests.
+- Record project closure requests as `UPDATE`, final normal closure as `PROJECT_CLOSE`, and forced closure as `PROJECT_FORCE_CLOSE`, storing the same `CLOSE-n` version as the electronic signature. Preserve the signature input string `signed_payload` and `signature_id` in `new_values` of the closure request record, and calculate the electronic signature’s SHA-256 hash from the UTF-8 bytes of that string.
+- Manage `client_ip` and `old_values`/`new_values`, which may contain personal information, as sensitive data. `password_hash` is sensitive information but has `Audit=N`; do not include the hash value in audit logs.
 - The history of changes can be traced if the implementation stores existing values in Audit Trail upon deletion. Because `old_values` currently allows NULL, preservation of values before deletion must be ensured through business logic and recording policies.
 - `audit_trail` has no direct organization ID. The organizational scope of system and batch records without a user must be determined through another path, such as the target record.
