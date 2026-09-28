@@ -4,7 +4,7 @@
 
 This document describes the 73 tables of the Validation Management Platform across 14 business areas. Each area shows the information it manages and the connections among its main tables.
 
-For an at-a-glance view of the connections between business areas, see the **[Overall Data Structure Diagram](./erd-overview.md)**.
+For an at-a-glance view of the connections between business areas, see the [Overall Data Structure Diagram](./erd-overview.md).
 
 > [!NOTE]
 > This document explains data modeling and system design. Example values are de-identified samples and do not represent actual operational data from any specific organization.
