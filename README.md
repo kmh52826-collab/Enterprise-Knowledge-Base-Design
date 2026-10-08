@@ -11,7 +11,7 @@
 
 ---
 
-## 📌 Project Executive Summary
+## Project Executive Summary
 
 This project is an initiative to build an **AI-powered Validation Management Platform (DVT)** that digitizes the entire fragmented Validation workflow while complying with GMP and CSV (Computerized System Validation) regulations in the pharmaceutical and biotechnology industries.
 
@@ -34,13 +34,13 @@ This portfolio focuses on two core pillars that serve as the foundation of the p
 
 ---
 
-## 🏗️ System Overview & Architecture
+## System Overview & Architecture
 
 [![System Overview & Context](https://github.com/user-attachments/assets/26fe8971-9772-43d5-a1f0-de782b84f96c)](https://github.com/user-attachments/assets/26fe8971-9772-43d5-a1f0-de782b84f96c)
 
 > 💡 **Tip:** Click the image above to view the full diagram in a larger and clearer original resolution.
 
-### 🎯 Architecture Summary
+### Architecture Summary
 - **Validation Lifecycle** : Supports the entire regulatory environment (CSV) process end-to-end, from Project Initiation to DQ/FRA, IQ/OQ/PQ, RTM, and VSR
 - **Core AI Audit & Traceability** : Designed so that, in response to in-depth queries from regulatory auditors, AI can search for and provide relevant documents based on the hybrid knowledge DB, while tracking End-to-End Lineage and approval history
 - **Compliance & Governance** : Database-level Audit Trail and history management in compliance with 21 CFR Part 11 and ALCOA++ principles
@@ -52,7 +52,7 @@ This portfolio focuses on two core pillars that serve as the foundation of the p
 
 ---
 
-## 🚀 Key Technical Contributions & Engineering Design
+## Key Technical Contributions & Engineering Design
 
 ### 1. End-to-End Relational Data Modeling & ERD Design (Completed)
 Reflecting the complexity of a highly regulated domain, I directly designed and implemented the entire PostgreSQL schema, from conceptual modeling through logical/physical ERD design.
