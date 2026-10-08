@@ -23,7 +23,7 @@ This portfolio focuses on two core pillars that serve as the foundation of the p
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Category | Technologies |
 | :--- | :--- |
