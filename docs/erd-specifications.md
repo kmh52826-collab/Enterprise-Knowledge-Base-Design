@@ -9,7 +9,7 @@ To see the connections between business areas at a glance, refer to the **[Overa
 > [!NOTE]
 > This document is intended to explain data modeling and system design. Example values are de-identified samples and do not represent actual operational data of any specific organization.
 
-The relationship structures are simplified diagrams showing the main connections. Commonly used tables may appear in multiple ERDs. See the [Data Dictionary](./data-dictionary.md) for column definitions and business rules.
+The relationship structures are simplified diagrams showing the main connections. Commonly used tables may appear in multiple ERDs. See the **[Data Dictionary](./data-dictionary.md)** for column definitions and business rules.
 
 ## Contents
 
