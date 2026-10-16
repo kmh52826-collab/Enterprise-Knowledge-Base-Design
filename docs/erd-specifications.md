@@ -2,14 +2,14 @@
 
 # ERD Specifications
 
-This document describes the 76 tables of the Validation Management Platform, divided into 14 business areas. For each area, you can see the information it manages and how its main tables are connected.
+This document describes the 77 tables of the Validation Management Platform, divided into 14 business areas. For each area, you can see the information it manages and how its main tables are connected.
 
 To see the connections between business areas at a glance, refer to the **[Overall Data Structure](./erd-overview.md)**.
 
 > [!NOTE]
 > This document is intended to explain data modeling and system design. Example values are de-identified samples and do not represent actual operational data of any specific organization.
 
-The relationship structures are simplified diagrams showing the main connections. Commonly used tables may appear in multiple ERDs. See the **[Data Dictionary](./data-dictionary.md)** for column definitions and business rules.
+The relationship structures are simplified diagrams showing the main connections. Commonly used tables may appear in multiple ERDs. See the [Data Dictionary](./data-dictionary.md) for column definitions and business rules.
 
 ## Contents
 
@@ -698,12 +698,13 @@ The library provides reusable items for authoring requirements, risk assessments
 
 ## 14. AI Generation & Application
 
-**Tables: 12**
+**Tables: 13**
 
 ### Relationship Structure
 
 ```text
 ai_generation_job (generation request)
+  ├─ ai_sensitive_detection (sensitive-information detection on outbound data)
   └─ ai_generation_result (result set)
        └─ ai_result_item (individual draft)
 
@@ -712,7 +713,7 @@ User review/selection → applied to business items/document body → review/app
 
 ### Overview
 
-Manages the process from an AI generation request through user review to actual application in business work. Generation requests, result sets and individual drafts are kept separate, and the requirement, risk assessment, test or document body to which each adopted draft was applied is recorded. AI features are turned on and off in the organization settings.
+Manages the process from an AI generation request through user review to actual application in business work. Generation requests, result sets and individual drafts are kept separate, and the requirement, risk assessment, test or document body to which each adopted draft was applied is recorded. Before data is sent to the AI, sensitive information in it is masked and the number of detections per type is recorded. AI features are turned on and off in the organization settings.
 
 ### Table Roles
 
@@ -721,6 +722,7 @@ Manages the process from an AI generation request through user review to actual 
 | `ai_generation_job` | AI generation requests, input conditions and progress status |
 | `ai_generation_result` | Generated result sets and whether the user selected and applied them |
 | `ai_result_item` | Individual drafts and the results of applying them to actual business work |
+| `ai_sensitive_detection` | Number of detections per type of the sensitive information masked before sending to the AI |
 | `validation_project` | Basic information of validation projects and their progress and closure status |
 | `app_user` | User accounts, their organization, account status and permission level |
 | `requirement` | Requirement content and acceptance criteria, with revision and approval status |
@@ -736,5 +738,6 @@ Manages the process from an AI generation request through user review to actual 
 - Generation completion, user selection and business application are separate states. The fact that the AI produced a result does not by itself mean that the result has been applied to business work or approved.
 - New items can be reviewed in a preview before being applied, and are linked to the actual business items after application. Document generation is requested against a document revision, and the result is applied to the body of the corresponding section.
 - AI results are applied only to drafts in progress or to new revisions. They do not overwrite original content after submission, and applied content also goes through the normal review and approval process.
+- The actual detected values are not stored; only the number per type is kept. Checked types are recorded even with 0 detections, and data is sent to the AI only after the detection result is stored.
 
 [↑ Back to contents](#top)
