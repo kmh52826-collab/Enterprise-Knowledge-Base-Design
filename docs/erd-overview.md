@@ -1,6 +1,6 @@
 # Validation Management Platform Overall Data Structure
 
-This diagram groups all **76 tables** into **14 business areas**. Each box shows the actual table names, and each table is placed only once.
+This diagram groups all **77 tables** into **14 business areas**. Each box shows the actual table names, and each table is placed only once.
 
 The area numbers and names match areas 1–14 in the [ERD Specifications](./erd-specifications.md).
 
@@ -130,7 +130,8 @@ library_item_regulation"]
             AI["⑭ AI Generation & Application
 ai_generation_job
 ai_generation_result
-ai_result_item"]
+ai_result_item
+ai_sensitive_detection"]
             LIBRARY ~~~ AI
         end
 
@@ -188,6 +189,7 @@ traceability_link"]
 | `regulatory_source` → `regulatory_clause` → regulatory basis for requirements and library items | Distinguishes editions of regulation documents from their clauses, and links the applicable basis through `requirement_regulation` and `library_item_regulation`. |
 | `library_item` → requirements, risk assessments, test items | Imports reusable content and references the source library item. Imported items are managed independently and do not automatically reflect later library changes. |
 | `ai_generation_job` → `ai_generation_result` → `ai_result_item` | Distinguishes AI generation requests, result sets and individual drafts. After user selection and application to the business work, the review and approval procedure of that work applies. |
+| `ai_generation_job` → `ai_sensitive_detection` | Before sending to the AI, sensitive information in the outbound data is masked and the number of detections per type is recorded. The actual values are not stored. |
 
 ## Notes for Readers
 
