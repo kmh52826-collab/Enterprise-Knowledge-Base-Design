@@ -17,8 +17,8 @@ For table relationships by business area, see **[ERD Specifications](./erd-speci
 
 ## 1. Document Overview
 
-- Total tables: **76**
-- Total columns: **1,253**
+- Total tables: **77**
+- Total columns: **1,263**
 - Domains: **26**
 - Naming convention: tables and columns use `snake_case`; the PK is an identifier column per entity
 - Date/time convention: stored in UTC in the DB; the user's or site's Timezone is applied on screens
@@ -134,10 +134,11 @@ For business revisions that have an approval status, the body, sub-steps, compos
 | 70 | AI | AI Generation Job | [`ai_generation_job`](#table-ai_generation_job) | `ai_job_id` | `project_id, requested_by, created_by, updated_by` | High | Y |
 | 71 | AI | AI Generation Result | [`ai_generation_result`](#table-ai_generation_result) | `ai_result_id` | `ai_job_id, selected_by, created_by, updated_by` | High | Y |
 | 72 | AI | AI Generation Result Item | [`ai_result_item`](#table-ai_result_item) | `ai_result_item_id` | `ai_result_id, created_by, updated_by` | High | Y |
-| 73 | Regulation | Regulatory Basis Document | [`regulatory_source`](#table-regulatory_source) | `regulatory_source_id` | `file_id, verified_by, created_by, updated_by` | High | Y |
-| 74 | Regulation | Regulatory Clause | [`regulatory_clause`](#table-regulatory_clause) | `regulatory_clause_id` | `regulatory_source_id, created_by, updated_by` | High | Y |
-| 75 | Regulation | Requirement Regulatory Basis | [`requirement_regulation`](#table-requirement_regulation) | `requirement_regulation_id` | `requirement_id, regulatory_clause_id, created_by, updated_by` | High | Y |
-| 76 | Regulation | Library Regulatory Basis | [`library_item_regulation`](#table-library_item_regulation) | `library_item_regulation_id` | `library_id, regulatory_clause_id, created_by, updated_by` | High | Y |
+| 73 | AI | AI Outbound Data Sensitive-Information Detection Result | [`ai_sensitive_detection`](#table-ai_sensitive_detection) | `detection_id` | `ai_job_id, created_by` | High | Y |
+| 74 | Regulation | Regulatory Basis Document | [`regulatory_source`](#table-regulatory_source) | `regulatory_source_id` | `file_id, verified_by, created_by, updated_by` | High | Y |
+| 75 | Regulation | Regulatory Clause | [`regulatory_clause`](#table-regulatory_clause) | `regulatory_clause_id` | `regulatory_source_id, created_by, updated_by` | High | Y |
+| 76 | Regulation | Requirement Regulatory Basis | [`requirement_regulation`](#table-requirement_regulation) | `requirement_regulation_id` | `requirement_id, regulatory_clause_id, created_by, updated_by` | High | Y |
+| 77 | Regulation | Library Regulatory Basis | [`library_item_regulation`](#table-library_item_regulation) | `library_item_regulation_id` | `library_id, regulatory_clause_id, created_by, updated_by` | High | Y |
 
 ## 4. Shortcuts by Domain
 
@@ -165,7 +166,7 @@ For business revisions that have an approval status, the body, sub-steps, compos
 - **Deviation**: [`deviation`](#table-deviation), [`deviation_action_round`](#table-deviation_action_round), [`deviation_completion_revision`](#table-deviation_completion_revision)
 - **Document**: [`deliverable_document`](#table-deliverable_document), [`deliverable_revision`](#table-deliverable_revision), [`deliverable_section`](#table-deliverable_section)
 - **Report**: [`report_generation`](#table-report_generation)
-- **AI**: [`ai_generation_job`](#table-ai_generation_job), [`ai_generation_result`](#table-ai_generation_result), [`ai_result_item`](#table-ai_result_item)
+- **AI**: [`ai_generation_job`](#table-ai_generation_job), [`ai_generation_result`](#table-ai_generation_result), [`ai_result_item`](#table-ai_result_item), [`ai_sensitive_detection`](#table-ai_sensitive_detection)
 - **Regulation**: [`regulatory_source`](#table-regulatory_source), [`regulatory_clause`](#table-regulatory_clause), [`requirement_regulation`](#table-requirement_regulation), [`library_item_regulation`](#table-library_item_regulation)
 
 ---
@@ -184,7 +185,7 @@ For business revisions that have an approval status, the body, sub-steps, compos
 | Main References (FK) | - |
 | GxP Criticality | High |
 | Audit Target | Y |
-| Retention / Deletion | Retained for the auditable period |
+| Retention / Deletion | Retained for the auditable period. Rows are not physically deleted and are managed only by status |
 
 #### Column Definitions
 
@@ -210,11 +211,12 @@ For business revisions that have an approval status, the body, sub-steps, compos
 | `ck_organization_1` | CHECK | `status` | CHECK (status IN ('ACTIVE','INACTIVE')) |
 | `ck_organization_2` | CHECK | `organization_type` | CHECK (organization_type IN ('HEADQUARTERS','PLANT','LAB','OVERSEAS','SYSTEM','VENDOR')) |
 | `ck_organization_3` | CHECK | `organization_type, ai_enabled` | CHECK (organization_type <> 'SYSTEM' OR ai_enabled = FALSE) |
-| `rule_organization_4` | Business validation | `organization_type` | There is 1 organization with organization_type='SYSTEM' per DB, and only account_type=SYSTEM accounts belong to it. It cannot own projects, system assets, or user groups, and it is not shown in organization lists, selection options, or reports on screens. |
+| `rule_organization_4` | Business validation | `organization_type` | There is 1 organization with organization_type='SYSTEM' per DB, and only account_type=SYSTEM accounts belong to it. It cannot own projects, system assets, or user groups, and it is not shown in organization lists, selection options, or reports on screens. It is not deleted, and an inactive (INACTIVE) organization also counts toward the limit of 1 per DB (uq_organization_system_vendor). When it is needed again, a new one is not created; the same row is reactivated. |
 | `rule_organization_5` | Business validation | `ai_enabled` | Only administrator levels (SYSTEM_ADMIN or ADMIN of that organization) may change ai_enabled, and the before and after values are recorded in the Audit Trail (menu_code=ACCOUNTS). |
 | `rule_organization_6` | Business validation | `sso_enabled` | Only administrator levels may change sso_enabled, and the change is recorded in the Audit Trail (menu_code=ACCOUNTS). On change, the auth_provider, SSO identifiers, and password_hash of the HUMAN accounts belonging to the organization are switched in bulk for the whole organization (excluding emergency (break-glass) access accounts). Detailed procedures, such as when existing passwords are disposed of, are defined in operating procedures. |
 | `ck_organization_7` | CHECK | `organization_type, sso_enabled` | CHECK (organization_type <> 'SYSTEM' OR sso_enabled = FALSE) |
-| `rule_organization_8` | Business validation | `organization_type` | There is 1 organization with organization_type='VENDOR' per DB, and only the platform developer's operations staff (permission_level=SYSTEM_ADMIN) belong to it. It cannot own projects, system assets, or user groups, and it is excluded from organization lists, selection options, and statistics on customer screens. sso_enabled is set according to whether the developer's IdP is used. |
+| `rule_organization_8` | Business validation | `organization_type` | There is 1 organization with organization_type='VENDOR' per DB, and only the platform developer's operations staff (permission_level=SYSTEM_ADMIN) belong to it. It cannot own projects, system assets, or user groups, and it is excluded from organization lists, selection options, and statistics on customer screens. sso_enabled is set according to whether the developer's IdP is used. It is not deleted, and an inactive (INACTIVE) organization also counts toward the limit of 1 per DB (uq_organization_system_vendor). When it is needed again, a new one is not created; the same row is reactivated. |
+| `uq_organization_system_vendor` | UNIQUE | `organization_type` | UNIQUE (organization_type) WHERE organization_type IN ('SYSTEM','VENDOR') |
 
 #### Business Rules
 
@@ -244,7 +246,7 @@ sso_enabled determines the login method of the organization. Human accounts in a
 | Main References (FK) | `organization_id` |
 | GxP Criticality | High |
 | Audit Target | Y |
-| Retention / Deletion | Retained for the auditable period |
+| Retention / Deletion | Retained for the auditable period. Rows are not physically deleted and are managed only by status |
 
 #### Column Definitions
 
@@ -284,7 +286,8 @@ sso_enabled determines the login method of the organization. Human accounts in a
 | `ck_app_user_6` | CHECK | `account_type, auth_provider, sso_issuer, sso_subject, password_hash` | CHECK ((account_type='SYSTEM' AND password_hash IS NULL AND sso_issuer IS NULL AND sso_subject IS NULL) OR (account_type='HUMAN' AND auth_provider='SSO' AND sso_issuer IS NOT NULL AND sso_subject IS NOT NULL AND password_hash IS NULL) OR (account_type='HUMAN' AND auth_provider='LOCAL' AND password_hash IS NOT NULL AND sso_issuer IS NULL AND sso_subject IS NULL)) |
 | `uq_app_user_7` | UNIQUE | `sso_issuer, sso_subject` | UNIQUE (sso_issuer, sso_subject) WHERE sso_subject IS NOT NULL |
 | `rule_app_user_8` | Business validation | `auth_provider, organization_id, permission_level` | The auth_provider of a HUMAN account must match the sso_enabled of its organization (SSO if TRUE, LOCAL if FALSE). As an exception, in organizations with sso_enabled=TRUE, LOCAL is allowed only for emergency (break-glass) access accounts with permission_level=SYSTEM_ADMIN. |
-| `rule_app_user_9` | Business validation | `account_type` | There is 1 account_type=SYSTEM account per DB, and it belongs to the organization_type=SYSTEM organization. It keeps permission_level=USER and status=ACTIVE and is excluded from login, electronic signatures, approval workflow assignments, and user_signature_credential creation. It is not deleted or deactivated. |
+| `rule_app_user_9` | Business validation | `account_type` | There is 1 account_type=SYSTEM account per DB, and it belongs to the organization_type=SYSTEM organization. It keeps permission_level=USER and status=ACTIVE and is excluded from login, electronic signatures, approval workflow assignments, and user_signature_credential creation. It is not deleted or deactivated. The limit of 1 per DB is enforced by uq_app_user_system_account. |
+| `uq_app_user_system_account` | UNIQUE | `account_type` | UNIQUE (account_type) WHERE account_type = 'SYSTEM' |
 | `rule_app_user_10` | Business validation | `permission_level` | SYSTEM_ADMIN is granted only to the platform developer's operations staff; customer administrators use ADMIN. SYSTEM_ADMIN accounts belong only to the organization_type=VENDOR organization, and all HUMAN accounts of the VENDOR organization are SYSTEM_ADMIN. Administrator levels also do not bypass the rules for electronic signature identity verification, assignment, and author/reviewer/approver separation. |
 | `rule_app_user_11` | Business validation | `auth_provider` | Emergency (break-glass) access accounts (LOCAL accounts in organizations with sso_enabled=TRUE) cannot be used for electronic signatures or approval workflow assignments, and their login and usage history is recorded in the Audit Trail. The allowed number and the custody/usage procedures are defined by operating policy (SOP) (pending decision). LOCAL accounts in organizations not using SSO can sign and perform approval workflow actions as general users. |
 | `rule_app_user_12` | Business validation | `password_hash, previous_password_hash, status, failed_login_count` | For LOCAL accounts, 5 consecutive login password failures switch status to LOCKED; the lock is not released automatically over time and is released only by an administrator reset. When the password is changed or reset, the same value as the immediately previous password (previous_password_hash) is not allowed (requirement 1.3). The password must be at least 10 characters long and contain at least 1 each of uppercase letters, lowercase letters, digits, and special characters, and it must be changed once 180 days have passed since password_changed_at (requirement 1.3). The length, composition, and expiry days are managed as operating settings. Consecutive failures are counted in failed_login_count; when the account is locked, ACCOUNT_LOCKED is recorded in the Audit Trail, and when the password is changed, PASSWORD_CHANGE is recorded in the Audit Trail. |
@@ -814,7 +817,7 @@ LOGIN_FAILED is an event in which the platform rejected a login. For SSO, it is 
 
 menu_code=SYSTEM_PROCESS is used for all records left by non-human actors (actor_type=SYSTEM/BATCH). This covers the initial data seed, scheduled batches, scan status transitions by the file scan Worker, automatic linking based on file link requests (file_link_request), and automatic retries. In this case, the business area is identified by target_table_name/target_record_id, and the original screen the user started from is traced through the user audit record for the same target (e.g., the upload completion record). SYSTEM_PROCESS is not used for changes performed by users on screen (USER) or for ANONYMOUS events (ck_audit_trail_10).
 
-Area mapping (for USER/ANONYMOUS actions; SYSTEM/BATCH actions use SYSTEM_PROCESS): accounts, groups, and permissions (app_user, role, user_role, user_group, user_group_member, group_role, access_permission_grant, inventory_role_grant) and organization are recorded as ACCOUNTS; user_signature_credential and login/signature authentication events as AUTH; system_asset/system_asset_revision as INVENTORY; library_item/regulatory_source/regulatory_clause/library_item_regulation as LIBRARY; and validation_project/project_system_baseline/project_member/project_activity/project_closure_request/project_workflow_config and the activity master (validation_activity/activity_dependency) as PROJECT. Business items and documents use the corresponding activity code (VP/VA/QIA/URS/FDS_GROUP/FRA/DQ/IQ/OQ/PQ/VSR); requirement_regulation is URS, and fds_spec/dds_spec are FDS_GROUP. Approval workflow (workflow_instance/workflow_step/workflow_step_assignee/approval_action) follows the area code of the business subject to approval (INVENTORY for inventory, PROJECT for project closure requests). Deviations (deviation/deviation_action_round/deviation_completion_revision) use the IQ/OQ/PQ of the original execution; evidence (evidence_link) and files (file_asset/file_link_request) use the code of the linked business target (LIBRARY for uploads outside a project); upload completion records (file_scan_job), made before a link target is set, use PROJECT if file_scan_job.project_id is present and LIBRARY if it is not (uploads outside a project, such as regulation originals); and traceability_link uses the code of the screen where the link was saved (DASHBOARD for the RTM screen). deliverable_document/deliverable_revision/deliverable_section use the corresponding activity code; report_generation uses the activity code of the target deliverable if DELIVERABLE, or AUDIT_TRAIL if AUDIT_TRAIL; and AI jobs and results (ai_generation_job/ai_generation_result/ai_result_item) use the activity code of the business for which content is generated. electronic_signature follows the area code of the signature target (target_table_name) (e.g., PROJECT for approval route application, INVENTORY for inventory, and the IQ/OQ/PQ of the original execution for deviation completion/closure). Audit trail record view/export is AUDIT_TRAIL.
+Area mapping (for USER/ANONYMOUS actions; SYSTEM/BATCH actions use SYSTEM_PROCESS): accounts, groups, and permissions (app_user, role, user_role, user_group, user_group_member, group_role, access_permission_grant, inventory_role_grant) and organization are recorded as ACCOUNTS; user_signature_credential and login/signature authentication events as AUTH; system_asset/system_asset_revision as INVENTORY; library_item/regulatory_source/regulatory_clause/library_item_regulation as LIBRARY; and validation_project/project_system_baseline/project_member/project_activity/project_closure_request/project_workflow_config and the activity master (validation_activity/activity_dependency) as PROJECT. Business items and documents use the corresponding activity code (VP/VA/QIA/URS/FDS_GROUP/FRA/DQ/IQ/OQ/PQ/VSR); requirement_regulation is URS, and fds_spec/dds_spec are FDS_GROUP. Approval workflow (workflow_instance/workflow_step/workflow_step_assignee/approval_action) follows the area code of the business subject to approval (INVENTORY for inventory, PROJECT for project closure requests). Deviations (deviation/deviation_action_round/deviation_completion_revision) use the IQ/OQ/PQ of the original execution; evidence (evidence_link) and files (file_asset/file_link_request) use the code of the linked business target (LIBRARY for uploads outside a project); upload completion records (file_scan_job), made before a link target is set, use PROJECT if file_scan_job.project_id is present and LIBRARY if it is not (uploads outside a project, such as regulation originals); and traceability_link uses the code of the screen where the link was saved (DASHBOARD for the RTM screen). deliverable_document/deliverable_revision/deliverable_section use the corresponding activity code; report_generation uses the activity code of the target deliverable if DELIVERABLE, or AUDIT_TRAIL if AUDIT_TRAIL; and AI jobs, results, and detections (ai_generation_job/ai_generation_result/ai_result_item/ai_sensitive_detection) use the activity code of the business for which content is generated. electronic_signature follows the area code of the signature target (target_table_name) (e.g., PROJECT for approval route application, INVENTORY for inventory, and the IQ/OQ/PQ of the original execution for deviation completion/closure). Audit trail record view/export is AUDIT_TRAIL.
 
 Events related to the electronic signature password are recorded with user_signature_credential as the target table and the corresponding credential_id as the target record, and the hash and plaintext are not included in old_values/new_values.
 
@@ -921,13 +924,13 @@ Replacement is handled with a new file_id and a new storage object. During the r
 | 178 | Scan Engine Version | `scanner_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Engine version actually used. NULL is allowed if the scan service does not provide it | - |
 | 179 | Detection Signature Version | `signature_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Version of the malware detection information used for the scan. NULL is allowed if not provided | - |
 | 180 | Scan Service Request ID | `scanner_request_id` | `varchar(255)` | N | N | - | N | - | N | Y | N | Y | Execution/request identifier issued by the scan service. Used to match results against the job and the original object | - |
-| 181 | Scan Details | `scan_details` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Verifiable grounds for the scan, such as provider_result (the raw response returned by the scan engine, stored as is, e.g. OK, <malware name> FOUND, ERROR; the platform judgment is in scan_result), reason_code (detailed reason for UNSCANNABLE: FORMAT_MISMATCH, ENCRYPTED, UNSUPPORTED_EXTENSION, SOURCE_MISMATCH, ENGINE_UNSCANNABLE; carried over as the block reason in file_link_request.failure_code), format_detail (description of the format mismatch), engine_reason_code (the original reason returned by the scan engine), threat_names, and report_reference. Excludes passwords, tokens, signed URLs, and file contents | `{"provider_result":"OK","threat_names":[]}` |
+| 181 | Scan Details | `scan_details` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Verifiable grounds for the scan, such as provider_result (the clamd raw response with the leading stream: label removed, e.g. OK, <malware name> FOUND, ERROR; the platform judgment is in scan_result), reason_code (detailed reason for UNSCANNABLE: FORMAT_MISMATCH, ENCRYPTED, UNSUPPORTED_EXTENSION, SOURCE_MISMATCH, ENGINE_UNSCANNABLE, SIZE_LIMIT_EXCEEDED; carried over as the block reason in file_link_request.failure_code), format_detail (description of the format mismatch), engine_reason_code (the original reason returned by the scan engine), threat_names, and report_reference. Excludes passwords, tokens, signed URLs, and file contents | `{"provider_result":"OK","threat_names":[]}` |
 | 182 | Scan Requested By ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Party that requested the scan attempt. Stores the uploader (uploaded_by) for the initial attempt automatically registered right after upload, the requesting user for manual rescans, and the user_id of the SYSTEM account for automatic retries | `00000000-0000-0000-0000-000000000001` |
 | 183 | Scan Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the scan attempt was registered | `2026-09-18T01:00:00Z` |
 | 184 | Scan Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the scan for the attempt started. May be NULL on failure or cancellation before execution | `2026-09-18T01:00:05Z` |
 | 185 | Scan Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time completion, failure, or cancellation was finalized. Distinct from the file asset registration time | `2026-09-18T01:00:20Z` |
 | 186 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Last change time of the job status, scan result, or result file link | `2026-09-18T01:00:21Z` |
-| 187 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Technical error code for FAILED. Threats found is not a technical error and is recorded in scan_result | `SCAN_TIMEOUT` |
+| 187 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Technical error code for FAILED. Values in use (a reference list, not restricted by a CHECK): SOURCE_NOT_FOUND (quarantined source not found), SOURCE_READ_FAILED (failed to read the source), SCANNER_UNAVAILABLE (could not connect to the scan engine), SCAN_TIMEOUT (scan response timed out), SCANNER_ERROR (the scan engine responded with an error), WORKER_IO_FAILED (Worker temporary file handling failed), PROCESSING_STALLED (an attempt that stayed in processing beyond the time limit (processing policy), recorded as failed by the check job). Retried automatically; if all attempts up to the maximum attempt count (processing policy) fail, the link request is blocked with file_link_request.failure_code=SCAN_FAILED. Threats found is not a technical error and is recorded in scan_result | `SCAN_TIMEOUT` |
 | 188 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | Y | Y | Detailed reason for the technical failure. Does not include secrets, signed URLs, or file contents | `Scan response timeout` |
 | 189 | Registered File ID | `result_file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | Y | Y | N | Y | File asset registered after no threats were found and the identity with the original was confirmed. NULL before registration; only one attempt is linked per upload | `00000000-0000-0000-0000-000000000001` |
 
@@ -1060,7 +1063,7 @@ When IQ/OQ/PQ step evidence is newly uploaded, it is first requested via file_li
 | 211 | Linked File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | File that passed the scan and was linked. Required for LINKED | `00000000-0000-0000-0000-000000000001` |
 | 212 | Created Evidence Link ID | `evidence_link_id` | `uuid` | N | Y | `evidence_link.evidence_link_id` | N | - | N | Y | N | Y | evidence_link row created by linking as EVIDENCE. Required when EVIDENCE and LINKED | `00000000-0000-0000-0000-000000000001` |
 | 213 | Linked At | `linked_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the link to the business target was completed. Required for LINKED | `2026-09-01T10:05:00Z` |
-| 214 | Failure Reason Code | `failure_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Block/failure reason code. BLOCKED (the file did not pass the scan and must be uploaded again): THREATS_FOUND, ENCRYPTED, FORMAT_MISMATCH, UNSUPPORTED_EXTENSION, SOURCE_MISMATCH, ENGINE_UNSCANNABLE, SCAN_FAILED, SCAN_CANCELLED. FAILED (the file is valid but could not be linked to the business target): TARGET_NOT_FOUND, TARGET_LOCKED, FILE_NOT_FOUND, FILE_PROJECT_MISMATCH, FILE_CATEGORY_MISMATCH. Required for BLOCKED/FAILED and used as the reason shown to the user on screen (ck_file_link_failure_code) | - |
+| 214 | Failure Reason Code | `failure_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Block/failure reason code. BLOCKED (the file did not pass the scan and must be uploaded again): THREATS_FOUND, ENCRYPTED, FORMAT_MISMATCH, UNSUPPORTED_EXTENSION, SOURCE_MISMATCH, ENGINE_UNSCANNABLE, SIZE_LIMIT_EXCEEDED, SCAN_FAILED, SCAN_CANCELLED. FAILED (the file is valid but could not be linked to the business target): TARGET_NOT_FOUND, TARGET_LOCKED, FILE_NOT_FOUND, FILE_PROJECT_MISMATCH, FILE_CATEGORY_MISMATCH. Required for BLOCKED/FAILED and used as the reason shown to the user on screen (ck_file_link_failure_code) | - |
 | 215 | Failure Reason | `failure_message` | `text` | N | N | - | N | - | N | N | N | Y | Description of the block/failure reason | - |
 | 216 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Request creation time (UTC) | `2026-09-01T10:00:00Z` |
 | 217 | Requester ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who made the request. Must be the same as the user who uploaded the file | `00000000-0000-0000-0000-000000000001` |
@@ -1078,7 +1081,7 @@ When IQ/OQ/PQ step evidence is newly uploaded, it is first requested via file_li
 | `ck_file_link_status` | CHECK | `request_status` | CHECK (request_status IN ('WAITING','LINKED','BLOCKED','FAILED','CANCELLED')) |
 | `ck_file_link_status_state` | CHECK | `request_status, link_kind, file_id, evidence_link_id, linked_at, failure_code` | CHECK ((request_status='WAITING' AND file_id IS NULL AND linked_at IS NULL AND failure_code IS NULL) OR (request_status='LINKED' AND file_id IS NOT NULL AND linked_at IS NOT NULL AND (link_kind<>'EVIDENCE' OR evidence_link_id IS NOT NULL)) OR (request_status='BLOCKED' AND file_id IS NULL AND failure_code IS NOT NULL) OR (request_status='FAILED' AND failure_code IS NOT NULL) OR (request_status='CANCELLED' AND linked_at IS NULL)) |
 | `ck_file_link_evidence_link` | CHECK | `link_kind, evidence_link_id` | CHECK (evidence_link_id IS NULL OR link_kind='EVIDENCE') |
-| `ck_file_link_failure_code` | CHECK | `request_status, failure_code` | CHECK ((failure_code IS NULL OR failure_code IN ('THREATS_FOUND','ENCRYPTED','FORMAT_MISMATCH','UNSUPPORTED_EXTENSION','SOURCE_MISMATCH','ENGINE_UNSCANNABLE','SCAN_FAILED','SCAN_CANCELLED','TARGET_NOT_FOUND','TARGET_LOCKED','FILE_NOT_FOUND','FILE_PROJECT_MISMATCH','FILE_CATEGORY_MISMATCH')) AND (request_status <> 'BLOCKED' OR failure_code IN ('THREATS_FOUND','ENCRYPTED','FORMAT_MISMATCH','UNSUPPORTED_EXTENSION','SOURCE_MISMATCH','ENGINE_UNSCANNABLE','SCAN_FAILED','SCAN_CANCELLED')) AND (request_status <> 'FAILED' OR failure_code IN ('TARGET_NOT_FOUND','TARGET_LOCKED','FILE_NOT_FOUND','FILE_PROJECT_MISMATCH','FILE_CATEGORY_MISMATCH'))) |
+| `ck_file_link_failure_code` | CHECK | `request_status, failure_code` | CHECK ((failure_code IS NULL OR failure_code IN ('THREATS_FOUND','ENCRYPTED','FORMAT_MISMATCH','UNSUPPORTED_EXTENSION','SOURCE_MISMATCH','ENGINE_UNSCANNABLE','SIZE_LIMIT_EXCEEDED','SCAN_FAILED','SCAN_CANCELLED','TARGET_NOT_FOUND','TARGET_LOCKED','FILE_NOT_FOUND','FILE_PROJECT_MISMATCH','FILE_CATEGORY_MISMATCH')) AND (request_status <> 'BLOCKED' OR failure_code IN ('THREATS_FOUND','ENCRYPTED','FORMAT_MISMATCH','UNSUPPORTED_EXTENSION','SOURCE_MISMATCH','ENGINE_UNSCANNABLE','SIZE_LIMIT_EXCEEDED','SCAN_FAILED','SCAN_CANCELLED')) AND (request_status <> 'FAILED' OR failure_code IN ('TARGET_NOT_FOUND','TARGET_LOCKED','FILE_NOT_FOUND','FILE_PROJECT_MISMATCH','FILE_CATEGORY_MISMATCH'))) |
 | `rule_file_link_request_1` | Business validation | `created_by, upload_id, target_entity_type, target_entity_id` | The requester must be the same as the user who uploaded the file (file_scan_job.uploaded_by). The link target must exist, belong to the same project, and be in an editable state, and the requester must have edit permission on the target. The editable state is: for FDS/DDS/VA, before submission (REVIEW); for IQ/OQ/PQ step executions, when the execution_status of the parent execution (*_execution) is IN_PROGRESS (before results are registered). |
 | `rule_file_link_request_2` | Business validation | `request_status` | Link processing locks the request row and then changes its status. If the file has already passed the scan at the time of the request, it is linked immediately; otherwise, the Worker links it after the scan passes. File registration (file_asset) and business linking are in separate transactions, so even if linking fails, the file that passed the scan is kept, and FAILED and the reason are recorded. |
 | `rule_file_link_request_3` | Business validation | `request_status` | When the user cancels, WAITING/BLOCKED/FAILED requests are changed to CANCELLED. When an FDS/DDS draft is deleted (deleted_at) or the parent execution of an IQ/OQ/PQ step execution is aborted (ABORTED), the unlinked (WAITING/BLOCKED/FAILED) requests for that target are changed to CANCELLED in the same transaction. LINKED requests are not cancelled. |
@@ -4359,19 +4362,21 @@ Body, sections, versions and document approval status are stored in deliverable_
 | 1163 | Job Type | `job_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | ITEM_GENERATION, DOCUMENT_GENERATION | `ITEM_GENERATION` |
 | 1164 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT / FRA_ITEM / IQ_ITEM / OQ_ITEM / PQ_ITEM / DELIVERABLE_REVISION | `IQ_ITEM` |
 | 1165 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | For an existing target, the PK of the corresponding revision. NULL allowed for previews that generate new items | `00000000-0000-0000-0000-000000000001` |
-| 1166 | AI Model Name | `model_name` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Identifier of the model used for generation. Recorded when confirmed; NULL is allowed when unconfirmed. | - |
-| 1167 | Input Parameters | `input_parameters` | `jsonb` | N | N | - | Y | - | N | N | Y | Y | Screen inputs: purpose, scope, basis URS, number of items to generate, or the sections of the document to generate | `{"purpose":"Access permission verification","scope":"Login","count":3}` |
-| 1168 | Generation Status | `generation_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED | `PENDING` |
-| 1169 | Requester ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who requested the generation. For automatic/batch requests, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1170 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the request was received | `2026-09-02T00:00:00Z` |
-| 1171 | Execution Start Time | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing start time | `2026-09-02T00:00:00Z` |
-| 1172 | Execution Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing completion time | `2026-09-02T00:00:00Z` |
-| 1173 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Failure cause code | `LLM_TIMEOUT` |
-| 1174 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Detailed failure message | `Model response timeout` |
-| 1175 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
-| 1176 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1177 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
-| 1178 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1166 | AI Model Name | `model_name` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Identifier of the model used for generation. Stored as a fixed version name that includes a date; an alias that points to the latest version is not stored. Recorded when confirmed; NULL is allowed when unconfirmed. | - |
+| 1167 | Prompt Version | `prompt_version` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Version of the prompt template used by the AI service (an item of the WAS↔AI contract). Required when COMPLETED. A different prompt is not deployed under the same version name | `IQ_ITEM_v2` |
+| 1168 | Masked Raw Response | `masked_response` | `text` | N | N | - | N | - | N | N | Y | Y | The raw response returned by the AI service, kept per job in its masked state as is. The mapping table for unmasking is not stored, so it cannot be recreated later. Required when COMPLETED. Classified as sensitive because information not covered by the detection rules may remain. Which one is treated as the original in audits (this value or ai_result_item.content) is pending decision | - |
+| 1169 | Input Parameters | `input_parameters` | `jsonb` | N | N | - | Y | - | N | N | Y | Y | Screen inputs: purpose, scope, basis URS, number of items to generate, or the sections of the document to generate | `{"purpose":"Access permission verification","scope":"Login","count":3}` |
+| 1170 | Generation Status | `generation_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED | `PENDING` |
+| 1171 | Requester ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who requested the generation. For automatic/batch requests, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1172 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the request was received | `2026-09-02T00:00:00Z` |
+| 1173 | Execution Start Time | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing start time | `2026-09-02T00:00:00Z` |
+| 1174 | Execution Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing completion time | `2026-09-02T00:00:00Z` |
+| 1175 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Failure cause code | `LLM_TIMEOUT` |
+| 1176 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Detailed failure message | `Model response timeout` |
+| 1177 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
+| 1178 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1179 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
+| 1180 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4380,6 +4385,7 @@ Body, sections, versions and document approval status are stored in deliverable_
 | `rule_ai_generation_job_1` | Business validation | `target_entity_id` | New items of ITEM_GENERATION allow a NULL target_entity_id before being applied. DOCUMENT_GENERATION is linked to the corresponding document revision. |
 | `rule_ai_generation_job_2` | Business validation | - | Generation completion does not mean approval of business items or document approval. After selection and application, the regular edit/approval procedure is followed. |
 | `rule_ai_generation_job_3` | Business validation | `project_id, requested_by` | At job creation, organization.ai_enabled of the reference organization for the determination must be TRUE. The reference organization is the organization to which the project's system belongs if project_id is present, and otherwise the requester's organization. Because the SYSTEM account belongs to the SYSTEM organization (ai_enabled=FALSE), it cannot request AI jobs without a project_id. If FALSE, no PENDING row is created and the generation is rejected. Audit-response bot queries follow the same setting and are rejected on the server without separate storage. When ai_enabled is switched to FALSE, jobs that are already PENDING/PROCESSING are allowed to run to completion. |
+| `rule_ai_generation_job_4` | Business validation | `generation_status, prompt_version, masked_response` | Before data is sent to the AI service, the sensitive-information detection result for the outbound data (ai_sensitive_detection) must be stored; if it cannot be stored, the data is not sent. WAS→AI sending happens once per job; per-section/per-item generation and retries are handled inside the AI service, and only the final result or failure is recorded. When COMPLETED, prompt_version and masked_response are stored. |
 | `ck_ai_generation_job_type` | CHECK | `job_type` | CHECK (job_type IN ('ITEM_GENERATION','DOCUMENT_GENERATION')) |
 | `ck_ai_generation_job_target_type` | CHECK | `target_entity_type` | CHECK (target_entity_type IN ('REQUIREMENT','FRA_ITEM','IQ_ITEM','OQ_ITEM','PQ_ITEM','DELIVERABLE_REVISION')) |
 | `ck_ai_generation_job_status` | CHECK | `generation_status` | CHECK (generation_status IN ('PENDING','PROCESSING','COMPLETED','FAILED','CANCELLED')) |
@@ -4406,17 +4412,17 @@ Body, sections, versions and document approval status are stored in deliverable_
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1179 | AI Result ID | `ai_result_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI result identifier | `00000000-0000-0000-0000-000000000001` |
-| 1180 | AI Job ID | `ai_job_id` | `uuid` | N | Y | `ai_generation_job.ai_job_id` | Y | - | N | Y | N | Y | Parent AI job | `00000000-0000-0000-0000-000000000001` |
-| 1181 | Result Title | `result_title` | `varchar(300)` | N | N | - | N | - | N | N | N | Y | Result Title | `OQ test draft` |
-| 1182 | Selected | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether adopted by the user | `TRUE` |
-| 1183 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether actually applied to the deliverable | `TRUE` |
-| 1184 | Selected By ID | `selected_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who adopted it | `00000000-0000-0000-0000-000000000001` |
-| 1185 | Selected At | `selected_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Adopted At | `2026-09-02T00:00:00Z` |
-| 1186 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
-| 1187 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1188 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
-| 1189 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1181 | AI Result ID | `ai_result_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI result identifier | `00000000-0000-0000-0000-000000000001` |
+| 1182 | AI Job ID | `ai_job_id` | `uuid` | N | Y | `ai_generation_job.ai_job_id` | Y | - | N | Y | N | Y | Parent AI job | `00000000-0000-0000-0000-000000000001` |
+| 1183 | Result Title | `result_title` | `varchar(300)` | N | N | - | N | - | N | N | N | Y | Result Title | `OQ test draft` |
+| 1184 | Selected | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether adopted by the user | `TRUE` |
+| 1185 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether actually applied to the deliverable | `TRUE` |
+| 1186 | Selected By ID | `selected_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who adopted it | `00000000-0000-0000-0000-000000000001` |
+| 1187 | Selected At | `selected_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Adopted At | `2026-09-02T00:00:00Z` |
+| 1188 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
+| 1189 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1190 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
+| 1191 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4450,21 +4456,21 @@ This is a bundle of AI results. Per-item selection and application are based on 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1190 | AI Result Item ID | `ai_result_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Result item identifier | `00000000-0000-0000-0000-000000000001` |
-| 1191 | AI Result ID | `ai_result_id` | `uuid` | N | Y | `ai_generation_result.ai_result_id` | Y | - | N | Y | N | Y | References the parent result | `00000000-0000-0000-0000-000000000001` |
-| 1192 | Item Order | `item_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Result display order | `1` |
-| 1193 | Item Type | `item_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT, FRA_SCENARIO, IQ_TEST, OQ_TEST, PQ_TEST, DOCUMENT_SECTION | `REQUIREMENT` |
-| 1194 | Title | `title` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | Generated item title | `Electronic signature record` |
-| 1195 | Body Content | `content` | `text` | N | N | - | Y | - | N | N | N | Y | Draft content generated by AI per test/requirement/risk assessment/section | `Content` |
-| 1196 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Type of the business table it was applied to: REQUIREMENT / FRA_ITEM / IQ_ITEM / OQ_ITEM / PQ_ITEM / DELIVERABLE_SECTION | `IQ_ITEM` |
-| 1197 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | PK of the revision actually created/modified by applying it. NULL before application | `00000000-0000-0000-0000-000000000001` |
-| 1198 | Adopted | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether adopted by the user | `TRUE` |
-| 1199 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
-| 1200 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1201 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
-| 1202 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1203 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Applied | `FALSE` |
-| 1204 | Applied At | `applied_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Applied At | `2026-09-01T00:00:00Z` |
+| 1192 | AI Result Item ID | `ai_result_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Result item identifier | `00000000-0000-0000-0000-000000000001` |
+| 1193 | AI Result ID | `ai_result_id` | `uuid` | N | Y | `ai_generation_result.ai_result_id` | Y | - | N | Y | N | Y | References the parent result | `00000000-0000-0000-0000-000000000001` |
+| 1194 | Item Order | `item_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Result display order | `1` |
+| 1195 | Item Type | `item_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT, FRA_SCENARIO, IQ_TEST, OQ_TEST, PQ_TEST, DOCUMENT_SECTION | `REQUIREMENT` |
+| 1196 | Title | `title` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | Generated item title | `Electronic signature record` |
+| 1197 | Body Content | `content` | `text` | N | N | - | Y | - | N | N | N | Y | Draft content generated by AI per test/requirement/risk assessment/section. Stored as the unmasked value; it is the proposal the user first saw and the baseline for the edit history (the masked raw response is ai_generation_job.masked_response) | `Content` |
+| 1198 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Type of the business table it was applied to: REQUIREMENT / FRA_ITEM / IQ_ITEM / OQ_ITEM / PQ_ITEM / DELIVERABLE_SECTION | `IQ_ITEM` |
+| 1199 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | PK of the revision actually created/modified by applying it. NULL before application | `00000000-0000-0000-0000-000000000001` |
+| 1200 | Adopted | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether adopted by the user | `TRUE` |
+| 1201 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
+| 1202 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1203 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
+| 1204 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1205 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Applied | `FALSE` |
+| 1206 | Applied At | `applied_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Applied At | `2026-09-01T00:00:00Z` |
 
 #### Constraints
 
@@ -4480,10 +4486,55 @@ This is a bundle of AI results. Per-item selection and application are based on 
 
 ---
 
+<a id="table-ai_sensitive_detection"></a>
+### 73. AI Outbound Data Sensitive-Information Detection Result (`ai_sensitive_detection`)
+
+| Item | Definition |
+|---|---|
+| Description | Number of detections per type of the sensitive information masked in an AI generation job before it is sent to the AI service |
+| Primary Key | `detection_id` |
+| Main References (FK) | `ai_job_id, created_by` |
+| GxP Criticality | High |
+| Audit Target | Y |
+| Retention / Deletion | Retained for the auditable period |
+
+#### Column Definitions
+
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: personal / sensitive information
+
+| No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
+|---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
+| 1207 | Detection ID | `detection_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Detection result row identifier | `00000000-0000-0000-0000-000000000001` |
+| 1208 | AI Job ID | `ai_job_id` | `uuid` | N | Y | `ai_generation_job.ai_job_id` | Y | - | N | Y | N | Y | AI generation job that sent the checked data | `00000000-0000-0000-0000-000000000001` |
+| 1209 | Detection Type | `detection_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Values in use (a reference list, not restricted by a CHECK): EMAIL (email), PHONE (phone number), RRN (resident registration number), ORGANIZATION (organization name such as customer, plant, or lab), PERSON (person name). Added to the list when detection items increase | `EMAIL` |
+| 1210 | Detected Count | `detected_count` | `integer` | N | N | - | Y | - | N | N | N | Y | Number of detections of the type. A checked type is recorded even with 0 detections | `2` |
+| 1211 | Detection Rule Version | `detector_version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Version of the rules used for detection and masking. A different rule set is not deployed under the same version name | `MASK_RULE_v1` |
+| 1212 | Detected At | `detected_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the detection was performed | `2026-10-16T01:00:00Z` |
+| 1213 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-10-16T01:00:00Z` |
+| 1214 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+
+#### Constraints
+
+| Constraint | Type | Columns | Condition / Rule |
+|---|---|---|---|
+| `uq_ai_sensitive_detection_type` | UNIQUE | `ai_job_id, detection_type` | UNIQUE (ai_job_id, detection_type) |
+| `ck_ai_sensitive_detection_count` | CHECK | `detected_count` | CHECK (detected_count >= 0) |
+| `rule_ai_sensitive_detection_1` | Business validation | - | The actual detected values (email addresses, names, etc.) and the mapping table for unmasking are not stored; only the number per type is stored. |
+| `rule_ai_sensitive_detection_2` | Business validation | `ai_job_id, detection_type, detected_count` | A checked type is recorded as 1 row even with 0 detections. Storing is finished before the data is sent to the AI service; if it cannot be stored, the data is not sent (rule_ai_generation_job_4). |
+| `rule_ai_sensitive_detection_3` | Business validation | - | Rows are only added and are not updated or deleted. |
+
+#### Business Rules
+
+Data that an AI generation job sends to the AI service (system and project information, deliverables from previous stages) has its sensitive information masked before it is sent, and the result is recorded as 1 row per job × type. Because WAS→AI sending happens once per job, (ai_job_id, detection_type) is unique. Per-section/per-item generation and retries are handled inside the AI service and do not create separate detection rows. If the sending structure changes so that a job sends more than once, a sending sequence column is added. Uploaded files are not used as AI input in the current scope.
+
+[↑ Back to top](#top)
+
+---
+
 ## Regulation
 
 <a id="table-regulatory_source"></a>
-### 73. Regulatory Basis Document (`regulatory_source`)
+### 74. Regulatory Basis Document (`regulatory_source`)
 
 | Item | Definition |
 |---|---|
@@ -4500,23 +4551,23 @@ This is a bundle of AI results. Per-item selection and application are based on 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1205 | Regulatory Document ID | `regulatory_source_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1206 | Document Code | `source_code` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Document Code | `REF-001` |
-| 1207 | Document Type | `source_type` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | REGULATION / GUIDELINE / INTERNAL_SOP | `GUIDELINE` |
-| 1208 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Document Title | `Reference document for review` |
-| 1209 | Edition/Revision | `edition` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Edition/Revision | `Rev.1` |
-| 1210 | Issuing Body/Department | `issuing_body` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Issuing Body/Department | `Quality Assurance Team` |
-| 1211 | Source URL | `source_url` | `text` | N | N | - | N | - | N | N | N | Y | Source URL | `https://example.com/reference` |
-| 1212 | Original Attachment ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | References file_asset.file_id | `00000000-0000-0000-0000-000000000001` |
-| 1213 | Effective From | `effective_from` | `date` | N | N | - | N | - | N | N | N | Y | Effective From | `2026-09-01` |
-| 1214 | Effective To | `effective_to` | `date` | N | N | - | N | - | N | N | N | Y | Effective To | `2026-09-01` |
-| 1215 | Review Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT / VERIFIED / RETIRED | `DRAFT` |
-| 1216 | Verified By ID | `verified_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1217 | Verified At | `verified_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Verified At | `2026-09-01T00:00:00Z` |
-| 1218 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1219 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1220 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1221 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1215 | Regulatory Document ID | `regulatory_source_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1216 | Document Code | `source_code` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Document Code | `REF-001` |
+| 1217 | Document Type | `source_type` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | REGULATION / GUIDELINE / INTERNAL_SOP | `GUIDELINE` |
+| 1218 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Document Title | `Reference document for review` |
+| 1219 | Edition/Revision | `edition` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Edition/Revision | `Rev.1` |
+| 1220 | Issuing Body/Department | `issuing_body` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Issuing Body/Department | `Quality Assurance Team` |
+| 1221 | Source URL | `source_url` | `text` | N | N | - | N | - | N | N | N | Y | Source URL | `https://example.com/reference` |
+| 1222 | Original Attachment ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | References file_asset.file_id | `00000000-0000-0000-0000-000000000001` |
+| 1223 | Effective From | `effective_from` | `date` | N | N | - | N | - | N | N | N | Y | Effective From | `2026-09-01` |
+| 1224 | Effective To | `effective_to` | `date` | N | N | - | N | - | N | N | N | Y | Effective To | `2026-09-01` |
+| 1225 | Review Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT / VERIFIED / RETIRED | `DRAFT` |
+| 1226 | Verified By ID | `verified_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1227 | Verified At | `verified_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Verified At | `2026-09-01T00:00:00Z` |
+| 1228 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1229 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1230 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1231 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4538,7 +4589,7 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 ---
 
 <a id="table-regulatory_clause"></a>
-### 74. Regulatory Clause (`regulatory_clause`)
+### 75. Regulatory Clause (`regulatory_clause`)
 
 | Item | Definition |
 |---|---|
@@ -4555,18 +4606,18 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1222 | Clause ID | `regulatory_clause_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1223 | Regulatory Document ID | `regulatory_source_id` | `uuid` | N | Y | `regulatory_source.regulatory_source_id` | Y | - | N | Y | N | Y | References regulatory_source.regulatory_source_id | `00000000-0000-0000-0000-000000000001` |
-| 1224 | Clause Code | `clause_code` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Clause Code | `4.1` |
-| 1225 | Clause Title | `title` | `varchar(255)` | N | N | - | N | - | N | N | N | Y | Clause Title | `Access management` |
-| 1226 | Clause Summary | `summary` | `text` | N | N | - | Y | - | N | N | N | Y | Clause Summary | `Summary of the requirements applicable to the relevant work` |
-| 1227 | Original Content Location | `source_locator` | `text` | N | N | - | N | - | N | N | N | Y | Original Content Location | `Chapter 4, Section 1` |
-| 1228 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
-| 1229 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | In Use | `TRUE` |
-| 1230 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1231 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1232 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1233 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1232 | Clause ID | `regulatory_clause_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1233 | Regulatory Document ID | `regulatory_source_id` | `uuid` | N | Y | `regulatory_source.regulatory_source_id` | Y | - | N | Y | N | Y | References regulatory_source.regulatory_source_id | `00000000-0000-0000-0000-000000000001` |
+| 1234 | Clause Code | `clause_code` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Clause Code | `4.1` |
+| 1235 | Clause Title | `title` | `varchar(255)` | N | N | - | N | - | N | N | N | Y | Clause Title | `Access management` |
+| 1236 | Clause Summary | `summary` | `text` | N | N | - | Y | - | N | N | N | Y | Clause Summary | `Summary of the requirements applicable to the relevant work` |
+| 1237 | Original Content Location | `source_locator` | `text` | N | N | - | N | - | N | N | N | Y | Original Content Location | `Chapter 4, Section 1` |
+| 1238 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
+| 1239 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | In Use | `TRUE` |
+| 1240 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1241 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1242 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1243 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4581,7 +4632,7 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 ---
 
 <a id="table-requirement_regulation"></a>
-### 75. Requirement Regulatory Basis (`requirement_regulation`)
+### 76. Requirement Regulatory Basis (`requirement_regulation`)
 
 | Item | Definition |
 |---|---|
@@ -4598,16 +4649,16 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1234 | Basis Link ID | `requirement_regulation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1235 | Business Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | Y | N | Y | References requirement.requirement_id | `00000000-0000-0000-0000-000000000001` |
-| 1236 | Regulatory Clause ID | `regulatory_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | Y | - | N | Y | N | Y | References regulatory_clause.regulatory_clause_id | `00000000-0000-0000-0000-000000000001` |
-| 1237 | Application Rationale | `application_note` | `text` | N | N | - | N | - | N | N | N | Y | Application Rationale | `Applied to access permission requirements` |
-| 1238 | Citation Text | `citation_snapshot` | `text` | N | N | - | Y | - | N | N | N | Y | Preserves the document title, edition and clause display as of the time of application | `Reference document for review Rev.1 / 4.1` |
-| 1239 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
-| 1240 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1241 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1242 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1243 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1244 | Basis Link ID | `requirement_regulation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1245 | Business Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | Y | N | Y | References requirement.requirement_id | `00000000-0000-0000-0000-000000000001` |
+| 1246 | Regulatory Clause ID | `regulatory_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | Y | - | N | Y | N | Y | References regulatory_clause.regulatory_clause_id | `00000000-0000-0000-0000-000000000001` |
+| 1247 | Application Rationale | `application_note` | `text` | N | N | - | N | - | N | N | N | Y | Application Rationale | `Applied to access permission requirements` |
+| 1248 | Citation Text | `citation_snapshot` | `text` | N | N | - | Y | - | N | N | N | Y | Preserves the document title, edition and clause display as of the time of application | `Reference document for review Rev.1 / 4.1` |
+| 1249 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
+| 1250 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1251 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1252 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1253 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4622,7 +4673,7 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 ---
 
 <a id="table-library_item_regulation"></a>
-### 76. Library Regulatory Basis (`library_item_regulation`)
+### 77. Library Regulatory Basis (`library_item_regulation`)
 
 | Item | Definition |
 |---|---|
@@ -4639,16 +4690,16 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1244 | Basis Link ID | `library_item_regulation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1245 | Library Item ID | `library_id` | `uuid` | N | Y | `library_item.library_id` | Y | - | N | Y | N | Y | References library_item.library_id | `00000000-0000-0000-0000-000000000001` |
-| 1246 | Regulatory Clause ID | `regulatory_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | Y | - | N | Y | N | Y | References regulatory_clause.regulatory_clause_id | `00000000-0000-0000-0000-000000000001` |
-| 1247 | Application Rationale | `application_note` | `text` | N | N | - | N | - | N | N | N | Y | Application Rationale | `Applied to access permission requirements` |
-| 1248 | Citation Text | `citation_snapshot` | `text` | N | N | - | Y | - | N | N | N | Y | Preserves the document title, edition and clause display as of the time of application | `Reference document for review Rev.1 / 4.1` |
-| 1249 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
-| 1250 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1251 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1252 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1253 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1254 | Basis Link ID | `library_item_regulation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1255 | Library Item ID | `library_id` | `uuid` | N | Y | `library_item.library_id` | Y | - | N | Y | N | Y | References library_item.library_id | `00000000-0000-0000-0000-000000000001` |
+| 1256 | Regulatory Clause ID | `regulatory_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | Y | - | N | Y | N | Y | References regulatory_clause.regulatory_clause_id | `00000000-0000-0000-0000-000000000001` |
+| 1257 | Application Rationale | `application_note` | `text` | N | N | - | N | - | N | N | N | Y | Application Rationale | `Applied to access permission requirements` |
+| 1258 | Citation Text | `citation_snapshot` | `text` | N | N | - | Y | - | N | N | N | Y | Preserves the document title, edition and clause display as of the time of application | `Reference document for review Rev.1 / 4.1` |
+| 1259 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
+| 1260 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1261 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1262 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1263 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
