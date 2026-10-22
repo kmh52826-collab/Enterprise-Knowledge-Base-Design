@@ -55,7 +55,7 @@ External AI engineers develop the AI features with a vector DB and LLMs, and I a
 ## 🚀 Key Technical Contributions & Engineering Design
 
 ### 1. End-to-End Relational Data Modeling & ERD Design (Completed)
-Reflecting the complexity of a Highly Regulated Domain, I personally designed the entire PostgreSQL schema of 76 tables across 14 business areas, from conceptual modeling to logical/physical ERD design. Each time the requirements changed, I reported the design to the project members and the PM, incorporated their feedback, and revised it several times.
+Reflecting the complexity of a Highly Regulated Domain, I personally designed the entire PostgreSQL schema of 77 tables across 14 business areas, from conceptual modeling to logical/physical ERD design. Each time the requirements changed, I reported the design to the project members and the PM, incorporated their feedback, and revised it several times.
 
 - **Regulatory Compliance Schema Design:** Designed to enforce 21 CFR Part 11 (electronic signatures and audit trails) and ALCOA++ principles through both database constraints (PK/FK/CHECK/UNIQUE) and server-side validation rules. An electronic signature preserves the signed original content together with the target revision, and audit trail records are never modified; only new records are added.
 - **Revision-Pinned Traceability:** Designed so that the trace links between requirements (URS), design, risk assessment (FRA), and test items (IQ/OQ/PQ) point to the exact revision at the time of linking. Past approval evidence does not change even when a new revision is created, and each requirement is linked to the regulatory clause it is based on, together with that clause's edition.
@@ -63,7 +63,7 @@ Reflecting the complexity of a Highly Regulated Domain, I personally designed th
 - **Design Trade-off:** Polymorphic references were used to link revisions of many kinds of deliverables to each other. As a result, referential integrity must be validated in the application layer rather than by database FKs. To compensate, I defined rules that check the target table, PK, and revision on the server at every save, submission, and approval.
 
 #### 🔗 Data Model Documents
-- [Data Dictionary](docs/data-dictionary.md) — columns, constraints, and business rules of the 76 tables
+- [Data Dictionary](docs/data-dictionary.md) — columns, constraints, and business rules of the 77 tables
 - [ERD Specifications](docs/erd-specifications.md) — table relationships for each of the 14 business areas
 - [Overall Data Structure](docs/erd-overview.md) — overall structure across areas
 
