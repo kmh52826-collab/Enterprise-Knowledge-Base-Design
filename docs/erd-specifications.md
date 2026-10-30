@@ -2,14 +2,14 @@
 
 # ERD Specifications
 
-This document describes the 77 tables of the Validation Management Platform, divided into 14 business areas. For each area, you can see the information it manages and how its main tables are connected.
+This document describes the 80 tables of the Validation Management Platform, divided into 14 business areas. For each area, you can see the information it manages and how its main tables are connected.
 
 To see the connections between business areas at a glance, refer to the **[Overall Data Structure](./erd-overview.md)**.
 
 > [!NOTE]
 > This document is intended to explain data modeling and system design. Example values are de-identified samples and do not represent actual operational data of any specific organization.
 
-The relationship structures are simplified diagrams showing the main connections. Commonly used tables may appear in multiple ERDs. See the **[Data Dictionary](./data-dictionary.md)** for column definitions and business rules.
+The relationship structures are simplified diagrams showing the main connections. Commonly used tables may appear in multiple ERDs. See the [Data Dictionary](./data-dictionary.md) for column definitions and business rules.
 
 ## Contents
 
@@ -34,14 +34,15 @@ The relationship structures are simplified diagrams showing the main connections
 
 ## 1. Organization, Users & Permissions
 
-**Tables: 11**
+**Tables: 12**
 
 ### Relationship Structure
 
 ```text
 organization
   ├─ app_user ─ user_role ─ role
-  │    └─ user_signature_credential (electronic signature password)
+  │    ├─ user_signature_credential (electronic signature password)
+  │    └─ login_session (login session)
   └─ user_group
        ├─ user_group_member ─ app_user
        └─ group_role ─ role
@@ -53,7 +54,7 @@ app_user / user_group
 
 ### Overview
 
-Users and groups are managed per organization, and business roles and access permissions are granted to individuals and groups. The structure separately manages roles such as author, reviewer and approver, access permissions for screens and projects, and inventory business permissions. The login method (SSO or platform password) is set per organization, and an electronic signature verifies the signer's identity with a signature-only password separate from the login. Accounts for automated system processing belong to the SYSTEM organization, and administrators from the developer company belong to the VENDOR organization.
+Users and groups are managed per organization, and business roles and access permissions are granted to individuals and groups. The structure separately manages roles such as author, reviewer and approver, access permissions for screens and projects, and inventory business permissions. The login method (SSO or platform password) is set per organization, and an electronic signature verifies the signer's identity with a signature-only password separate from the login. Each login leaves an access session, recorded together with its end time and reason. Accounts for automated system processing belong to the SYSTEM organization, and administrators from the developer company belong to the VENDOR organization.
 
 ### Table Roles
 
@@ -69,6 +70,7 @@ Users and groups are managed per organization, and business roles and access per
 | `access_permission_grant` | Screen and project access permissions for individuals and groups |
 | `inventory_role_grant` | Inventory authoring, review, approval and disposal permissions for individuals and groups |
 | `user_signature_credential` | Signature-only password used for electronic signature re-authentication, with lock and expiry status |
+| `login_session` | Access session per login, with its end time and reason |
 | `validation_project` | Basic information of validation projects and their progress and closure status |
 
 ### Key Points
@@ -76,6 +78,8 @@ Users and groups are managed per organization, and business roles and access per
 - The permission level (SYSTEM_ADMIN, ADMIN, USER) and business roles are separate. An account's permission level alone does not make it a reviewer or approver.
 - Permissions granted directly to a user and permissions received from the user's groups are applied together. Group permissions are determined based on active groups and members.
 - Editing and disposal require both an access permission and a business role. Review and approval require being assigned as the approval assignee or substitute assignee.
+- Access sessions are not deleted; they are ended with an end time and reason. When an account is deactivated or locked or its login method changes, its in-progress sessions are forcibly ended. When the same account logs in again, its previous session is ended.
+- An invited account stays in the invited state until its first login. An SSO account can be used after its first SSO login, and a platform-password account after entering its name and department and changing its temporary password. Every account holds the viewer role by default.
 
 [↑ Back to contents](#top)
 
@@ -85,7 +89,7 @@ Users and groups are managed per organization, and business roles and access per
 
 ## 2. System Inventory & Project Management
 
-**Tables: 14**
+**Tables: 16**
 
 ### Relationship Structure
 
@@ -95,7 +99,9 @@ system_asset (system under validation)
   └─ validation_project
        ├─ project_system_baseline (adopted approved revision)
        ├─ project_member (participants)
+       ├─ project_party (performing organizations)
        ├─ project_activity ─ validation_activity
+       │    └─ project_activity_assignment (responsibility assignment)
        └─ project_closure_request (closure request)
 
 validation_activity ─ activity_dependency (activity dependency conditions)
@@ -103,7 +109,7 @@ validation_activity ─ activity_dependency (activity dependency conditions)
 
 ### Overview
 
-Manages the current information and revision history of systems under validation and runs projects based on them. Each project is linked to the approved revision adopted as its validation baseline, its participants, its activities and its closure requests.
+Manages the current information and revision history of systems under validation and runs projects based on them. Each project is linked to the approved revision adopted as its validation baseline, its participants, its performing organizations, its activities with the responsibility assignment per activity, and its closure requests.
 
 ### Table Roles
 
@@ -114,8 +120,10 @@ Manages the current information and revision history of systems under validation
 | `validation_project` | Basic information of validation projects and their progress and closure status |
 | `project_system_baseline` | Approved system revision adopted by a project as its validation baseline |
 | `project_member` | Project participants and their assigned roles |
+| `project_party` | User organizations, supplier organizations and CSV consultants of a project, with their responsibilities |
 | `validation_activity` | Common list of activities such as validation planning, assessment and testing |
 | `project_activity` | Activities selected for a project and their progress status |
+| `project_activity_assignment` | Organizations responsible for authoring, execution, support, review and approval per activity |
 | `activity_dependency` | Predecessor/successor conditions between activities and the version of the condition set |
 | `project_closure_request` | Project closure requests and links to the approval history of each round |
 | `organization` | Organizations that users and groups belong to, with login method and AI usage settings |
@@ -128,6 +136,7 @@ Manages the current information and revision history of systems under validation
 
 - The system's current information is kept separate from the validation baseline adopted by the project. Even if the system is revised later, the approved original content used by the project is preserved.
 - A project proceeds according to its selected activities and the version of dependency conditions adopted when it was created. Common conditions are created as new versions, and the version adopted by an existing project is not changed.
+- The background, purpose, performing organizations and responsibility assignment of a project are copied into the body when deliverables such as the VP are written. Later changes to the project do not change deliverables already written or approved, and they are separate from approval assignee designation.
 - Closure requests are managed per round. Even if a request is made again after rejection, the reason and approval history of the earlier request can still be reviewed.
 
 [↑ Back to contents](#top)
@@ -698,7 +707,7 @@ The library provides reusable items for authoring requirements, risk assessments
 
 ## 14. AI Generation & Application
 
-**Tables: 13**
+**Tables: 15**
 
 ### Relationship Structure
 
@@ -713,13 +722,13 @@ User review/selection → applied to business items/document body → review/app
 
 ### Overview
 
-Manages the process from an AI generation request through user review to actual application in business work. Generation requests, result sets and individual drafts are kept separate, and the requirement, risk assessment, test or document body to which each adopted draft was applied is recorded. Before data is sent to the AI, sensitive information in it is masked and the number of detections per type is recorded. AI features are turned on and off in the organization settings.
+Manages the process from an AI generation request through user review to actual application in business work. Generation requests, result sets and individual drafts are kept separate, and the requirement, risk assessment, test or document body to which each adopted draft was applied is recorded. English translations of document sections and automatic evaluations of QIA processes (including a judgment score per question) are requested and applied through the same structure. Before data is sent to the AI, sensitive information in it is masked and the number of detections per type is recorded. AI features are turned on and off in the organization settings.
 
 ### Table Roles
 
 | Table | Role |
 |---|---|
-| `ai_generation_job` | AI generation requests, input conditions and progress status |
+| `ai_generation_job` | AI generation, translation and automatic evaluation requests, input conditions and progress status |
 | `ai_generation_result` | Generated result sets and whether the user selected and applied them |
 | `ai_result_item` | Individual drafts and the results of applying them to actual business work |
 | `ai_sensitive_detection` | Number of detections per type of the sensitive information masked before sending to the AI |
@@ -732,11 +741,13 @@ Manages the process from an AI generation request through user review to actual 
 | `pq_item` | Performance qualification test content and criteria, with protocol revisions |
 | `deliverable_revision` | Content, basis and approval status of each document revision |
 | `deliverable_section` | Sections and body text included in a document revision |
+| `vp_plan` | Revisions and approval status of the validation plan |
+| `vp_section` | Sections and body text included in the validation plan |
 
 ### Key Points
 
 - Generation completion, user selection and business application are separate states. The fact that the AI produced a result does not by itself mean that the result has been applied to business work or approved.
-- New items can be reviewed in a preview before being applied, and are linked to the actual business items after application. Document generation is requested against a document revision, and the result is applied to the body of the corresponding section.
+- New items can be reviewed in a preview before being applied, and are linked to the actual business items after application. Document generation is requested against a document revision, and the result is applied to the body of the corresponding section. Because the VP keeps its original sections separately, VP generation is requested against the VP revision, and the result is applied to the VP sections.
 - AI results are applied only to drafts in progress or to new revisions. They do not overwrite original content after submission, and applied content also goes through the normal review and approval process.
 - The actual detected values are not stored; only the number per type is kept. Checked types are recorded even with 0 detections, and data is sent to the AI only after the detection result is stored.
 
