@@ -1,6 +1,6 @@
 # Validation Management Platform Overall Data Structure
 
-This diagram groups all **77 tables** into **14 business areas**. Each box shows the actual table names, and each table is placed only once.
+This diagram groups all **80 tables** into **14 business areas**. Each box shows the actual table names, and each table is placed only once.
 
 The area numbers and names match areas 1–14 in the [ERD Specifications](./erd-specifications.md).
 
@@ -22,15 +22,18 @@ user_group_member
 group_role
 access_permission_grant
 inventory_role_grant
-user_signature_credential"]
+user_signature_credential
+login_session"]
         PROJECT["② System Inventory &<br/>Project Management
 system_asset
 system_asset_revision
 validation_project
 project_system_baseline
 project_member
+project_party
 validation_activity
 project_activity
+project_activity_assignment
 activity_dependency
 project_closure_request"]
         SECURITY --> PROJECT
@@ -173,6 +176,7 @@ traceability_link"]
 | `system_asset_revision` → `project_system_baseline` | Identifies the approved system revision adopted by the project. Test executions and document revisions are also linked to the baseline in effect at the time, preserving the past validation target. |
 | `validation_project` → `project_member` | Manages the users participating in the project and their roles. |
 | `validation_project` → `project_activity` → `validation_activity` | Selects the activities to be performed in the project. Dependency conditions use the criteria adopted from `activity_dependency` when the project was created. |
+| `validation_project` → `project_party` → `project_activity_assignment` | Manages the performing organizations of a project and the assignment of authoring, execution, support, review and approval per activity. This information is for display in deliverables such as the VP and is separate from approval assignee designation. |
 | `vp_plan` → `vp_section` / `qia_assessment` → `qia_module_item` → `qia_process` | The validation plan is managed as sections and body, and the quality impact assessment is managed as the common assessment, modules and processes. Vendor audits are recorded in `vendor_audit`. |
 | `requirement` · `fds_spec` · `dds_spec` → `dq_item` | Assesses design suitability by linking specific revisions of requirements and design documents. |
 | `requirement` → `fra_item` | Assesses the risk of each requirement and links the internal SOP basis through `regulatory_clause`. |
