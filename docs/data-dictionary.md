@@ -17,8 +17,8 @@ For table relationships by business area, see **[ERD Specifications](./erd-speci
 
 ## 1. Document Overview
 
-- Total tables: **77**
-- Total columns: **1,263**
+- Total tables: **80**
+- Total columns: **1,310**
 - Domains: **26**
 - Naming convention: tables and columns use `snake_case`; the PK is an identifier column per entity
 - Date/time convention: stored in UTC in the DB; the user's or site's Timezone is applied on screens
@@ -56,7 +56,7 @@ Concurrent requests are controlled by server transactions together with target r
 
 Versioned question and judgment rule definitions (QIA Part 11/GxP questions, FRA risk judgment, meaning of activity dependency judgments) are not kept in a separate master table but are managed as server deployment settings identified by version name. A different definition is never deployed under the same version name, and the original content copied into each assessment, document, and project (question_set_snapshot, rule_snapshot, evaluation_definition_snapshot, dependency_snapshot) serves as the audit basis.
 
-For business revisions that have an approval status, the body, sub-steps, composition, and attachments are locked after submission (REVIEW). Saving a DRAFT before submission updates the same row and records the before and after values in the Audit Trail. Rejection (REJECTED) and cancellation (CANCELLED) are terminal states of the revision and do not revert to DRAFT. Edits after rejection or cancellation and changes after approval are handled as a new revision (DRAFT) of the same logical key, and the terminated revision and its Workflow and electronic signatures are retained (for inventory, revision_number is incremented; for test execution results, record_revision is incremented under the same attempt_no). Screens may show this as 'edit', but a new revision row is created in the DB.
+For business revisions that have an approval status, the body, sub-steps, composition, and attachments are locked after submission (REVIEW). Saving a DRAFT before submission updates the same row and records the before and after values in the Audit Trail. Rejection (REJECTED) and cancellation (CANCELLED) are terminal states of the revision and do not revert to DRAFT. Edits after rejection or cancellation and changes after approval are handled as a new revision (DRAFT) of the same logical key, and the terminated revision and its Workflow and electronic signatures are retained (for inventory, revision_number is incremented; for test execution results, record_revision is incremented under the same attempt_no). Screens may show this as 'edit', but a new revision row is created in the DB. The display version (version) is incremented only on final approval. A revision before approval shows the next planned approval version, which is fixed on approval; a rejected or cancelled revision and the revision written after it have the same display version and are distinguished by PK and revision_number.
 
 ## 3. Table List
 
@@ -72,83 +72,86 @@ For business revisions that have an approval status, the body, sub-steps, compos
 | 8 | Security | Menu/Project Access Permission | [`access_permission_grant`](#table-access_permission_grant) | `grant_id` | `user_id, user_group_id, project_id, created_by, updated_by` | High | Y |
 | 9 | Security | Inventory Business Role | [`inventory_role_grant`](#table-inventory_role_grant) | `grant_id` | `user_id, user_group_id, created_by, updated_by` | High | Y |
 | 10 | Security | Electronic Signature Password | [`user_signature_credential`](#table-user_signature_credential) | `credential_id` | `user_id, reset_requested_by, created_by, updated_by` | High | Y |
-| 11 | Compliance | Electronic Signature | [`electronic_signature`](#table-electronic_signature) | `signature_id` | `signer_id` | Critical | Y |
-| 12 | Compliance | Audit Trail | [`audit_trail`](#table-audit_trail) | `audit_id` | `actor_id` | Critical | Y |
-| 13 | File | File Asset | [`file_asset`](#table-file_asset) | `file_id` | `uploader_id` | High | Y |
-| 14 | File | File Malware Scan Job | [`file_scan_job`](#table-file_scan_job) | `scan_job_id` | `previous_scan_job_id, project_id, uploaded_by, requested_by, result_file_id` | High | Y |
-| 15 | File | Evidence File Link | [`evidence_link`](#table-evidence_link) | `evidence_link_id` | `project_id, file_id, created_by, updated_by` | High | Y |
-| 16 | File | File Link Request | [`file_link_request`](#table-file_link_request) | `link_request_id` | `project_id, file_id, evidence_link_id, created_by, updated_by` | High | Y |
-| 17 | System | System/Equipment Identification | [`system_asset`](#table-system_asset) | `system_id` | `organization_id` | High | Y |
-| 18 | System | System Inventory Revision History | [`system_asset_revision`](#table-system_asset_revision) | `system_revision_id` | `system_id, processed_by, signature_id` | High | Y |
-| 19 | Library | Library Item Master | [`library_item`](#table-library_item) | `library_id` | - | High | Y |
-| 20 | Validation | Validation Project | [`validation_project`](#table-validation_project) | `project_id` | `system_id, created_by, updated_by, closure_requested_by, current_closure_request_id, current_system_baseline_id` | High | Y |
-| 21 | Validation | Project Validation Target Revision | [`project_system_baseline`](#table-project_system_baseline) | `baseline_id` | `project_id, system_revision_id, adopted_by` | Critical | Y |
-| 22 | Validation | Project Member | [`project_member`](#table-project_member) | `project_member_id` | `project_id, user_id, role_id, created_by, updated_by` | High | Y |
-| 23 | Validation | Validation Activity Master | [`validation_activity`](#table-validation_activity) | `activity_id` | `created_by, updated_by` | High | Y |
-| 24 | Validation | Project Activity | [`project_activity`](#table-project_activity) | `project_activity_id` | `project_id, activity_id, created_by, updated_by` | Critical | Y |
-| 25 | Validation | Activity Dependency Condition | [`activity_dependency`](#table-activity_dependency) | `activity_dependency_id` | `successor_activity_id, predecessor_activity_id, created_by, updated_by` | Critical | Y |
-| 26 | Validation | Project Closure Request | [`project_closure_request`](#table-project_closure_request) | `closure_request_id` | `project_id, requested_by, workflow_instance_id, created_by, updated_by` | High | Y |
-| 27 | VP | Validation Plan | [`vp_plan`](#table-vp_plan) | `vp_id` | `project_id, workflow_instance_id, created_by, updated_by, disposal_workflow_id` | High | Y |
-| 28 | VP | Validation Plan Section | [`vp_section`](#table-vp_section) | `vp_section_id` | `vp_id, created_by, updated_by` | High | Y |
-| 29 | QIA | Quality Impact Assessment Header | [`qia_assessment`](#table-qia_assessment) | `qia_id` | `project_id, created_by, updated_by` | High | Y |
-| 30 | QIA | QIA Module Detailed Assessment | [`qia_module_item`](#table-qia_module_item) | `qia_module_item_id` | `qia_id, workflow_instance_id, created_by, updated_by, disposal_workflow_id` | High | Y |
-| 31 | QIA | QIA Process Assessment | [`qia_process`](#table-qia_process) | `qia_process_id` | `qia_module_item_id, created_by, updated_by` | High | Y |
-| 32 | VA | Vendor Audit Assessment | [`vendor_audit`](#table-vendor_audit) | `audit_id` | `project_id, auditor_user_id, file_id, workflow_instance_id, created_by, updated_by, disposal_workflow_id` | High | Y |
-| 33 | URS | User Requirements Specification | [`requirement`](#table-requirement) | `requirement_id` | `project_id, created_by, workflow_instance_id, updated_by, disposal_workflow_id, source_library_id` | High | Y |
-| 34 | FDS | Functional Design Specification | [`fds_spec`](#table-fds_spec) | `fds_id` | `project_id, created_by, updated_by, workflow_instance_id, disposal_workflow_id, file_id, uploaded_by` | High | Y |
-| 35 | DDS | Detailed Design Specification | [`dds_spec`](#table-dds_spec) | `dds_id` | `project_id, created_by, updated_by, workflow_instance_id, disposal_workflow_id, file_id, uploaded_by` | High | Y |
-| 36 | DQ | Design Qualification Assessment | [`dq_assessment`](#table-dq_assessment) | `dq_id` | `project_id, created_by, updated_by` | High | Y |
-| 37 | DQ | DQ Detailed Assessment Item | [`dq_item`](#table-dq_item) | `dq_item_id` | `dq_id, requirement_id, created_by, updated_by, fds_revision_id, dds_revision_id, executed_by, workflow_instance_id, disposal_workflow_id` | High | Y |
-| 38 | FRA | Functional Risk Assessment | [`fra_assessment`](#table-fra_assessment) | `fra_id` | `project_id, created_by, updated_by` | High | Y |
-| 39 | FRA | FRA Risk Detail Item | [`fra_item`](#table-fra_item) | `fra_item_id` | `fra_id, requirement_id, created_by, updated_by, sop_clause_id, workflow_instance_id, disposal_workflow_id, source_library_id` | High | Y |
-| 40 | IQ | Installation Qualification Assessment | [`iq_assessment`](#table-iq_assessment) | `iq_id` | `project_id, created_by, updated_by` | High | Y |
-| 41 | IQ | IQ Detailed Test Item | [`iq_item`](#table-iq_item) | `iq_item_id` | `iq_id, created_by, updated_by, source_library_id, protocol_workflow_id, disposal_workflow_id, disposal_signature_id, disposed_by` | High | Y |
-| 42 | IQ | IQ Test Step | [`iq_step`](#table-iq_step) | `step_id` | `iq_item_id, created_by, updated_by` | High | Y |
-| 43 | IQ | IQ Test Execution | [`iq_execution`](#table-iq_execution) | `execution_id` | `iq_item_id, executed_by, execution_signature_id, abort_signature_id, result_workflow_id, created_by, updated_by, system_baseline_id` | High | Y |
-| 44 | IQ | IQ Step Execution | [`iq_step_execution`](#table-iq_step_execution) | `step_execution_id` | `execution_id, step_id, confirmed_by, created_by, updated_by` | High | Y |
-| 45 | OQ | Operational Qualification Assessment | [`oq_assessment`](#table-oq_assessment) | `oq_id` | `project_id, created_by, updated_by` | High | Y |
-| 46 | OQ | OQ Detailed Test Item | [`oq_item`](#table-oq_item) | `oq_item_id` | `oq_id, created_by, updated_by, source_library_id, protocol_workflow_id, disposal_workflow_id, disposal_signature_id, disposed_by` | High | Y |
-| 47 | OQ | OQ Test Step | [`oq_step`](#table-oq_step) | `step_id` | `oq_item_id, created_by, updated_by` | High | Y |
-| 48 | OQ | OQ Test Execution | [`oq_execution`](#table-oq_execution) | `execution_id` | `oq_item_id, executed_by, execution_signature_id, abort_signature_id, result_workflow_id, created_by, updated_by, system_baseline_id` | High | Y |
-| 49 | OQ | OQ Step Execution | [`oq_step_execution`](#table-oq_step_execution) | `step_execution_id` | `execution_id, step_id, confirmed_by, created_by, updated_by` | High | Y |
-| 50 | PQ | Performance Qualification Assessment | [`pq_assessment`](#table-pq_assessment) | `pq_id` | `project_id, created_by, updated_by` | High | Y |
-| 51 | PQ | PQ Detailed Test Item | [`pq_item`](#table-pq_item) | `pq_item_id` | `pq_id, created_by, updated_by, source_library_id, protocol_workflow_id, disposal_workflow_id, disposal_signature_id, disposed_by` | High | Y |
-| 52 | PQ | PQ Test Step | [`pq_step`](#table-pq_step) | `step_id` | `pq_item_id, created_by, updated_by` | High | Y |
-| 53 | PQ | PQ Test Execution | [`pq_execution`](#table-pq_execution) | `execution_id` | `pq_item_id, executed_by, execution_signature_id, abort_signature_id, result_workflow_id, created_by, updated_by, system_baseline_id` | High | Y |
-| 54 | PQ | PQ Step Execution | [`pq_step_execution`](#table-pq_step_execution) | `step_execution_id` | `execution_id, step_id, confirmed_by, created_by, updated_by` | High | Y |
-| 55 | VSR | Validation Summary Report | [`vsr_assessment`](#table-vsr_assessment) | `vsr_id` | `project_id, created_by, updated_by, workflow_instance_id, approval_signature_id` | Critical | Y |
-| 56 | VSR | VSR Activity Summary Item | [`vsr_item`](#table-vsr_item) | `vsr_item_id` | `vsr_id, created_by, updated_by, project_activity_id, document_revision_id` | Critical | Y |
-| 57 | Workflow | Workflow Instance | [`workflow_instance`](#table-workflow_instance) | `workflow_instance_id` | `requested_by, created_by, updated_by, project_id, workflow_config_id` | Critical | Y |
-| 58 | Workflow | Workflow Step | [`workflow_step`](#table-workflow_step) | `workflow_step_id` | `workflow_instance_id, created_by, updated_by` | Critical | Y |
-| 59 | Workflow | Approval Workflow Step Assignee | [`workflow_step_assignee`](#table-workflow_step_assignee) | `assignment_id` | `workflow_step_id, assignee_id, substitute_user_id, created_by, updated_by` | Critical | Y |
-| 60 | Workflow | Approval Action History | [`approval_action`](#table-approval_action) | `approval_action_id` | `workflow_step_id, workflow_step_assignee_id, actor_id, signature_id` | Critical | Y |
-| 61 | Workflow | Project Approval Route Configuration | [`project_workflow_config`](#table-project_workflow_config) | `config_id` | `project_id, project_activity_id, applied_signature_id, created_by, updated_by` | Critical | Y |
-| 62 | Traceability | Common Traceability Link | [`traceability_link`](#table-traceability_link) | `traceability_link_id` | `project_id, created_by, updated_by` | Critical | Y |
-| 63 | Deviation | Deviation Management | [`deviation`](#table-deviation) | `deviation_id` | `project_id, approved_by, created_by, updated_by, action_workflow_id, action_signature_id, completion_signature_id, closure_signature_id, current_action_round_id, current_completion_revision_id` | Critical | Y |
-| 64 | Deviation | Deviation Action Round | [`deviation_action_round`](#table-deviation_action_round) | `action_round_id` | `deviation_id, workflow_instance_id, signature_id, created_by, updated_by` | Critical | Y |
-| 65 | Deviation | Deviation Closure Report Revision | [`deviation_completion_revision`](#table-deviation_completion_revision) | `completion_revision_id` | `deviation_id, action_round_id, workflow_instance_id, signature_id, created_by, updated_by` | Critical | Y |
-| 66 | Document | Deliverable Document | [`deliverable_document`](#table-deliverable_document) | `document_id` | `project_id, project_activity_id, created_by, updated_by` | Critical | Y |
-| 67 | Document | Deliverable Revision | [`deliverable_revision`](#table-deliverable_revision) | `document_revision_id` | `document_id, workflow_instance_id, approved_by, file_id, created_by, updated_by, system_baseline_id` | Critical | Y |
-| 68 | Document | Deliverable Section/Body | [`deliverable_section`](#table-deliverable_section) | `section_id` | `document_revision_id, created_by, updated_by` | Critical | Y |
-| 69 | Report | Report Generation Job | [`report_generation`](#table-report_generation) | `report_generation_id` | `project_id, requested_by, result_file_id, created_by, updated_by, document_revision_id` | High | Y |
-| 70 | AI | AI Generation Job | [`ai_generation_job`](#table-ai_generation_job) | `ai_job_id` | `project_id, requested_by, created_by, updated_by` | High | Y |
-| 71 | AI | AI Generation Result | [`ai_generation_result`](#table-ai_generation_result) | `ai_result_id` | `ai_job_id, selected_by, created_by, updated_by` | High | Y |
-| 72 | AI | AI Generation Result Item | [`ai_result_item`](#table-ai_result_item) | `ai_result_item_id` | `ai_result_id, created_by, updated_by` | High | Y |
-| 73 | AI | AI Outbound Data Sensitive-Information Detection Result | [`ai_sensitive_detection`](#table-ai_sensitive_detection) | `detection_id` | `ai_job_id, created_by` | High | Y |
-| 74 | Regulation | Regulatory Basis Document | [`regulatory_source`](#table-regulatory_source) | `regulatory_source_id` | `file_id, verified_by, created_by, updated_by` | High | Y |
-| 75 | Regulation | Regulatory Clause | [`regulatory_clause`](#table-regulatory_clause) | `regulatory_clause_id` | `regulatory_source_id, created_by, updated_by` | High | Y |
-| 76 | Regulation | Requirement Regulatory Basis | [`requirement_regulation`](#table-requirement_regulation) | `requirement_regulation_id` | `requirement_id, regulatory_clause_id, created_by, updated_by` | High | Y |
-| 77 | Regulation | Library Regulatory Basis | [`library_item_regulation`](#table-library_item_regulation) | `library_item_regulation_id` | `library_id, regulatory_clause_id, created_by, updated_by` | High | Y |
+| 11 | Security | Login Session | [`login_session`](#table-login_session) | `session_id` | `user_id` | High | Y |
+| 12 | Compliance | Electronic Signature | [`electronic_signature`](#table-electronic_signature) | `signature_id` | `signer_id` | Critical | Y |
+| 13 | Compliance | Audit Trail | [`audit_trail`](#table-audit_trail) | `audit_id` | `actor_id` | Critical | Y |
+| 14 | File | File Asset | [`file_asset`](#table-file_asset) | `file_id` | `uploader_id` | High | Y |
+| 15 | File | File Malware Scan Job | [`file_scan_job`](#table-file_scan_job) | `scan_job_id` | `previous_scan_job_id, project_id, uploaded_by, requested_by, result_file_id` | High | Y |
+| 16 | File | Evidence File Link | [`evidence_link`](#table-evidence_link) | `evidence_link_id` | `project_id, file_id, created_by, updated_by` | High | Y |
+| 17 | File | File Link Request | [`file_link_request`](#table-file_link_request) | `link_request_id` | `project_id, file_id, evidence_link_id, created_by, updated_by` | High | Y |
+| 18 | System | System/Equipment Identification | [`system_asset`](#table-system_asset) | `system_id` | `organization_id` | High | Y |
+| 19 | System | System Inventory Revision History | [`system_asset_revision`](#table-system_asset_revision) | `system_revision_id` | `system_id, processed_by, signature_id` | High | Y |
+| 20 | Library | Library Item Master | [`library_item`](#table-library_item) | `library_id` | - | High | Y |
+| 21 | Validation | Validation Project | [`validation_project`](#table-validation_project) | `project_id` | `system_id, created_by, updated_by, closure_requested_by, current_closure_request_id, current_system_baseline_id` | High | Y |
+| 22 | Validation | Project Validation Target Revision | [`project_system_baseline`](#table-project_system_baseline) | `baseline_id` | `project_id, system_revision_id, adopted_by` | Critical | Y |
+| 23 | Validation | Project Member | [`project_member`](#table-project_member) | `project_member_id` | `project_id, user_id, role_id, created_by, updated_by` | High | Y |
+| 24 | Validation | Validation Activity Master | [`validation_activity`](#table-validation_activity) | `activity_id` | `created_by, updated_by` | High | Y |
+| 25 | Validation | Project Activity | [`project_activity`](#table-project_activity) | `project_activity_id` | `project_id, activity_id, created_by, updated_by` | Critical | Y |
+| 26 | Validation | Project Performing Organization | [`project_party`](#table-project_party) | `party_id` | `project_id, created_by, updated_by` | High | Y |
+| 27 | Validation | Responsibility Assignment by Activity | [`project_activity_assignment`](#table-project_activity_assignment) | `activity_assignment_id` | `project_activity_id, party_id, created_by, updated_by` | High | Y |
+| 28 | Validation | Activity Dependency Condition | [`activity_dependency`](#table-activity_dependency) | `activity_dependency_id` | `successor_activity_id, predecessor_activity_id, created_by, updated_by` | Critical | Y |
+| 29 | Validation | Project Closure Request | [`project_closure_request`](#table-project_closure_request) | `closure_request_id` | `project_id, requested_by, workflow_instance_id, created_by, updated_by` | High | Y |
+| 30 | VP | Validation Plan | [`vp_plan`](#table-vp_plan) | `vp_id` | `project_id, workflow_instance_id, created_by, updated_by, disposal_workflow_id` | High | Y |
+| 31 | VP | Validation Plan Section | [`vp_section`](#table-vp_section) | `vp_section_id` | `vp_id, created_by, updated_by` | High | Y |
+| 32 | QIA | Quality Impact Assessment Header | [`qia_assessment`](#table-qia_assessment) | `qia_id` | `project_id, created_by, updated_by` | High | Y |
+| 33 | QIA | QIA Module Detailed Assessment | [`qia_module_item`](#table-qia_module_item) | `qia_module_item_id` | `qia_id, workflow_instance_id, created_by, updated_by, disposal_workflow_id` | High | Y |
+| 34 | QIA | QIA Process Assessment | [`qia_process`](#table-qia_process) | `qia_process_id` | `qia_module_item_id, created_by, updated_by` | High | Y |
+| 35 | VA | Vendor Audit Assessment | [`vendor_audit`](#table-vendor_audit) | `audit_id` | `project_id, auditor_user_id, file_id, workflow_instance_id, created_by, updated_by, disposal_workflow_id` | High | Y |
+| 36 | URS | User Requirements Specification | [`requirement`](#table-requirement) | `requirement_id` | `project_id, created_by, workflow_instance_id, updated_by, disposal_workflow_id, source_library_id` | High | Y |
+| 37 | FDS | Functional Design Specification | [`fds_spec`](#table-fds_spec) | `fds_id` | `project_id, created_by, updated_by, workflow_instance_id, disposal_workflow_id, file_id, uploaded_by` | High | Y |
+| 38 | DDS | Detailed Design Specification | [`dds_spec`](#table-dds_spec) | `dds_id` | `project_id, created_by, updated_by, workflow_instance_id, disposal_workflow_id, file_id, uploaded_by` | High | Y |
+| 39 | DQ | Design Qualification Assessment | [`dq_assessment`](#table-dq_assessment) | `dq_id` | `project_id, created_by, updated_by` | High | Y |
+| 40 | DQ | DQ Detailed Assessment Item | [`dq_item`](#table-dq_item) | `dq_item_id` | `dq_id, requirement_id, created_by, updated_by, fds_revision_id, dds_revision_id, executed_by, workflow_instance_id, disposal_workflow_id` | High | Y |
+| 41 | FRA | Functional Risk Assessment | [`fra_assessment`](#table-fra_assessment) | `fra_id` | `project_id, created_by, updated_by` | High | Y |
+| 42 | FRA | FRA Risk Detail Item | [`fra_item`](#table-fra_item) | `fra_item_id` | `fra_id, requirement_id, created_by, updated_by, sop_clause_id, workflow_instance_id, disposal_workflow_id, source_library_id` | High | Y |
+| 43 | IQ | Installation Qualification Assessment | [`iq_assessment`](#table-iq_assessment) | `iq_id` | `project_id, created_by, updated_by` | High | Y |
+| 44 | IQ | IQ Detailed Test Item | [`iq_item`](#table-iq_item) | `iq_item_id` | `iq_id, created_by, updated_by, source_library_id, protocol_workflow_id, disposal_workflow_id, disposal_signature_id, disposed_by` | High | Y |
+| 45 | IQ | IQ Test Step | [`iq_step`](#table-iq_step) | `step_id` | `iq_item_id, created_by, updated_by` | High | Y |
+| 46 | IQ | IQ Test Execution | [`iq_execution`](#table-iq_execution) | `execution_id` | `iq_item_id, executed_by, execution_signature_id, abort_signature_id, result_workflow_id, created_by, updated_by, system_baseline_id` | High | Y |
+| 47 | IQ | IQ Step Execution | [`iq_step_execution`](#table-iq_step_execution) | `step_execution_id` | `execution_id, step_id, confirmed_by, created_by, updated_by` | High | Y |
+| 48 | OQ | Operational Qualification Assessment | [`oq_assessment`](#table-oq_assessment) | `oq_id` | `project_id, created_by, updated_by` | High | Y |
+| 49 | OQ | OQ Detailed Test Item | [`oq_item`](#table-oq_item) | `oq_item_id` | `oq_id, created_by, updated_by, source_library_id, protocol_workflow_id, disposal_workflow_id, disposal_signature_id, disposed_by` | High | Y |
+| 50 | OQ | OQ Test Step | [`oq_step`](#table-oq_step) | `step_id` | `oq_item_id, created_by, updated_by` | High | Y |
+| 51 | OQ | OQ Test Execution | [`oq_execution`](#table-oq_execution) | `execution_id` | `oq_item_id, executed_by, execution_signature_id, abort_signature_id, result_workflow_id, created_by, updated_by, system_baseline_id` | High | Y |
+| 52 | OQ | OQ Step Execution | [`oq_step_execution`](#table-oq_step_execution) | `step_execution_id` | `execution_id, step_id, confirmed_by, created_by, updated_by` | High | Y |
+| 53 | PQ | Performance Qualification Assessment | [`pq_assessment`](#table-pq_assessment) | `pq_id` | `project_id, created_by, updated_by` | High | Y |
+| 54 | PQ | PQ Detailed Test Item | [`pq_item`](#table-pq_item) | `pq_item_id` | `pq_id, created_by, updated_by, source_library_id, protocol_workflow_id, disposal_workflow_id, disposal_signature_id, disposed_by` | High | Y |
+| 55 | PQ | PQ Test Step | [`pq_step`](#table-pq_step) | `step_id` | `pq_item_id, created_by, updated_by` | High | Y |
+| 56 | PQ | PQ Test Execution | [`pq_execution`](#table-pq_execution) | `execution_id` | `pq_item_id, executed_by, execution_signature_id, abort_signature_id, result_workflow_id, created_by, updated_by, system_baseline_id` | High | Y |
+| 57 | PQ | PQ Step Execution | [`pq_step_execution`](#table-pq_step_execution) | `step_execution_id` | `execution_id, step_id, confirmed_by, created_by, updated_by` | High | Y |
+| 58 | VSR | Validation Summary Report | [`vsr_assessment`](#table-vsr_assessment) | `vsr_id` | `project_id, created_by, updated_by, workflow_instance_id, approval_signature_id` | Critical | Y |
+| 59 | VSR | VSR Activity Summary Item | [`vsr_item`](#table-vsr_item) | `vsr_item_id` | `vsr_id, created_by, updated_by, project_activity_id, document_revision_id` | Critical | Y |
+| 60 | Workflow | Workflow Instance | [`workflow_instance`](#table-workflow_instance) | `workflow_instance_id` | `requested_by, created_by, updated_by, project_id, workflow_config_id` | Critical | Y |
+| 61 | Workflow | Workflow Step | [`workflow_step`](#table-workflow_step) | `workflow_step_id` | `workflow_instance_id, created_by, updated_by` | Critical | Y |
+| 62 | Workflow | Approval Workflow Step Assignee | [`workflow_step_assignee`](#table-workflow_step_assignee) | `assignment_id` | `workflow_step_id, assignee_id, substitute_user_id, created_by, updated_by` | Critical | Y |
+| 63 | Workflow | Approval Action History | [`approval_action`](#table-approval_action) | `approval_action_id` | `workflow_step_id, workflow_step_assignee_id, actor_id, signature_id` | Critical | Y |
+| 64 | Workflow | Project Approval Route Configuration | [`project_workflow_config`](#table-project_workflow_config) | `config_id` | `project_id, project_activity_id, applied_signature_id, created_by, updated_by` | Critical | Y |
+| 65 | Traceability | Common Traceability Link | [`traceability_link`](#table-traceability_link) | `traceability_link_id` | `project_id, created_by, updated_by` | Critical | Y |
+| 66 | Deviation | Deviation Management | [`deviation`](#table-deviation) | `deviation_id` | `project_id, approved_by, created_by, updated_by, action_workflow_id, action_signature_id, completion_signature_id, closure_signature_id, current_action_round_id, current_completion_revision_id` | Critical | Y |
+| 67 | Deviation | Deviation Action Round | [`deviation_action_round`](#table-deviation_action_round) | `action_round_id` | `deviation_id, workflow_instance_id, signature_id, created_by, updated_by` | Critical | Y |
+| 68 | Deviation | Deviation Closure Report Revision | [`deviation_completion_revision`](#table-deviation_completion_revision) | `completion_revision_id` | `deviation_id, action_round_id, workflow_instance_id, signature_id, created_by, updated_by` | Critical | Y |
+| 69 | Document | Deliverable Document | [`deliverable_document`](#table-deliverable_document) | `document_id` | `project_id, project_activity_id, created_by, updated_by` | Critical | Y |
+| 70 | Document | Deliverable Revision | [`deliverable_revision`](#table-deliverable_revision) | `document_revision_id` | `document_id, workflow_instance_id, approved_by, file_id, created_by, updated_by, system_baseline_id` | Critical | Y |
+| 71 | Document | Deliverable Section/Body | [`deliverable_section`](#table-deliverable_section) | `section_id` | `document_revision_id, created_by, updated_by` | Critical | Y |
+| 72 | Report | Report Generation Job | [`report_generation`](#table-report_generation) | `report_generation_id` | `project_id, requested_by, result_file_id, created_by, updated_by, document_revision_id` | High | Y |
+| 73 | AI | AI Generation Job | [`ai_generation_job`](#table-ai_generation_job) | `ai_job_id` | `project_id, requested_by, created_by, updated_by` | High | Y |
+| 74 | AI | AI Generation Result | [`ai_generation_result`](#table-ai_generation_result) | `ai_result_id` | `ai_job_id, selected_by, created_by, updated_by` | High | Y |
+| 75 | AI | AI Generation Result Item | [`ai_result_item`](#table-ai_result_item) | `ai_result_item_id` | `ai_result_id, created_by, updated_by` | High | Y |
+| 76 | AI | AI Outbound Data Sensitive-Information Detection Result | [`ai_sensitive_detection`](#table-ai_sensitive_detection) | `detection_id` | `ai_job_id, created_by` | High | Y |
+| 77 | Regulation | Regulatory Basis Document | [`regulatory_source`](#table-regulatory_source) | `regulatory_source_id` | `file_id, verified_by, created_by, updated_by` | High | Y |
+| 78 | Regulation | Regulatory Clause | [`regulatory_clause`](#table-regulatory_clause) | `regulatory_clause_id` | `regulatory_source_id, created_by, updated_by` | High | Y |
+| 79 | Regulation | Requirement Regulatory Basis | [`requirement_regulation`](#table-requirement_regulation) | `requirement_regulation_id` | `requirement_id, regulatory_clause_id, created_by, updated_by` | High | Y |
+| 80 | Regulation | Library Regulatory Basis | [`library_item_regulation`](#table-library_item_regulation) | `library_item_regulation_id` | `library_id, regulatory_clause_id, created_by, updated_by` | High | Y |
 
 ## 4. Shortcuts by Domain
 
 - **Organization**: [`organization`](#table-organization)
-- **Security**: [`app_user`](#table-app_user), [`role`](#table-role), [`user_role`](#table-user_role), [`user_group`](#table-user_group), [`user_group_member`](#table-user_group_member), [`group_role`](#table-group_role), [`access_permission_grant`](#table-access_permission_grant), [`inventory_role_grant`](#table-inventory_role_grant), [`user_signature_credential`](#table-user_signature_credential)
+- **Security**: [`app_user`](#table-app_user), [`role`](#table-role), [`user_role`](#table-user_role), [`user_group`](#table-user_group), [`user_group_member`](#table-user_group_member), [`group_role`](#table-group_role), [`access_permission_grant`](#table-access_permission_grant), [`inventory_role_grant`](#table-inventory_role_grant), [`user_signature_credential`](#table-user_signature_credential), [`login_session`](#table-login_session)
 - **Compliance**: [`electronic_signature`](#table-electronic_signature), [`audit_trail`](#table-audit_trail)
 - **File**: [`file_asset`](#table-file_asset), [`file_scan_job`](#table-file_scan_job), [`evidence_link`](#table-evidence_link), [`file_link_request`](#table-file_link_request)
 - **System**: [`system_asset`](#table-system_asset), [`system_asset_revision`](#table-system_asset_revision)
 - **Library**: [`library_item`](#table-library_item)
-- **Validation**: [`validation_project`](#table-validation_project), [`project_system_baseline`](#table-project_system_baseline), [`project_member`](#table-project_member), [`validation_activity`](#table-validation_activity), [`project_activity`](#table-project_activity), [`activity_dependency`](#table-activity_dependency), [`project_closure_request`](#table-project_closure_request)
+- **Validation**: [`validation_project`](#table-validation_project), [`project_system_baseline`](#table-project_system_baseline), [`project_member`](#table-project_member), [`validation_activity`](#table-validation_activity), [`project_activity`](#table-project_activity), [`project_party`](#table-project_party), [`project_activity_assignment`](#table-project_activity_assignment), [`activity_dependency`](#table-activity_dependency), [`project_closure_request`](#table-project_closure_request)
 - **VP**: [`vp_plan`](#table-vp_plan), [`vp_section`](#table-vp_section)
 - **QIA**: [`qia_assessment`](#table-qia_assessment), [`qia_module_item`](#table-qia_module_item), [`qia_process`](#table-qia_process)
 - **VA**: [`vendor_audit`](#table-vendor_audit)
@@ -198,7 +201,7 @@ For business revisions that have an approval status, the body, sub-steps, compos
 | 3 | Organization Name | `organization_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Company/site name | `Sample Co., Ltd.` |
 | 4 | Organization Type | `organization_type` | `varchar(50)` | N | N | - | Y | `'HEADQUARTERS'` | N | N | N | Y | HEADQUARTERS=headquarters, PLANT=plant, LAB=laboratory, OVERSEAS=overseas subsidiary, SYSTEM=system-only organization, VENDOR=platform developer operations organization. SYSTEM is an internal-only organization to which the SYSTEM account belongs; there is 1 per DB, and it is excluded from organization lists and selection options on screens. Screen display names are mapped to a Korean label per code | `HEADQUARTERS` |
 | 5 | Status | `status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE \| INACTIVE | `ACTIVE` |
-| 6 | AI Features Enabled | `ai_enabled` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Organization-level switch that turns AI draft generation and the audit-response bot on or off together. If FALSE, the entry points of both features are hidden on screens, and the server rejects new AI job creation and bot queries. Fixed to FALSE for the SYSTEM organization | `TRUE` |
+| 6 | AI Features Enabled | `ai_enabled` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Organization-level switch that turns the AI features (those processed as ai_generation_job) and the audit-response bot on or off together. The default is OFF (FALSE), and the AI ON/OFF switch on the screen is shown only to administrator levels. If FALSE, AI-related buttons are not shown on screens, and the server rejects new AI job creation and bot queries. Fixed to FALSE for the SYSTEM organization | `TRUE` |
 | 7 | SSO Enabled | `sso_enabled` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Login method of the organization. If TRUE, HUMAN accounts belonging to it log in through the company IdP (SSO); if FALSE, they log in with the platform's own password (LOCAL). Because SSO adoption differs by customer, it is set per organization. IdP connection information (issuer, certificate, client settings) is managed in server settings, not in this table. FALSE for the SYSTEM organization | `TRUE` |
 | 8 | Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Organization description | `Corporate IT and data operations organization` |
 | 9 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-01T00:00:00Z` |
@@ -222,7 +225,7 @@ For business revisions that have an approval status, the body, sub-steps, compos
 
 Manages the organization to which users, groups, and systems belong.
 
-ai_enabled is the organization-level AI usage policy. If TRUE, both AI draft generation (ai_generation_job) and the audit-response bot can be used; if FALSE, both features are blocked together. There are no separate per-feature switches. After switching to FALSE, no new AI jobs are created, but jobs already PENDING/PROCESSING at the time of the switch are allowed to run to completion.
+ai_enabled is the organization-level AI usage policy, and a new organization starts with FALSE (OFF). If TRUE, both the AI features (ai_generation_job) and the audit-response bot can be used; if FALSE, all of them are blocked together and AI-related buttons are not shown on screens. There are no separate per-feature switches. After switching to FALSE, no new AI jobs are created, but jobs already PENDING/PROCESSING at the time of the switch are allowed to run to completion.
 
 The SYSTEM organization is an internal organization that represents the affiliation of the SYSTEM account used for batch/automated processing. It does not own business data and is excluded from customer screens and statistics.
 
@@ -258,21 +261,22 @@ sso_enabled determines the login method of the organization. Human accounts in a
 | 12 | Organization ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | References organization.organization_id | `00000000-0000-0000-0000-000000000001` |
 | 13 | Password Hash | `password_hash` | `varchar(255)` | N | N | - | N | - | N | N | Y | N | Hash value used to verify the password for the platform's own login (auth_provider=LOCAL). Required for auth_provider=LOCAL accounts (users of organizations not using SSO, and emergency (break-glass) access accounts of organizations using SSO); SSO accounts and the SYSTEM account keep it NULL. Not used for electronic signature re-authentication (the signature password is in user_signature_credential). The raw hash is not included in responses, general exports, or audit logs. Audit=N is maintained. | `[REDACTED_PASSWORD_HASH]` |
 | 14 | Previous Password Hash | `previous_password_hash` | `varchar(255)` | N | N | - | N | - | N | N | Y | N | Hash of the immediately previous login password (password_hash). Used to reject the same value as the previous password when a LOCAL account changes or resets its password (requirement 1.3). NULL for SSO and SYSTEM accounts. Not included in responses, general exports, or audit logs; Audit=N is maintained. | `[REDACTED_PASSWORD_HASH]` |
-| 15 | User Full Name | `full_name` | `varchar(100)` | N | N | - | Y | - | N | Y | Y | Y | User name | `Gildong Hong` |
+| 15 | User Full Name | `full_name` | `varchar(100)` | N | N | - | N | - | N | Y | Y | Y | User name. May be NULL in the invited (INVITED) status; a LOCAL account enters it in the account setup at its first login, and an SSO account is filled from the IdP information. Required unless INVITED (ck_app_user_full_name) | `Gildong Hong` |
 | 16 | Email | `email` | `varchar(254)` | N | N | - | Y | - | Y | Y | Y | Y | Email used for account invitation and login. Stored as a value normalized by trimming leading/trailing whitespace and converting to lowercase. It is the account value shown on screens; no separate login ID is kept. | `user@example.com` |
 | 17 | Authentication Method | `auth_provider` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | How this account logs in. SSO=the company IdP verifies identity, LOCAL=login with the password_hash stored by the platform. The server sets it according to the sso_enabled of the account's organization: SSO for organizations using SSO (exception: only SYSTEM_ADMIN accounts for emergency access in case of IdP failure are LOCAL), LOCAL for organizations not using SSO. The SYSTEM account does not log in, so the value is irrelevant | `SSO` |
-| 18 | SSO Identifier | `sso_subject` | `varchar(255)` | N | N | - | N | - | N | Y | Y | Y | User identifier issued by the IdP (OIDC sub / SAML NameID). Because it is unique only within its issuer (sso_issuer), accounts are matched by the (sso_issuer, sso_subject) combination, and email is used only for secondary confirmation. Required for HUMAN accounts with auth_provider=SSO; NULL for LOCAL and SYSTEM accounts | `[REDACTED_SSO_SUBJECT]` |
-| 19 | SSO Issuer | `sso_issuer` | `varchar(255)` | N | N | - | N | - | N | Y | N | Y | Identifier of the IdP that issued sso_subject (OIDC issuer URL / SAML entityID). Even within the same customer, different legal entities or sites may use different IdPs, so it is stored together with sso_subject to distinguish accounts. Required for HUMAN accounts with auth_provider=SSO; NULL for LOCAL and SYSTEM accounts | `https://login.example.com/tenant-sample` |
+| 18 | SSO Identifier | `sso_subject` | `varchar(255)` | N | N | - | N | - | N | Y | Y | Y | User identifier issued by the IdP (OIDC sub / SAML NameID). Because it is unique only within its issuer (sso_issuer), accounts are matched by the (sso_issuer, sso_subject) combination, and email is used only for secondary confirmation. Required for HUMAN accounts with auth_provider=SSO (NULL in the invited status until the first SSO login); NULL for LOCAL and SYSTEM accounts | `[REDACTED_SSO_SUBJECT]` |
+| 19 | SSO Issuer | `sso_issuer` | `varchar(255)` | N | N | - | N | - | N | Y | N | Y | Identifier of the IdP that issued sso_subject (OIDC issuer URL / SAML entityID). Even within the same customer, different legal entities or sites may use different IdPs, so it is stored together with sso_subject to distinguish accounts. Required for HUMAN accounts with auth_provider=SSO (NULL in the invited status until the first SSO login); NULL for LOCAL and SYSTEM accounts | `https://login.example.com/tenant-sample` |
 | 20 | Account Type | `account_type` | `varchar(20)` | N | N | - | Y | `'HUMAN'` | N | Y | N | Y | HUMAN=human user, SYSTEM=account that acts as the performer of batch/automated processing. There is 1 SYSTEM account per DB; it is not used for login, electronic signatures, or approval workflow assignments, and is used only as an FK value such as created_by/updated_by/requested_by in seed and batch processing | `HUMAN` |
 | 21 | Permission Level | `permission_level` | `varchar(20)` | N | N | - | Y | `'USER'` | N | N | N | Y | SYSTEM_ADMIN=platform developer administrator (manages all customers, organizations, and operating settings), ADMIN=customer administrator (manages accounts, permissions, and settings of its own organization; formerly GLOBAL_ADMIN), USER=general user. The former PROJECT_ADMIN is removed because the screens have no such concept, and project-level roles are managed in project_member. Distinct from business roles (role) such as author and reviewer; administrator levels are not stored in role | `USER` |
 | 22 | Department Name | `department_name` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Name of the department the user belongs to | `Information Strategy Team` |
 | 23 | Rank/Position | `position_title` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Rank information | `Senior` |
-| 24 | Account Status | `status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE \| INACTIVE \| LOCKED | `ACTIVE` |
+| 24 | Account Status | `status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE \| INACTIVE \| LOCKED \| INVITED. INVITED=invited, before account setup (rule_app_user_13) | `ACTIVE` |
 | 25 | Last Login At | `last_login_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Timestamp of the last system access | `2026-08-26T16:00:00Z` |
 | 26 | Consecutive Login Failure Count | `failed_login_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of consecutive LOCAL login password failures. Reset to 0 on success; after 5 consecutive failures, status switches to LOCKED (requirement 1.3). The lock is not released automatically over time; reset to 0 when an administrator resets the account. Not used for SSO accounts because the IdP manages failures | `0` |
 | 27 | Password Change Date | `password_changed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the login password (password_hash) was last changed. Used only for LOCAL accounts; NULL for SSO and SYSTEM accounts. The signature password change time is user_signature_credential.changed_at | `2026-08-01T09:00:00Z` |
-| 28 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-01T00:00:00Z` |
-| 29 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T16:00:00Z` |
+| 28 | Password Change Required | `password_change_required` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Whether a LOCAL account is on a temporary password. Set to TRUE on invitation (temporary password issued) and on administrator reset, and set to FALSE when the user changes to a new login password. While TRUE, only the account setup screen (login password change) can be used after login. FALSE for SSO and SYSTEM accounts | `FALSE` |
+| 29 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-01T00:00:00Z` |
+| 30 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T16:00:00Z` |
 
 #### Constraints
 
@@ -280,20 +284,23 @@ sso_enabled determines the login method of the organization. Human accounts in a
 |---|---|---|---|
 | `rule_app_user_1` | Business validation | `email` | Email is stored as a value normalized by trimming leading/trailing whitespace and converting to lowercase (ck_app_user_email), and duplicates are not allowed based on the normalized value (email UQ). |
 | `ck_app_user_2` | CHECK | `permission_level` | CHECK (permission_level IN ('SYSTEM_ADMIN','ADMIN','USER')) |
-| `ck_app_user_3` | CHECK | `status` | CHECK (status IN ('ACTIVE','INACTIVE','LOCKED')) |
+| `ck_app_user_3` | CHECK | `status` | CHECK (status IN ('ACTIVE','INACTIVE','LOCKED','INVITED')) |
 | `ck_app_user_4` | CHECK | `auth_provider` | CHECK (auth_provider IN ('SSO','LOCAL')) |
 | `ck_app_user_5` | CHECK | `account_type` | CHECK (account_type IN ('HUMAN','SYSTEM')) |
-| `ck_app_user_6` | CHECK | `account_type, auth_provider, sso_issuer, sso_subject, password_hash` | CHECK ((account_type='SYSTEM' AND password_hash IS NULL AND sso_issuer IS NULL AND sso_subject IS NULL) OR (account_type='HUMAN' AND auth_provider='SSO' AND sso_issuer IS NOT NULL AND sso_subject IS NOT NULL AND password_hash IS NULL) OR (account_type='HUMAN' AND auth_provider='LOCAL' AND password_hash IS NOT NULL AND sso_issuer IS NULL AND sso_subject IS NULL)) |
+| `ck_app_user_6` | CHECK | `account_type, auth_provider, sso_issuer, sso_subject, password_hash, status` | CHECK ((account_type='SYSTEM' AND password_hash IS NULL AND sso_issuer IS NULL AND sso_subject IS NULL) OR (account_type='HUMAN' AND auth_provider='SSO' AND password_hash IS NULL AND ((sso_issuer IS NOT NULL AND sso_subject IS NOT NULL) OR (status='INVITED' AND sso_issuer IS NULL AND sso_subject IS NULL))) OR (account_type='HUMAN' AND auth_provider='LOCAL' AND password_hash IS NOT NULL AND sso_issuer IS NULL AND sso_subject IS NULL)) |
 | `uq_app_user_7` | UNIQUE | `sso_issuer, sso_subject` | UNIQUE (sso_issuer, sso_subject) WHERE sso_subject IS NOT NULL |
 | `rule_app_user_8` | Business validation | `auth_provider, organization_id, permission_level` | The auth_provider of a HUMAN account must match the sso_enabled of its organization (SSO if TRUE, LOCAL if FALSE). As an exception, in organizations with sso_enabled=TRUE, LOCAL is allowed only for emergency (break-glass) access accounts with permission_level=SYSTEM_ADMIN. |
 | `rule_app_user_9` | Business validation | `account_type` | There is 1 account_type=SYSTEM account per DB, and it belongs to the organization_type=SYSTEM organization. It keeps permission_level=USER and status=ACTIVE and is excluded from login, electronic signatures, approval workflow assignments, and user_signature_credential creation. It is not deleted or deactivated. The limit of 1 per DB is enforced by uq_app_user_system_account. |
 | `uq_app_user_system_account` | UNIQUE | `account_type` | UNIQUE (account_type) WHERE account_type = 'SYSTEM' |
 | `rule_app_user_10` | Business validation | `permission_level` | SYSTEM_ADMIN is granted only to the platform developer's operations staff; customer administrators use ADMIN. SYSTEM_ADMIN accounts belong only to the organization_type=VENDOR organization, and all HUMAN accounts of the VENDOR organization are SYSTEM_ADMIN. Administrator levels also do not bypass the rules for electronic signature identity verification, assignment, and author/reviewer/approver separation. |
 | `rule_app_user_11` | Business validation | `auth_provider` | Emergency (break-glass) access accounts (LOCAL accounts in organizations with sso_enabled=TRUE) cannot be used for electronic signatures or approval workflow assignments, and their login and usage history is recorded in the Audit Trail. The allowed number and the custody/usage procedures are defined by operating policy (SOP) (pending decision). LOCAL accounts in organizations not using SSO can sign and perform approval workflow actions as general users. |
-| `rule_app_user_12` | Business validation | `password_hash, previous_password_hash, status, failed_login_count` | For LOCAL accounts, 5 consecutive login password failures switch status to LOCKED; the lock is not released automatically over time and is released only by an administrator reset. When the password is changed or reset, the same value as the immediately previous password (previous_password_hash) is not allowed (requirement 1.3). The password must be at least 10 characters long and contain at least 1 each of uppercase letters, lowercase letters, digits, and special characters, and it must be changed once 180 days have passed since password_changed_at (requirement 1.3). The length, composition, and expiry days are managed as operating settings. Consecutive failures are counted in failed_login_count; when the account is locked, ACCOUNT_LOCKED is recorded in the Audit Trail, and when the password is changed, PASSWORD_CHANGE is recorded in the Audit Trail. |
+| `rule_app_user_12` | Business validation | `password_hash, previous_password_hash, status, failed_login_count` | For LOCAL accounts, 5 consecutive login password failures switch status to LOCKED; the lock is not released automatically over time and is released only by an administrator reset. When the password is changed or reset, the same value as the immediately previous password (previous_password_hash) is not allowed (requirement 1.3). The password must be at least 10 characters long and contain at least 1 each of letters, digits, and special characters, and it must be changed once 180 days have passed since password_changed_at (requirement 1.3). The length, composition, and expiry days are managed as operating settings. Consecutive failures are counted in failed_login_count; when the account is locked, ACCOUNT_LOCKED is recorded in the Audit Trail, and when the password is changed, PASSWORD_CHANGE is recorded in the Audit Trail. |
 | `ck_app_user_failed_login` | CHECK | `failed_login_count` | CHECK (failed_login_count >= 0) |
 | `ck_app_user_previous_password` | CHECK | `auth_provider, previous_password_hash` | CHECK (previous_password_hash IS NULL OR auth_provider = 'LOCAL') |
 | `ck_app_user_email` | CHECK | `email` | CHECK (email = lower(trim(email))) |
+| `ck_app_user_full_name` | CHECK | `status, full_name` | CHECK (status = 'INVITED' OR full_name IS NOT NULL) |
+| `ck_app_user_password_change` | CHECK | `auth_provider, password_change_required` | CHECK (password_change_required = FALSE OR auth_provider = 'LOCAL') |
+| `rule_app_user_13` | Business validation | `status, full_name, department_name, sso_issuer, sso_subject, password_change_required` | An administrator level can invite several accounts at once by specifying emails and roles. An invitation creates an account row with status=INVITED and immediately grants the selected roles (including VIEWER, rule_user_role_2) and the permission level (ADMIN if admin is selected). An account cannot be invited as SYSTEM_ADMIN (rule_app_user_10). For an organization that uses SSO, at the first SSO login the account stores sso_issuer and sso_subject if the email confirmed by the IdP matches the invited email, fills the name and department from the IdP information, and switches to ACTIVE. For an organization that does not use SSO, a temporary password is issued (password_change_required=TRUE), and the account switches to ACTIVE once the name and department are entered and the login password is changed in the account setup at the first login. The electronic signature password can be set later. An INVITED account cannot be used for approval assignment or electronic signatures, and the invitation is recorded in the Audit Trail (menu_code=ACCOUNTS). |
 
 #### Business Rules
 
@@ -303,7 +310,7 @@ The login method is determined by the sso_enabled of the account's organization.
 
 In organizations using SSO, auth_provider=LOCAL is allowed only for SYSTEM_ADMIN accounts for emergency access (break-glass), such as during an IdP failure. Emergency (break-glass) access accounts log in with password_hash and cannot be used for electronic signatures or approval workflow assignments, and all of their login and usage history is recorded in the Audit Trail. They are not used in normal operation, and their existence is reviewed periodically. LOCAL accounts in organizations not using SSO are not emergency (break-glass) access accounts and are used for regular business work and signatures.
 
-Electronic signature re-authentication uses the signature-only password in user_signature_credential, regardless of the login method. The login password and the signature password are not set to the same value.
+Electronic signature re-authentication uses the signature-only password in user_signature_credential, regardless of the login method. The signature password is managed separately from the login password, and the same value is not restricted.
 
 account_type=SYSTEM is the account that represents the performer of batch/automated processing. Only 1 exists per DB, it belongs to the SYSTEM organization, and it is used as an FK value such as created_by/updated_by/requested_by in seed and batch processing. In the Audit Trail, this account's user_id is recorded as actor_id together with actor_type=SYSTEM or BATCH.
 
@@ -331,11 +338,11 @@ Permission levels (SYSTEM_ADMIN=platform developer administrator, ADMIN=customer
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 30 | Role ID | `role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique role/permission identifier | `00000000-0000-0000-0000-000000000001` |
-| 31 | Role Code | `role_code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | AUTHOR=author, REVIEWER=reviewer, APPROVER=approver, VIEWER=viewer. Administrator levels (SYSTEM_ADMIN/ADMIN) are not business roles, so they are not stored in role but managed in app_user.permission_level | `AUTHOR` |
-| 32 | Role Name | `role_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Display name of the business role on the account screen. Multiple roles can be granted to 1 user. | `Author` |
-| 33 | Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the detailed permission scope of the role | `Permission to author and submit business items` |
-| 34 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-01T00:00:00Z` |
+| 31 | Role ID | `role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique role/permission identifier | `00000000-0000-0000-0000-000000000001` |
+| 32 | Role Code | `role_code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | AUTHOR=author, REVIEWER=reviewer, APPROVER=approver, VIEWER=viewer. Administrator levels (SYSTEM_ADMIN/ADMIN) are not business roles, so they are not stored in role but managed in app_user.permission_level | `AUTHOR` |
+| 33 | Role Name | `role_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Display name of the business role on the account screen. Multiple roles can be granted to 1 user. | `Author` |
+| 34 | Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the detailed permission scope of the role | `Permission to author and submit business items` |
+| 35 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-01T00:00:00Z` |
 
 #### Constraints
 
@@ -369,20 +376,21 @@ Menu/project view, edit, and dispose permissions are stored in access_permission
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 35 | Mapping ID | `user_role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique user-role mapping identifier. Duplicate (user_id, role_id) is not allowed among active (is_active=TRUE) rows. Role revocation is handled with is_active=FALSE, and the row is not deleted. | `00000000-0000-0000-0000-000000000001` |
-| 36 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 37 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | References role.role_id | `00000000-0000-0000-0000-000000000001` |
-| 38 | Active | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the role grant is active. Changed to FALSE when the role is revoked; the row is not deleted | `TRUE` |
-| 39 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-01T00:00:00Z` |
-| 40 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who granted the role | `00000000-0000-0000-0000-000000000001` |
-| 41 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-01T00:00:00Z` |
-| 42 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified or revoked the role grant | `00000000-0000-0000-0000-000000000001` |
+| 36 | Mapping ID | `user_role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique user-role mapping identifier. Duplicate (user_id, role_id) is not allowed among active (is_active=TRUE) rows. Role revocation is handled with is_active=FALSE, and the row is not deleted. | `00000000-0000-0000-0000-000000000001` |
+| 37 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 38 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | References role.role_id | `00000000-0000-0000-0000-000000000001` |
+| 39 | Active | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the role grant is active. Changed to FALSE when the role is revoked; the row is not deleted | `TRUE` |
+| 40 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-01T00:00:00Z` |
+| 41 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who granted the role | `00000000-0000-0000-0000-000000000001` |
+| 42 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-01T00:00:00Z` |
+| 43 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last modified or revoked the role grant | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
 | Constraint | Type | Columns | Condition / Rule |
 |---|---|---|---|
 | `uq_user_role_1` | UNIQUE | `user_id, role_id, is_active` | UNIQUE (user_id, role_id) WHERE is_active=TRUE |
+| `rule_user_role_2` | Business validation | `user_id, role_id, is_active` | An account_type=HUMAN account always holds the VIEWER role in active status. VIEWER is granted together when the account is created (including by invitation); it is included automatically even when other roles are selected, and it cannot be revoked (is_active=FALSE). |
 
 [↑ Back to top](#top)
 
@@ -406,17 +414,17 @@ Menu/project view, edit, and dispose permissions are stored in access_permission
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 43 | User Group ID | `user_group_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique user group identifier | `00000000-0000-0000-0000-000000000001` |
-| 44 | Organization ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | Organization to which the user group belongs | `00000000-0000-0000-0000-000000000001` |
-| 45 | Group Code | `group_code` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Code identifying the user group within the organization. Duplicate (organization_id, group_code) is not allowed among rows where deleted_at IS NULL and is_active is TRUE. | `QA_REVIEWER_GROUP` |
-| 46 | Group Name | `group_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Group name displayed to users | `QA Reviewer Group` |
-| 47 | Group Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the purpose and permission scope of the group | `Group of QA review assignees for Validation documents` |
-| 48 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the user group is active | `TRUE` |
-| 49 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group creation time (UTC) | `2026-09-14T09:00:00Z` |
-| 50 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who created the user group | `00000000-0000-0000-0000-000000000001` |
-| 51 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group last update time (UTC) | `2026-09-14T09:00:00Z` |
-| 52 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the user group | `00000000-0000-0000-0000-000000000001` |
-| 53 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | User group soft-deletion time | `2026-09-15T09:00:00Z` |
+| 44 | User Group ID | `user_group_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique user group identifier | `00000000-0000-0000-0000-000000000001` |
+| 45 | Organization ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | Organization to which the user group belongs | `00000000-0000-0000-0000-000000000001` |
+| 46 | Group Code | `group_code` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Code identifying the user group within the organization. Duplicate (organization_id, group_code) is not allowed among rows where deleted_at IS NULL and is_active is TRUE. | `QA_REVIEWER_GROUP` |
+| 47 | Group Name | `group_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Group name displayed to users | `QA Reviewer Group` |
+| 48 | Group Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the purpose and permission scope of the group | `Group of QA review assignees for Validation documents` |
+| 49 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the user group is active | `TRUE` |
+| 50 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group creation time (UTC) | `2026-09-14T09:00:00Z` |
+| 51 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who created the user group | `00000000-0000-0000-0000-000000000001` |
+| 52 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | User group last update time (UTC) | `2026-09-14T09:00:00Z` |
+| 53 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the user group | `00000000-0000-0000-0000-000000000001` |
+| 54 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | User group soft-deletion time | `2026-09-15T09:00:00Z` |
 
 #### Constraints
 
@@ -446,17 +454,17 @@ Menu/project view, edit, and dispose permissions are stored in access_permission
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 54 | Group Member ID | `user_group_member_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique user group member mapping identifier | `00000000-0000-0000-0000-000000000001` |
-| 55 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | Y | - | N | Y | N | Y | User group to which the member belongs | `00000000-0000-0000-0000-000000000001` |
-| 56 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User included in the group. Duplicate (user_group_id, user_id) is not allowed among rows where deleted_at IS NULL and member_status is ACTIVE. | `00000000-0000-0000-0000-000000000001` |
-| 57 | Member Status | `member_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | Y | N | Y | Group member status. ACTIVE, INACTIVE, WITHDRAWN | `ACTIVE` |
-| 58 | Joined At | `joined_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time the user was added to the group | `2026-09-14T09:00:00Z` |
-| 59 | Left At | `left_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the user's group membership ended. NULL if the user is currently a member | `2026-09-15T09:00:00Z` |
-| 60 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Group member mapping creation time (UTC) | `2026-09-14T09:00:00Z` |
-| 61 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the group member | `00000000-0000-0000-0000-000000000001` |
-| 62 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Group member mapping last update time (UTC) | `2026-09-14T09:00:00Z` |
-| 63 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the group member mapping | `00000000-0000-0000-0000-000000000001` |
-| 64 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Group member mapping soft-deletion time | `2026-09-15T09:00:00Z` |
+| 55 | Group Member ID | `user_group_member_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique user group member mapping identifier | `00000000-0000-0000-0000-000000000001` |
+| 56 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | Y | - | N | Y | N | Y | User group to which the member belongs | `00000000-0000-0000-0000-000000000001` |
+| 57 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User included in the group. Duplicate (user_group_id, user_id) is not allowed among rows where deleted_at IS NULL and member_status is ACTIVE. | `00000000-0000-0000-0000-000000000001` |
+| 58 | Member Status | `member_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | Y | N | Y | Group member status. ACTIVE, INACTIVE, WITHDRAWN | `ACTIVE` |
+| 59 | Joined At | `joined_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time the user was added to the group | `2026-09-14T09:00:00Z` |
+| 60 | Left At | `left_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the user's group membership ended. NULL if the user is currently a member | `2026-09-15T09:00:00Z` |
+| 61 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Group member mapping creation time (UTC) | `2026-09-14T09:00:00Z` |
+| 62 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the group member | `00000000-0000-0000-0000-000000000001` |
+| 63 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Group member mapping last update time (UTC) | `2026-09-14T09:00:00Z` |
+| 64 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the group member mapping | `00000000-0000-0000-0000-000000000001` |
+| 65 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Group member mapping soft-deletion time | `2026-09-15T09:00:00Z` |
 
 #### Constraints
 
@@ -491,17 +499,17 @@ A user may join multiple groups. Group-based permissions are aggregated from the
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 65 | Group Role ID | `group_role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the permission mapping between a user group and a role | `00000000-0000-0000-0000-000000000001` |
-| 66 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | Y | - | N | Y | N | Y | User group that receives the role | `00000000-0000-0000-0000-000000000001` |
-| 67 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | Role granted to the group | `00000000-0000-0000-0000-000000000001` |
-| 68 | Permission Scope Type | `scope_type` | `varchar(20)` | N | N | - | Y | `'GLOBAL'` | N | Y | N | Y | Scope of the group role. GLOBAL, PROJECT | `PROJECT` |
-| 69 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Required when scope_type is PROJECT. NULL when GLOBAL. The correspondence between scope and NULL is validated by a CHECK constraint | `00000000-0000-0000-0000-000000000001` |
-| 70 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the group role mapping is in use. The per-scope duplicate prohibition applies to rows where deleted_at IS NULL and is_active is TRUE. GLOBAL is based on (user_group_id, role_id), and PROJECT on (user_group_id, role_id, project_id). | `TRUE` |
-| 71 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Group role mapping creation time (UTC) | `2026-09-14T09:00:00Z` |
-| 72 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who granted the group role | `00000000-0000-0000-0000-000000000001` |
-| 73 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Group role mapping last update time (UTC) | `2026-09-14T09:00:00Z` |
-| 74 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the group role mapping | `00000000-0000-0000-0000-000000000001` |
-| 75 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Group role mapping soft-deletion time | `2026-09-15T09:00:00Z` |
+| 66 | Group Role ID | `group_role_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the permission mapping between a user group and a role | `00000000-0000-0000-0000-000000000001` |
+| 67 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | Y | - | N | Y | N | Y | User group that receives the role | `00000000-0000-0000-0000-000000000001` |
+| 68 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | Role granted to the group | `00000000-0000-0000-0000-000000000001` |
+| 69 | Permission Scope Type | `scope_type` | `varchar(20)` | N | N | - | Y | `'GLOBAL'` | N | Y | N | Y | Scope of the group role. GLOBAL, PROJECT | `PROJECT` |
+| 70 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Required when scope_type is PROJECT. NULL when GLOBAL. The correspondence between scope and NULL is validated by a CHECK constraint | `00000000-0000-0000-0000-000000000001` |
+| 71 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the group role mapping is in use. The per-scope duplicate prohibition applies to rows where deleted_at IS NULL and is_active is TRUE. GLOBAL is based on (user_group_id, role_id), and PROJECT on (user_group_id, role_id, project_id). | `TRUE` |
+| 72 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Group role mapping creation time (UTC) | `2026-09-14T09:00:00Z` |
+| 73 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who granted the group role | `00000000-0000-0000-0000-000000000001` |
+| 74 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Group role mapping last update time (UTC) | `2026-09-14T09:00:00Z` |
+| 75 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the group role mapping | `00000000-0000-0000-0000-000000000001` |
+| 76 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Group role mapping soft-deletion time | `2026-09-15T09:00:00Z` |
 
 #### Constraints
 
@@ -537,20 +545,20 @@ Business role mapping for groups. The per-menu and per-project permission checkb
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 76 | Permission ID | `grant_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 77 | Individual User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 78 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | N | - | N | Y | N | Y | References user_group.user_group_id | `00000000-0000-0000-0000-000000000001` |
-| 79 | Permission Scope | `scope_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | MENU=menu, PROJECT=project | `MENU` |
-| 80 | Menu Code | `menu_code` | `varchar(40)` | N | N | - | N | - | N | N | N | Y | INVENTORY / PROJECT / LIBRARY / AUDIT_TRAIL / ACCOUNTS. A subset of the same code system as audit_trail.menu_code, used only for screen menu-level permissions. Regulatory basis management is included in the LIBRARY menu. Required for MENU scope | `LIBRARY` |
-| 81 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Required for PROJECT scope. NULL for MENU scope | `00000000-0000-0000-0000-000000000001` |
-| 82 | Can View | `can_view` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | View checkbox on the screen | `FALSE` |
-| 83 | Can Edit | `can_edit` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Edit checkbox on the screen | `FALSE` |
-| 84 | Can Dispose | `can_dispose` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Dispose checkbox on the project permission screen. FALSE for menu scope | `FALSE` |
-| 85 | Active | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Changed to FALSE when the permission is revoked | `TRUE` |
-| 86 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
-| 87 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 88 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
-| 89 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 77 | Permission ID | `grant_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 78 | Individual User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 79 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | N | - | N | Y | N | Y | References user_group.user_group_id | `00000000-0000-0000-0000-000000000001` |
+| 80 | Permission Scope | `scope_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | MENU=menu, PROJECT=project | `MENU` |
+| 81 | Menu Code | `menu_code` | `varchar(40)` | N | N | - | N | - | N | N | N | Y | INVENTORY / PROJECT / LIBRARY / AUDIT_TRAIL / ACCOUNTS. A subset of the same code system as audit_trail.menu_code, used only for screen menu-level permissions. Regulatory basis management is included in the LIBRARY menu. Required for MENU scope | `LIBRARY` |
+| 82 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Required for PROJECT scope. NULL for MENU scope | `00000000-0000-0000-0000-000000000001` |
+| 83 | Can View | `can_view` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | View checkbox on the screen | `FALSE` |
+| 84 | Can Edit | `can_edit` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Edit checkbox on the screen | `FALSE` |
+| 85 | Can Dispose | `can_dispose` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Dispose checkbox on the project permission screen. FALSE for menu scope | `FALSE` |
+| 86 | Active | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Changed to FALSE when the permission is revoked | `TRUE` |
+| 87 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
+| 88 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 89 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
+| 90 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -597,15 +605,15 @@ The permission level determines the scope of administrative functions; global ro
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 90 | Inventory Role ID | `grant_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 91 | Individual User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 92 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | N | - | N | Y | N | Y | References user_group.user_group_id | `00000000-0000-0000-0000-000000000001` |
-| 93 | Inventory Role | `role_code` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | AUTHOR=author, REVIEWER=reviewer, APPROVER=approver, DISPOSER=disposal authority holder | `APPROVER` |
-| 94 | Active | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Active flag value | `TRUE` |
-| 95 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
-| 96 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 97 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
-| 98 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 91 | Inventory Role ID | `grant_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 92 | Individual User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 93 | User Group ID | `user_group_id` | `uuid` | N | Y | `user_group.user_group_id` | N | - | N | Y | N | Y | References user_group.user_group_id | `00000000-0000-0000-0000-000000000001` |
+| 94 | Inventory Role | `role_code` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | AUTHOR=author, REVIEWER=reviewer, APPROVER=approver, DISPOSER=disposal authority holder | `APPROVER` |
+| 95 | Active | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Active flag value | `TRUE` |
+| 96 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
+| 97 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 98 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
+| 99 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -643,21 +651,22 @@ These are inventory permissions assigned on screen, separate from the account's 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 99 | Signature Credential ID | `credential_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 100 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | Y | Y | N | Y | User who owns the signature password. 1 row per user (1:1); only account_type=HUMAN accounts are allowed | `00000000-0000-0000-0000-000000000001` |
-| 101 | Signature Password Hash | `signature_password_hash` | `varchar(255)` | N | N | - | N | - | N | N | Y | N | Hash of the password dedicated to electronic signature re-authentication. Separate from the login password (app_user.password_hash), and the same value is not allowed. NULL in NOT_SET status. Not included in responses, exports, Audit JSON, or signed_payload; Audit=N is maintained | `[REDACTED_PASSWORD_HASH]` |
-| 102 | Previous Signature Password Hash | `previous_signature_password_hash` | `varchar(255)` | N | N | - | N | - | N | N | Y | N | Hash of the immediately previous signature password. Used to reject the same value as the previous password when changing or resetting it (requirement 1.3). NULL if it has never been changed or reset. Not included in responses, exports, Audit JSON, or signed_payload; Audit=N is maintained | `[REDACTED_PASSWORD_HASH]` |
-| 103 | Credential Status | `credential_status` | `varchar(20)` | N | N | - | Y | `'NOT_SET'` | N | Y | N | Y | NOT_SET=not set (cannot sign), ACTIVE=usable, LOCKED=locked after 5 consecutive failures (released only by an administrator reset), RESET_REQUIRED=awaiting reset by the user after an administrator reset request | `ACTIVE` |
-| 104 | Initial Set At | `set_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the user first set the signature password | `2026-09-01T09:00:00Z` |
-| 105 | Last Changed At | `changed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the signature password was last changed. Basis for expiry calculation | `2026-09-01T09:00:00Z` |
-| 106 | Expires At | `expires_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | changed_at plus the expiry period (180 days, requirement 1.3, an operating setting). Once passed, signing is not possible even if ACTIVE; recalculated after a change | `2026-12-01T09:00:00Z` |
-| 107 | Consecutive Failure Count | `failed_attempt_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of consecutive signature password re-authentication failures. Reset to 0 on success; after 5 consecutive failures, switches to LOCKED (requirement 1.3). Reset to 0 when a new signature password is set after an administrator reset | `0` |
-| 108 | Reset Requested By ID | `reset_requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Administrator who switched the status to RESET_REQUIRED. Administrators can only request a reset and cannot set the password value | `00000000-0000-0000-0000-000000000001` |
-| 109 | Reset Requested At | `reset_requested_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the status was switched to RESET_REQUIRED | `2026-09-01T09:00:00Z` |
-| 110 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 111 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 112 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 113 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 100 | Signature Credential ID | `credential_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 101 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | Y | Y | N | Y | User who owns the signature password. 1 row per user (1:1); only account_type=HUMAN accounts are allowed | `00000000-0000-0000-0000-000000000001` |
+| 102 | Signature Password Hash | `signature_password_hash` | `varchar(255)` | N | N | - | N | - | N | N | Y | N | Hash of the password dedicated to electronic signature re-authentication. Managed separately from the login password (app_user.password_hash); the same value is not restricted. NULL in NOT_SET status. Not included in responses, exports, Audit JSON, or signed_payload; Audit=N is maintained | `[REDACTED_PASSWORD_HASH]` |
+| 103 | Previous Signature Password Hash | `previous_signature_password_hash` | `varchar(255)` | N | N | - | N | - | N | N | Y | N | Hash of the immediately previous signature password. Used to reject the same value as the previous password when changing or resetting it (requirement 1.3). NULL if it has never been changed or reset. Not included in responses, exports, Audit JSON, or signed_payload; Audit=N is maintained | `[REDACTED_PASSWORD_HASH]` |
+| 104 | Credential Status | `credential_status` | `varchar(20)` | N | N | - | Y | `'NOT_SET'` | N | Y | N | Y | NOT_SET=not set (cannot sign), ACTIVE=usable, LOCKED=locked after 5 consecutive failures (released only by an administrator reset), RESET_REQUIRED=awaiting reset by the user after an administrator reset request | `ACTIVE` |
+| 105 | Initial Set At | `set_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the user first set the signature password | `2026-09-01T09:00:00Z` |
+| 106 | Signing Means Acknowledged At | `acknowledged_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the user checked 'I confirm that this password becomes my means of signing once I receive electronic signature permission' on the signature password setup screen. Setting is possible only after checking it; NULL while NOT_SET | `2026-09-01T09:00:00Z` |
+| 107 | Last Changed At | `changed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the signature password was last changed. Basis for expiry calculation | `2026-09-01T09:00:00Z` |
+| 108 | Expires At | `expires_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | changed_at plus the expiry period (180 days, requirement 1.3, an operating setting). Once passed, signing is not possible even if ACTIVE; recalculated after a change | `2026-12-01T09:00:00Z` |
+| 109 | Consecutive Failure Count | `failed_attempt_count` | `integer` | N | N | - | Y | `0` | N | N | N | Y | Number of consecutive signature password re-authentication failures. Reset to 0 on success; after 5 consecutive failures, switches to LOCKED (requirement 1.3). Reset to 0 when a new signature password is set after an administrator reset | `0` |
+| 110 | Reset Requested By ID | `reset_requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Administrator who switched the status to RESET_REQUIRED. Administrators can only request a reset and cannot set the password value | `00000000-0000-0000-0000-000000000001` |
+| 111 | Reset Requested At | `reset_requested_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the status was switched to RESET_REQUIRED | `2026-09-01T09:00:00Z` |
+| 112 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 113 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 114 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 115 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -670,8 +679,9 @@ These are inventory permissions assigned on screen, separate from the account's 
 | `ck_user_signature_credential_6` | CHECK | `credential_status, reset_requested_by, reset_requested_at` | CHECK (credential_status <> 'RESET_REQUIRED' OR (reset_requested_by IS NOT NULL AND reset_requested_at IS NOT NULL)) |
 | `rule_user_signature_credential_7` | Business validation | `user_id` | user_id allows only account_type=HUMAN accounts. No row is created for SYSTEM accounts or emergency (break-glass) access accounts (LOCAL accounts in organizations that use SSO). A row is created for LOCAL accounts in organizations that do not use SSO. |
 | `rule_user_signature_credential_8` | Business validation | `signature_password_hash, previous_signature_password_hash` | Setting and changing are performed only by the users themselves, who verify their identity with the current signature password. For initial setup (NOT_SET) and reset (RESET_REQUIRED), the current signature password cannot be used, so identity is verified by login re-authentication (SSO for SSO accounts, the login password for LOCAL accounts). Administrators can only switch the status to RESET_REQUIRED; a NOT_SET status is not switched and remains as is. Administrators cannot set or view the value. The new password cannot be the same as the immediately previous password (previous_signature_password_hash) (requirement 1.3). The new password must be at least 10 characters long and contain at least 1 each of uppercase letters, lowercase letters, digits, and special characters (requirement 1.3). The length and composition are managed as operating settings. |
-| `rule_user_signature_credential_9` | Business validation | `credential_status, failed_attempt_count, expires_at` | On re-authentication failure, failed_attempt_count is incremented, and after 5 consecutive failures the status switches to LOCKED (requirement 1.3). The lock is not released automatically over time; when an administrator resets it (switch to RESET_REQUIRED), the user sets a new signature password after login re-authentication, the status returns to ACTIVE, and failed_attempt_count is reset to 0. On success, it is reset to 0. When expires_at passes, signing is refused and a change is required. The expiry period is 180 days (requirement 1.3) and is managed as an operating setting. |
+| `rule_user_signature_credential_9` | Business validation | `credential_status, failed_attempt_count, expires_at` | On re-authentication failure, failed_attempt_count is incremented, and after 5 consecutive failures the status switches to LOCKED (requirement 1.3). The lock is not released automatically over time; when an administrator resets it (switch to RESET_REQUIRED), the user sets a new signature password after login re-authentication, the status returns to ACTIVE, and failed_attempt_count is reset to 0. On success, it is reset to 0. When expires_at passes, signing is refused and a change is required. The expiry period is 180 days (requirement 1.3) and is managed as an operating setting. The user is notified to change it 7, 3, and 1 days before expiry. |
 | `rule_user_signature_credential_10` | Business validation | - | Setting/changing is recorded as SIGNATURE_PASSWORD_SET, administrator reset requests as SIGNATURE_PASSWORD_RESET, re-authentication failures as SIGNATURE_FAILED, and locking/unlocking as an UPDATE that changes credential_status, in the Audit Trail (menu_code=AUTH). Hashes, plaintext, and input values are not recorded. |
+| `ck_user_signature_credential_11` | CHECK | `credential_status, acknowledged_at` | CHECK (credential_status = 'NOT_SET' OR acknowledged_at IS NOT NULL) |
 
 #### Business Rules
 
@@ -687,10 +697,66 @@ The plaintext password, hash, and input values are not included in electronic_si
 
 ---
 
+<a id="table-login_session"></a>
+### 11. Login Session (`login_session`)
+
+| Item | Definition |
+|---|---|
+| Description | Access session and its end history, kept as 1 row per user login. Only the hash of the cookie token is stored |
+| Primary Key | `session_id` |
+| Main References (FK) | `user_id` |
+| GxP Criticality | High |
+| Audit Target | Y |
+| Retention / Deletion | Retained for the auditable period. Because it also serves as the login history, rows are not physically deleted and are ended with ended_at |
+
+#### Column Definitions
+
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: personal / sensitive information
+
+| No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
+|---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
+| 116 | Session ID | `session_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Session identifier. The same value is recorded in audit_trail.session_id | `00000000-0000-0000-0000-000000000001` |
+| 117 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Logged-in user. Only account_type=HUMAN accounts are allowed | `00000000-0000-0000-0000-000000000001` |
+| 118 | Token Hash | `token_hash` | `varchar(64)` | N | N | - | Y | - | Y | Y | Y | N | SHA-256 of the cookie session token as 64 lowercase characters. The original token is not stored, is not included in responses, exports, or Audit JSON, and Audit=N is kept | `[REDACTED_TOKEN_HASH]` |
+| 119 | Authentication Method | `auth_provider` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Login method of this session. SSO / LOCAL. The value of app_user.auth_provider at login time | `SSO` |
+| 120 | Login Time | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Session creation (login) time | `2026-10-23T00:00:00Z` |
+| 121 | Last Activity Time | `last_seen_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | N | Time the last request with this session was processed. Used to determine the idle timeout. Excluded from Audit because it is updated on every request | `2026-10-23T00:25:00Z` |
+| 122 | Expiry Time | `expires_at` | `timestamptz` | N | N | - | Y | - | N | N | N | N | Session expiry time. Excluded from Audit because it may be updated on every request | `2026-10-23T08:00:00Z` |
+| 123 | End Time | `ended_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Session end time. NULL while in progress | `2026-10-23T00:55:00Z` |
+| 124 | End Reason | `end_reason` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | LOGOUT=user logout, IDLE_TIMEOUT=idle time exceeded, EXPIRED=maximum session time expired, FORCED=forced termination due to account deactivation or lock or a login method change, PASSWORD_CHANGED=ended due to a login password change, DUPLICATE_LOGIN=ended due to a new login of the same account. NULL while in progress | `IDLE_TIMEOUT` |
+| 125 | Client IP Address | `client_ip` | `varchar(45)` | N | N | - | N | - | N | N | Y | Y | IP of the client that logged in | `192.0.2.10` |
+| 126 | Client Information | `user_agent` | `varchar(500)` | N | N | - | N | - | N | N | Y | Y | Browser and operating system information used to log in | `Sample-Client/1.0` |
+
+#### Constraints
+
+| Constraint | Type | Columns | Condition / Rule |
+|---|---|---|---|
+| `uq_login_session_token` | UNIQUE | `token_hash` | UNIQUE (token_hash) |
+| `ck_login_session_token_hash` | CHECK | `token_hash` | CHECK (token_hash ~ '^[0-9a-f]{64}$') |
+| `ck_login_session_auth_provider` | CHECK | `auth_provider` | CHECK (auth_provider IN ('SSO','LOCAL')) |
+| `ck_login_session_end_reason` | CHECK | `end_reason` | CHECK (end_reason IS NULL OR end_reason IN ('LOGOUT','IDLE_TIMEOUT','EXPIRED','FORCED','PASSWORD_CHANGED','DUPLICATE_LOGIN')) |
+| `ck_login_session_end_state` | CHECK | `ended_at, end_reason` | CHECK ((ended_at IS NULL) = (end_reason IS NULL)) |
+| `ck_login_session_time` | CHECK | `created_at, last_seen_at, expires_at, ended_at` | CHECK (last_seen_at >= created_at AND expires_at > created_at AND (ended_at IS NULL OR ended_at >= created_at)) |
+| `rule_login_session_1` | Business validation | `user_id, auth_provider` | Sessions are created only for account_type=HUMAN accounts. SYSTEM accounts and INACTIVE/LOCKED accounts are refused at the login step, so no session is created. auth_provider stores app_user.auth_provider at login time. |
+| `rule_login_session_2` | Business validation | `ended_at, end_reason` | When an account changes to INACTIVE/LOCKED or its auth_provider changes, the account's in-progress sessions are ended with FORCED. A session ended because of a login password change is recorded as PASSWORD_CHANGED. |
+| `rule_login_session_3` | Business validation | `expires_at, last_seen_at, ended_at` | Even if ended_at is NULL, a session whose expires_at has passed or that exceeded the idle time limit is not treated as in progress. Expiry is checked at the next request, and the session is ended with IDLE_TIMEOUT/EXPIRED. |
+| `rule_login_session_4` | Business validation | - | Rows are not physically deleted. token_hash is excluded from responses, exports, and Audit JSON, and last_seen_at/expires_at are excluded from Audit because they are updated on every request. |
+| `rule_login_session_5` | Business validation | `user_id, end_reason` | An account has only 1 in-progress session. When it logs in again, its previous in-progress session is ended with DUPLICATE_LOGIN. A session that has already expired or exceeded the idle time limit is not in progress (rule_login_session_3), so it is ended with IDLE_TIMEOUT/EXPIRED rather than DUPLICATE_LOGIN. |
+
+#### Business Rules
+
+When a login succeeds, a session row is created and LOGIN is recorded, and when the user logs out, LOGOUT is recorded in the Audit Trail (menu_code=AUTH, session_id=the session_id of this row). For IDLE_TIMEOUT/EXPIRED, where expiry is checked at the next request and the session is ended, no separate audit record is created and ended_at/end_reason of this row serve as the history; if a cleanup batch is added later, sessions ended by the batch are recorded as SYSTEM_PROCESS. FORCED endings are traced through the audit records of the account status or login method change that caused them. When a new login of the same account ends a previous session (DUPLICATE_LOGIN), no separate audit event is created; ended_previous_sessions (the number of in-progress sessions ended) is recorded in new_values of the new LOGIN record, and the actor is the user who logged in.
+
+For looking up in-progress sessions and for forced termination, a conditional index (user_id) WHERE ended_at IS NULL is kept. The idle time limit and the maximum session time are managed as operating settings.
+
+[↑ Back to top](#top)
+
+---
+
 ## Compliance
 
 <a id="table-electronic_signature"></a>
-### 11. Electronic Signature (`electronic_signature`)
+### 12. Electronic Signature (`electronic_signature`)
 
 | Item | Definition |
 |---|---|
@@ -707,21 +773,21 @@ The plaintext password, hash, and input values are not included in electronic_si
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 114 | Electronic Signature ID | `signature_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the electronic signature record | `00000000-0000-0000-0000-000000000001` |
-| 115 | Signer ID | `signer_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 116 | Target Table Name | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Actual target table name. Distinguishes business item revisions, deliverable revisions, and closure requests. Inventory is identified by the system_asset PK and revision_number | `requirement` |
-| 117 | Target Record ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK value of the record to which the signature was applied | `00000000-0000-0000-0000-000000000001` |
-| 118 | Signature Step | `signature_action` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | SUBMIT / REVIEW / APPROVE / REJECT / DISPOSE / CONFIG_APPLY / EXECUTE / ABORT. Records the signature meaning together with the target task. ABORT is an abort of IQ/OQ/PQ test execution or the cancellation of an in-progress result correction | `APPROVE` |
-| 119 | Signature Purpose | `signature_meaning` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Business meaning of submission / review / approval / disposal / test execution confirmation / test abort or correction cancellation. For closure requests, PROJECT_CLOSE_NORMAL or PROJECT_CLOSE_FORCED | `Final document approval` |
-| 120 | Signature Timestamp | `signed_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Timestamp at which the electronic signature was performed | `2026-08-26T16:30:00Z` |
-| 121 | Target Version | `target_version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Revision display version or revision number. Closure request: CLOSE-{request_version}; deviation action: ACTION-{round_number}-{revision_number}; completion report: COMPLETE-{action round}-{revision_number}; closure without re-execution: CLOSE-{action round}-{revision_number} (deviation_completion_revision). For test execution, the attempt and the result revision are identified together. | `v1.0` |
-| 122 | Signed Content Hash | `content_hash` | `varchar(64)` | N | N | - | Y | - | N | N | N | Y | Lowercase 64-character SHA-256 of the entire normalized UTF-8 JSON of signed_payload, including payload_schema_version. Must be recalculable identically from the stored original content. | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
-| 123 | Re-authentication Method | `authentication_method` | `varchar(50)` | N | N | - | Y | `'SIGNATURE_PASSWORD'` | N | N | N | Y | Re-authentication method used to verify the signer's identity when performing the electronic signature. Fixed to SIGNATURE_PASSWORD (the signature-only password in user_signature_credential), regardless of the login method (SSO/LOCAL) | `SIGNATURE_PASSWORD` |
-| 124 | Re-authentication Result | `authentication_result` | `varchar(20)` | N | N | - | Y | `'SUCCESS'` | N | N | N | Y | Result of re-authentication processing when performing the electronic signature. Fixed to SUCCESS because only successful signatures are stored in this table; failures are recorded only in audit_trail (SIGNATURE_FAILED) and user_signature_credential.failed_attempt_count | `SUCCESS` |
-| 125 | Signer Display Name | `signer_name_snapshot` | `varchar(100)` | N | N | - | Y | - | N | N | Y | Y | User name displayed on screen at the time of signing | `Gildong Hong` |
-| 126 | Signer Role | `signer_role_snapshot` | `varchar(100)` | N | N | - | Y | - | N | N | Y | Y | Role at the time of signing, such as author/reviewer/approver | `Approver` |
-| 127 | Signed Original Content Format Version | `payload_schema_version` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Version identifying the included fields and normalization rules per target type and signature purpose | `SIGN-1` |
-| 128 | Signed Original Content | `signed_payload` | `jsonb` | N | N | - | Y | - | N | N | Y | Y | {schema_version,target,baseline_id,body,children,source_refs,files,context} as finalized by the server. Areas that do not exist for a given target are included as an empty array or NULL. Passwords and authentication secrets are excluded. | - |
+| 127 | Electronic Signature ID | `signature_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the electronic signature record | `00000000-0000-0000-0000-000000000001` |
+| 128 | Signer ID | `signer_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 129 | Target Table Name | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Actual target table name. Distinguishes business item revisions, deliverable revisions, and closure requests. Inventory is identified by the system_asset PK and revision_number | `requirement` |
+| 130 | Target Record ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK value of the record to which the signature was applied | `00000000-0000-0000-0000-000000000001` |
+| 131 | Signature Step | `signature_action` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | SUBMIT / REVIEW / APPROVE / REJECT / DISPOSE / CONFIG_APPLY / EXECUTE / ABORT. Records the signature meaning together with the target task. ABORT is an abort of IQ/OQ/PQ test execution or the cancellation of an in-progress result correction | `APPROVE` |
+| 132 | Signature Purpose | `signature_meaning` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Business meaning of submission / review / approval / disposal / test execution confirmation / test abort or correction cancellation. For closure requests, PROJECT_CLOSE_NORMAL or PROJECT_CLOSE_FORCED | `Final document approval` |
+| 133 | Signature Timestamp | `signed_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Timestamp at which the electronic signature was performed | `2026-08-26T16:30:00Z` |
+| 134 | Target Version | `target_version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Revision display version or revision number. Closure request: CLOSE-{request_version}; deviation action: ACTION-{round_number}-{revision_number}; completion report: COMPLETE-{action round}-{revision_number}; closure without re-execution: CLOSE-{action round}-{revision_number} (deviation_completion_revision). For test execution, the attempt and the result revision are identified together. | `v1.0` |
+| 135 | Signed Content Hash | `content_hash` | `varchar(64)` | N | N | - | Y | - | N | N | N | Y | Lowercase 64-character SHA-256 of the entire normalized UTF-8 JSON of signed_payload, including payload_schema_version. Must be recalculable identically from the stored original content. | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| 136 | Re-authentication Method | `authentication_method` | `varchar(50)` | N | N | - | Y | `'SIGNATURE_PASSWORD'` | N | N | N | Y | Re-authentication method used to verify the signer's identity when performing the electronic signature. Fixed to SIGNATURE_PASSWORD (the signature-only password in user_signature_credential), regardless of the login method (SSO/LOCAL) | `SIGNATURE_PASSWORD` |
+| 137 | Re-authentication Result | `authentication_result` | `varchar(20)` | N | N | - | Y | `'SUCCESS'` | N | N | N | Y | Result of re-authentication processing when performing the electronic signature. Fixed to SUCCESS because only successful signatures are stored in this table; failures are recorded only in audit_trail (SIGNATURE_FAILED) and user_signature_credential.failed_attempt_count | `SUCCESS` |
+| 138 | Signer Display Name | `signer_name_snapshot` | `varchar(100)` | N | N | - | Y | - | N | N | Y | Y | User name displayed on screen at the time of signing | `Gildong Hong` |
+| 139 | Signer Role | `signer_role_snapshot` | `varchar(100)` | N | N | - | Y | - | N | N | Y | Y | Role at the time of signing, such as author/reviewer/approver | `Approver` |
+| 140 | Signed Original Content Format Version | `payload_schema_version` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Version identifying the included fields and normalization rules per target type and signature purpose | `SIGN-1` |
+| 141 | Signed Original Content | `signed_payload` | `jsonb` | N | N | - | Y | - | N | N | Y | Y | {schema_version,target,baseline_id,body,children,source_refs,files,context} as finalized by the server. Areas that do not exist for a given target are included as an empty array or NULL. Passwords and authentication secrets are excluded. | - |
 
 #### Constraints
 
@@ -755,7 +821,7 @@ Management fields such as approval status, current revision flag, updated_at, ap
 ---
 
 <a id="table-audit_trail"></a>
-### 12. Audit Trail (`audit_trail`)
+### 13. Audit Trail (`audit_trail`)
 
 | Item | Definition |
 |---|---|
@@ -772,27 +838,27 @@ Management fields such as approval status, current revision flag, updated_at, ap
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 129 | Audit Trail ID | `audit_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the audit trail record | `00000000-0000-0000-0000-000000000001` |
-| 130 | Actor ID | `actor_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Required for USER actors. For SYSTEM/BATCH actors, stores the user_id of the SYSTEM account (account_type=SYSTEM); NULL is allowed only for the initial seed before the SYSTEM account is created. NULL for ANONYMOUS | `00000000-0000-0000-0000-000000000001` |
-| 131 | Action Type | `action_type` | `varchar(40)` | N | N | - | Y | - | N | Y | N | Y | CREATE, UPDATE, DELETE, EXPORT, LOGIN, LOGOUT, LOGIN_FAILED, ACCOUNT_LOCKED, PASSWORD_CHANGE, SIGNATURE_PASSWORD_SET, SIGNATURE_PASSWORD_RESET, SIGNATURE_FAILED, REPORT_GENERATE, REPORT_DOWNLOAD, REPORT_CANCEL, PROJECT_CLOSE, PROJECT_FORCE_CLOSE, SUBMIT, REVIEW, APPROVE, REJECT, CANCEL, DISPOSE, PERMISSION_CHANGE, FILE_DOWNLOAD. The recording criteria for approval workflow, disposal, and permission changes are in rule_audit_trail_11, and those for file downloads are in rule_audit_trail_12 | `REPORT_GENERATE` |
-| 132 | Target Table Name | `target_table_name` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Actual table name of the target. NULL for events without a target row | `requirement` |
-| 133 | Target Record ID | `target_record_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Target PK. NULL for events without a target row, such as login and logout | `00000000-0000-0000-0000-000000000001` |
-| 134 | Data Before Change | `old_values` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Business values before/after the change. Excludes passwords, tokens, and password_hash | `{"status": "in progress"}` |
-| 135 | Data After Change | `new_values` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Business values before/after the change. Excludes passwords, tokens, and password_hash | `{"status": "approved"}` |
-| 136 | Reason for Change | `reason_for_change` | `text` | N | N | - | N | - | N | N | N | Y | Reason for data change under 21 CFR Part 11 | `Corrected typos in requirement and supplemented regulation items` |
-| 137 | Client IP Address | `client_ip` | `varchar(45)` | N | N | - | N | - | N | N | Y | Y | User client IP | `192.0.2.10` |
-| 138 | Occurred At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Audit trail log creation time (UTC) | `2026-08-26T16:30:00Z` |
-| 139 | Actor Type | `actor_type` | `varchar(20)` | N | N | - | Y | `'USER'` | N | Y | N | Y | Type of actor that performed the change. Classified as USER, SYSTEM, BATCH, or ANONYMOUS; for USER, actor_id must be stored. ANONYMOUS is for events in which the actor cannot be identified, such as a login failure where the IdP identifier or the entered email matches no account | `USER` |
-| 140 | Request ID | `request_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Identifier for grouping multiple audit trail records generated by a single screen/API request as the same request | `00000000-0000-0000-0000-000000000001` |
-| 141 | Session ID | `session_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Identifier of the user login session in which the change occurred. NULL allowed for system/batch processing or requests without a session | `00000000-0000-0000-0000-000000000001` |
-| 142 | Target Document Version | `target_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | For revision-managed documents, stores the display version at the time of the change; NULL allowed for general tables. For project closure requests and closure records, stores the same CLOSE-n version as the electronic signature | `v1.0` |
-| 143 | Target Revision Number | `target_revision_number` | `integer` | N | N | - | N | - | N | N | N | Y | For revision-managed documents, stores the numeric revision number at the time of the change; NULL allowed for general tables | `1` |
-| 144 | Request Path | `request_uri` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | Screen or API request path that triggered the change. NULL allowed when there is no path, such as system/batch processing | `/api/fds/approve` |
-| 145 | Client Information | `user_agent` | `text` | N | N | - | N | - | N | N | Y | Y | Browser, operating system, or client application information used for the change request | `Sample-Client/1.0` |
-| 146 | Menu Code | `menu_code` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | INVENTORY / PROJECT / LIBRARY / ACCOUNTS / AUDIT_TRAIL / VP / VA / QIA / URS / FDS_GROUP / FRA / DQ / IQ / OQ / PQ / VSR / DASHBOARD / AUTH / SYSTEM_PROCESS. Same code system as menu permissions (access_permission_grant.menu_code); the code recorded for each table follows the area mapping in the business rules. AUDIT_TRAIL is the audit trail record view/export screen. SYSTEM_PROCESS is used only for records by non-human actors (actor_type=SYSTEM/BATCH) and covers the initial seed, scheduled batches, the file scan Worker, file link request processing, and system maintenance. The target business area is identified by target_table_name | `URS` |
-| 147 | Actor Role | `actor_role_snapshot` | `varchar(100)` | N | N | - | N | - | N | N | Y | Y | For the role filter on the audit screen and display of the role at the time | `Author` |
-| 148 | Actor Display Name | `actor_display_snapshot` | `varchar(100)` | N | N | - | N | - | N | N | Y | Y | User name at the time, displayed on the audit screen | `Gildong Hong` |
-| 149 | Changed Field | `field_path` | `text` | N | N | - | N | - | N | N | N | Y | Column/item path to display on the per-field change screen. NULL for whole-record events | `requirement_text` |
+| 142 | Audit Trail ID | `audit_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the audit trail record | `00000000-0000-0000-0000-000000000001` |
+| 143 | Actor ID | `actor_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Required for USER actors. For SYSTEM/BATCH actors, stores the user_id of the SYSTEM account (account_type=SYSTEM); NULL is allowed only for the initial seed before the SYSTEM account is created. NULL for ANONYMOUS | `00000000-0000-0000-0000-000000000001` |
+| 144 | Action Type | `action_type` | `varchar(40)` | N | N | - | Y | - | N | Y | N | Y | CREATE, UPDATE, DELETE, EXPORT, LOGIN, LOGOUT, LOGIN_FAILED, ACCOUNT_LOCKED, PASSWORD_CHANGE, SIGNATURE_PASSWORD_SET, SIGNATURE_PASSWORD_RESET, SIGNATURE_FAILED, REPORT_GENERATE, REPORT_DOWNLOAD, REPORT_CANCEL, PROJECT_CLOSE, PROJECT_FORCE_CLOSE, SUBMIT, REVIEW, APPROVE, REJECT, CANCEL, DISPOSE, PERMISSION_CHANGE, FILE_DOWNLOAD. The recording criteria for approval workflow, disposal, and permission changes are in rule_audit_trail_11, and those for file downloads are in rule_audit_trail_12 | `REPORT_GENERATE` |
+| 145 | Target Table Name | `target_table_name` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Actual table name of the target. NULL for events without a target row | `requirement` |
+| 146 | Target Record ID | `target_record_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Target PK. NULL for events without a target row, such as login and logout | `00000000-0000-0000-0000-000000000001` |
+| 147 | Data Before Change | `old_values` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Business values before/after the change. Excludes passwords, tokens, and password_hash | `{"status": "in progress"}` |
+| 148 | Data After Change | `new_values` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Business values before/after the change. Excludes passwords, tokens, and password_hash | `{"status": "approved"}` |
+| 149 | Reason for Change | `reason_for_change` | `text` | N | N | - | N | - | N | N | N | Y | Reason for data change under 21 CFR Part 11 | `Corrected typos in requirement and supplemented regulation items` |
+| 150 | Client IP Address | `client_ip` | `varchar(45)` | N | N | - | N | - | N | N | Y | Y | User client IP | `192.0.2.10` |
+| 151 | Occurred At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Audit trail log creation time (UTC) | `2026-08-26T16:30:00Z` |
+| 152 | Actor Type | `actor_type` | `varchar(20)` | N | N | - | Y | `'USER'` | N | Y | N | Y | Type of actor that performed the change. Classified as USER, SYSTEM, BATCH, or ANONYMOUS; for USER, actor_id must be stored. ANONYMOUS is for events in which the actor cannot be identified, such as a login failure where the IdP identifier or the entered email matches no account | `USER` |
+| 153 | Request ID | `request_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Identifier for grouping multiple audit trail records generated by a single screen/API request as the same request | `00000000-0000-0000-0000-000000000001` |
+| 154 | Session ID | `session_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | Identifier of the user login session in which the change occurred (login_session.session_id). NULL allowed for system/batch processing or requests without a session | `00000000-0000-0000-0000-000000000001` |
+| 155 | Target Document Version | `target_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | For revision-managed documents, stores the display version at the time of the change; NULL allowed for general tables. For project closure requests and closure records, stores the same CLOSE-n version as the electronic signature | `v1.0` |
+| 156 | Target Revision Number | `target_revision_number` | `integer` | N | N | - | N | - | N | N | N | Y | For revision-managed documents, stores the numeric revision number at the time of the change; NULL allowed for general tables | `1` |
+| 157 | Request Path | `request_uri` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | Screen or API request path that triggered the change. NULL allowed when there is no path, such as system/batch processing | `/api/fds/approve` |
+| 158 | Client Information | `user_agent` | `text` | N | N | - | N | - | N | N | Y | Y | Browser, operating system, or client application information used for the change request | `Sample-Client/1.0` |
+| 159 | Menu Code | `menu_code` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | INVENTORY / PROJECT / LIBRARY / ACCOUNTS / AUDIT_TRAIL / VP / VA / QIA / URS / FDS_GROUP / FRA / DQ / IQ / OQ / PQ / VSR / DASHBOARD / AUTH / SYSTEM_PROCESS. Same code system as menu permissions (access_permission_grant.menu_code); the code recorded for each table follows the area mapping in the business rules. AUDIT_TRAIL is the audit trail record view/export screen. SYSTEM_PROCESS is used only for records by non-human actors (actor_type=SYSTEM/BATCH) and covers the initial seed, scheduled batches, the file scan Worker, file link request processing, and system maintenance. The target business area is identified by target_table_name | `URS` |
+| 160 | Actor Role | `actor_role_snapshot` | `varchar(100)` | N | N | - | N | - | N | N | Y | Y | For the role filter on the audit screen and display of the role at the time | `Author` |
+| 161 | Actor Display Name | `actor_display_snapshot` | `varchar(100)` | N | N | - | N | - | N | N | Y | Y | User name at the time, displayed on the audit screen | `Gildong Hong` |
+| 162 | Changed Field | `field_path` | `text` | N | N | - | N | - | N | N | N | Y | Column/item path to display on the per-field change screen. NULL for whole-record events | `requirement_text` |
 
 #### Constraints
 
@@ -813,11 +879,11 @@ Management fields such as approval status, current revision flag, updated_at, ap
 
 #### Business Rules
 
-LOGIN_FAILED is an event in which the platform rejected a login. For SSO, it is the case where IdP authentication passed but the platform rejected the login; for LOCAL, it is a password mismatch or a rejection by the platform. If no account matches, it is recorded with actor_type=ANONYMOUS and actor_id NULL; if the account exists but there is a password mismatch or the account is INACTIVE, LOCKED, or a SYSTEM account, it is recorded with actor_type=USER and the corresponding actor_id. ACCOUNT_LOCKED is recorded when app_user.status changes to LOCKED, and PASSWORD_CHANGE is recorded when the login password (password_hash) of a LOCAL account is changed.
+LOGIN_FAILED is an event in which the platform rejected a login. For SSO, it is the case where IdP authentication passed but the platform rejected the login; for LOCAL, it is a password mismatch or a rejection by the platform. If no account matches, it is recorded with actor_type=ANONYMOUS and actor_id NULL; if the account exists but there is a password mismatch or the account is INACTIVE, LOCKED, or a SYSTEM account, it is recorded with actor_type=USER and the corresponding actor_id. ACCOUNT_LOCKED is recorded when app_user.status changes to LOCKED, and PASSWORD_CHANGE is recorded when the login password (password_hash) of a LOCAL account is changed. ACCOUNT_LOCKED is recorded under menu_code=AUTH with the same actor as the login failure that caused the lock (actor_type=USER, actor_id=the locked account).
 
 menu_code=SYSTEM_PROCESS is used for all records left by non-human actors (actor_type=SYSTEM/BATCH). This covers the initial data seed, scheduled batches, scan status transitions by the file scan Worker, automatic linking based on file link requests (file_link_request), and automatic retries. In this case, the business area is identified by target_table_name/target_record_id, and the original screen the user started from is traced through the user audit record for the same target (e.g., the upload completion record). SYSTEM_PROCESS is not used for changes performed by users on screen (USER) or for ANONYMOUS events (ck_audit_trail_10).
 
-Area mapping (for USER/ANONYMOUS actions; SYSTEM/BATCH actions use SYSTEM_PROCESS): accounts, groups, and permissions (app_user, role, user_role, user_group, user_group_member, group_role, access_permission_grant, inventory_role_grant) and organization are recorded as ACCOUNTS; user_signature_credential and login/signature authentication events as AUTH; system_asset/system_asset_revision as INVENTORY; library_item/regulatory_source/regulatory_clause/library_item_regulation as LIBRARY; and validation_project/project_system_baseline/project_member/project_activity/project_closure_request/project_workflow_config and the activity master (validation_activity/activity_dependency) as PROJECT. Business items and documents use the corresponding activity code (VP/VA/QIA/URS/FDS_GROUP/FRA/DQ/IQ/OQ/PQ/VSR); requirement_regulation is URS, and fds_spec/dds_spec are FDS_GROUP. Approval workflow (workflow_instance/workflow_step/workflow_step_assignee/approval_action) follows the area code of the business subject to approval (INVENTORY for inventory, PROJECT for project closure requests). Deviations (deviation/deviation_action_round/deviation_completion_revision) use the IQ/OQ/PQ of the original execution; evidence (evidence_link) and files (file_asset/file_link_request) use the code of the linked business target (LIBRARY for uploads outside a project); upload completion records (file_scan_job), made before a link target is set, use PROJECT if file_scan_job.project_id is present and LIBRARY if it is not (uploads outside a project, such as regulation originals); and traceability_link uses the code of the screen where the link was saved (DASHBOARD for the RTM screen). deliverable_document/deliverable_revision/deliverable_section use the corresponding activity code; report_generation uses the activity code of the target deliverable if DELIVERABLE, or AUDIT_TRAIL if AUDIT_TRAIL; and AI jobs, results, and detections (ai_generation_job/ai_generation_result/ai_result_item/ai_sensitive_detection) use the activity code of the business for which content is generated. electronic_signature follows the area code of the signature target (target_table_name) (e.g., PROJECT for approval route application, INVENTORY for inventory, and the IQ/OQ/PQ of the original execution for deviation completion/closure). Audit trail record view/export is AUDIT_TRAIL.
+Area mapping (for USER/ANONYMOUS actions; SYSTEM/BATCH actions use SYSTEM_PROCESS): accounts, groups, and permissions (app_user, role, user_role, user_group, user_group_member, group_role, access_permission_grant, inventory_role_grant) and organization are recorded as ACCOUNTS; user_signature_credential, login_session, and login/signature authentication events as AUTH; system_asset/system_asset_revision as INVENTORY; library_item/regulatory_source/regulatory_clause/library_item_regulation as LIBRARY; and validation_project/project_system_baseline/project_member/project_activity/project_closure_request/project_workflow_config and the activity master (validation_activity/activity_dependency) as PROJECT. Business items and documents use the corresponding activity code (VP/VA/QIA/URS/FDS_GROUP/FRA/DQ/IQ/OQ/PQ/VSR); requirement_regulation is URS, and fds_spec/dds_spec are FDS_GROUP. Approval workflow (workflow_instance/workflow_step/workflow_step_assignee/approval_action) follows the area code of the business subject to approval (INVENTORY for inventory, PROJECT for project closure requests). Deviations (deviation/deviation_action_round/deviation_completion_revision) use the IQ/OQ/PQ of the original execution; evidence (evidence_link) and files (file_asset/file_link_request) use the code of the linked business target (LIBRARY for uploads outside a project); upload completion records (file_scan_job), made before a link target is set, use PROJECT if file_scan_job.project_id is present and LIBRARY if it is not (uploads outside a project, such as regulation originals); and traceability_link uses the code of the screen where the link was saved (DASHBOARD for the RTM screen). deliverable_document/deliverable_revision/deliverable_section use the corresponding activity code; report_generation uses the activity code of the target deliverable if DELIVERABLE, or AUDIT_TRAIL if AUDIT_TRAIL; and AI jobs, results, and detections (ai_generation_job/ai_generation_result/ai_result_item/ai_sensitive_detection) use the activity code of the business for which content is generated. electronic_signature follows the area code of the signature target (target_table_name) (e.g., PROJECT for approval route application, INVENTORY for inventory, and the IQ/OQ/PQ of the original execution for deviation completion/closure). Audit trail record view/export is AUDIT_TRAIL.
 
 Events related to the electronic signature password are recorded with user_signature_credential as the target table and the corresponding credential_id as the target record, and the hash and plaintext are not included in old_values/new_values.
 
@@ -828,7 +894,7 @@ Events related to the electronic signature password are recorded with user_signa
 ## File
 
 <a id="table-file_asset"></a>
-### 13. File Asset (`file_asset`)
+### 14. File Asset (`file_asset`)
 
 | Item | Definition |
 |---|---|
@@ -845,17 +911,17 @@ Events related to the electronic signature password are recorded with user_signa
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 150 | File ID | `file_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the attachment metadata | `00000000-0000-0000-0000-000000000001` |
-| 151 | Uploader ID | `uploader_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Stores the uploader for user-uploaded files, the user who requested generation for server-generated files, and the user_id of the SYSTEM account for files generated by scheduled batches | `00000000-0000-0000-0000-000000000001` |
-| 152 | Original File Name | `original_file_name` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | File name at the time of upload | `sample_document.pdf` |
-| 153 | Stored File Path | `stored_file_path` | `text` | N | N | - | Y | - | N | N | N | Y | Storage path/S3 key | `documents/2026/08/sample_001.pdf` |
-| 154 | File Category | `file_category` | `varchar(30)` | N | N | - | Y | `'ATTACHMENT'` | N | Y | N | Y | Business category of the file. ATTACHMENT, EVIDENCE, REPORT, EXPORT | `REPORT` |
-| 155 | File Size | `file_size_bytes` | `bigint` | N | N | - | Y | `0` | N | N | N | Y | File size (bytes) | `1048576` |
-| 156 | MIME Type | `mime_type` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Attachment file format. NULL allowed if unidentified | `application/pdf` |
-| 157 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T16:30:00Z` |
-| 158 | File Content Hash | `content_hash` | `varchar(64)` | N | N | - | Y | - | N | N | N | Y | Lowercase 64-character SHA-256 of the original bytes of the stored file. Calculated and verified by the server. | - |
-| 159 | Storage Object Version | `storage_version_id` | `varchar(255)` | N | N | - | N | - | N | N | N | Y | Exact object version ID in versioned storage. NULL if versioning is not available, in which case overwriting stored_file_path is prohibited. | - |
-| 160 | File Origin | `file_origin` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | UPLOAD / SYSTEM_GENERATED. Assigned by the server based on the actual generation path; user uploads must pass the scan and be linked to the scan job. Distinct from file_category | `UPLOAD` |
+| 163 | File ID | `file_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the attachment metadata | `00000000-0000-0000-0000-000000000001` |
+| 164 | Uploader ID | `uploader_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Stores the uploader for user-uploaded files, the user who requested generation for server-generated files, and the user_id of the SYSTEM account for files generated by scheduled batches | `00000000-0000-0000-0000-000000000001` |
+| 165 | Original File Name | `original_file_name` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | File name at the time of upload | `sample_document.pdf` |
+| 166 | Stored File Path | `stored_file_path` | `text` | N | N | - | Y | - | N | N | N | Y | Storage path/S3 key | `documents/2026/08/sample_001.pdf` |
+| 167 | File Category | `file_category` | `varchar(30)` | N | N | - | Y | `'ATTACHMENT'` | N | Y | N | Y | Business category of the file. ATTACHMENT, EVIDENCE, REPORT, EXPORT | `REPORT` |
+| 168 | File Size | `file_size_bytes` | `bigint` | N | N | - | Y | `0` | N | N | N | Y | File size (bytes) | `1048576` |
+| 169 | MIME Type | `mime_type` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Attachment file format. NULL allowed if unidentified | `application/pdf` |
+| 170 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T16:30:00Z` |
+| 171 | File Content Hash | `content_hash` | `varchar(64)` | N | N | - | Y | - | N | N | N | Y | Lowercase 64-character SHA-256 of the original bytes of the stored file. Calculated and verified by the server. | - |
+| 172 | Storage Object Version | `storage_version_id` | `varchar(255)` | N | N | - | N | - | N | N | N | Y | Exact object version ID in versioned storage. NULL if versioning is not available, in which case overwriting stored_file_path is prohibited. | - |
+| 173 | File Origin | `file_origin` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | UPLOAD / SYSTEM_GENERATED. Assigned by the server based on the actual generation path; user uploads must pass the scan and be linked to the scan job. Distinct from file_category | `UPLOAD` |
 
 #### Constraints
 
@@ -887,7 +953,7 @@ Replacement is handled with a new file_id and a new storage object. During the r
 ---
 
 <a id="table-file_scan_job"></a>
-### 14. File Malware Scan Job (`file_scan_job`)
+### 15. File Malware Scan Job (`file_scan_job`)
 
 | Item | Definition |
 |---|---|
@@ -904,35 +970,35 @@ Replacement is handled with a new file_id and a new storage object. During the r
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 161 | Scan Job ID | `scan_job_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of one scan attempt. Basis for preventing duplicate processing of queue delivery and result receipt | `00000000-0000-0000-0000-000000000001` |
-| 162 | Upload ID | `upload_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | Logical identifier of one upload, issued by the server. Retry attempts for the same original keep the same value; not an FK to a separate table | `00000000-0000-0000-0000-000000000001` |
-| 163 | Scan Attempt | `attempt_no` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | 1 for the initial scan. Retries and rescans are added as the next attempt of the same upload_id; not incremented merely by receiving a duplicate message | `1` |
-| 164 | Previous Scan Job ID | `previous_scan_job_id` | `uuid` | N | Y | `file_scan_job.scan_job_id` | N | - | Y | Y | N | Y | Immediately preceding attempt for a retry or rescan. NULL for the first attempt; multiple subsequent attempts do not branch from the preceding job | `00000000-0000-0000-0000-000000000001` |
-| 165 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | The project, if it is a project attachment. NULL is allowed for uploads outside a project, such as original regulation content, in which case separate menu/data access permissions are verified | `00000000-0000-0000-0000-000000000001` |
-| 166 | Uploader ID | `uploaded_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who performed the original upload. The initial uploader is kept even on automatic retries | `00000000-0000-0000-0000-000000000001` |
-| 167 | Original File Name | `original_file_name` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | File name at the time of upload. The same value is used when registering the file asset | `design_document.pdf` |
-| 168 | Quarantine Storage Name | `storage_bucket` | `varchar(255)` | N | N | - | Y | - | N | Y | N | Y | Identifier of the bucket or storage where the original to be scanned is stored. Connection secrets and signed URLs are not stored | `upload-quarantine-example` |
-| 169 | Quarantine File Path | `stored_file_path` | `text` | N | N | - | Y | - | N | Y | N | Y | Quarantine object path unique to the upload. Not exposed as a business download path | `uploads/sample-upload/design_document.pdf` |
-| 170 | Quarantine Object Version | `storage_version_id` | `varchar(255)` | N | N | - | N | - | N | Y | N | Y | Exact object version that was scanned. NULL for storage without version support, in which case overwriting the original path is prohibited | - |
-| 171 | Original Content Hash | `content_hash` | `varchar(64)` | N | N | - | N | - | N | N | N | Y | Lowercase 64-character SHA-256 of the original bytes as confirmed by the server or trusted scan processing. NULL before confirmation; required upon completion with no threats found | - |
-| 172 | File Size | `file_size_bytes` | `bigint` | N | N | - | Y | - | N | N | N | Y | Actual byte size of the stored original | `1048576` |
-| 173 | MIME Type | `mime_type` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Confirmed file format of the original. The file type is not trusted based on user input alone. application/octet-stream if the file was scanned but its format could not be determined; NULL if not yet checked | `application/pdf` |
-| 174 | File Category | `file_category` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | ATTACHMENT / EVIDENCE / REPORT / EXPORT. Business purpose category; not used as grounds for skipping the scan | `ATTACHMENT` |
-| 175 | Job Status | `job_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED. COMPLETED means the scan has finished; whether use is allowed is determined by scan_result | `PENDING` |
-| 176 | Scan Result | `scan_result` | `varchar(30)` | N | N | - | N | - | N | Y | N | Y | NO_THREATS_FOUND / THREATS_FOUND / UNSCANNABLE. Distinguishes no threats found, threats found, and unscannable; NULL before completion or on technical failure or cancellation | `NO_THREATS_FOUND` |
-| 177 | Scan Service/Engine Name | `scanner_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Identifier of the scan service or engine designated for the attempt. Not tied to a specific product | `MALWARE_SCANNER` |
-| 178 | Scan Engine Version | `scanner_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Engine version actually used. NULL is allowed if the scan service does not provide it | - |
-| 179 | Detection Signature Version | `signature_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Version of the malware detection information used for the scan. NULL is allowed if not provided | - |
-| 180 | Scan Service Request ID | `scanner_request_id` | `varchar(255)` | N | N | - | N | - | N | Y | N | Y | Execution/request identifier issued by the scan service. Used to match results against the job and the original object | - |
-| 181 | Scan Details | `scan_details` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Verifiable grounds for the scan, such as provider_result (the clamd raw response with the leading stream: label removed, e.g. OK, <malware name> FOUND, ERROR; the platform judgment is in scan_result), reason_code (detailed reason for UNSCANNABLE: FORMAT_MISMATCH, ENCRYPTED, UNSUPPORTED_EXTENSION, SOURCE_MISMATCH, ENGINE_UNSCANNABLE, SIZE_LIMIT_EXCEEDED; carried over as the block reason in file_link_request.failure_code), format_detail (description of the format mismatch), engine_reason_code (the original reason returned by the scan engine), threat_names, and report_reference. Excludes passwords, tokens, signed URLs, and file contents | `{"provider_result":"OK","threat_names":[]}` |
-| 182 | Scan Requested By ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Party that requested the scan attempt. Stores the uploader (uploaded_by) for the initial attempt automatically registered right after upload, the requesting user for manual rescans, and the user_id of the SYSTEM account for automatic retries | `00000000-0000-0000-0000-000000000001` |
-| 183 | Scan Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the scan attempt was registered | `2026-09-18T01:00:00Z` |
-| 184 | Scan Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the scan for the attempt started. May be NULL on failure or cancellation before execution | `2026-09-18T01:00:05Z` |
-| 185 | Scan Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time completion, failure, or cancellation was finalized. Distinct from the file asset registration time | `2026-09-18T01:00:20Z` |
-| 186 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Last change time of the job status, scan result, or result file link | `2026-09-18T01:00:21Z` |
-| 187 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Technical error code for FAILED. Values in use (a reference list, not restricted by a CHECK): SOURCE_NOT_FOUND (quarantined source not found), SOURCE_READ_FAILED (failed to read the source), SCANNER_UNAVAILABLE (could not connect to the scan engine), SCAN_TIMEOUT (scan response timed out), SCANNER_ERROR (the scan engine responded with an error), WORKER_IO_FAILED (Worker temporary file handling failed), PROCESSING_STALLED (an attempt that stayed in processing beyond the time limit (processing policy), recorded as failed by the check job). Retried automatically; if all attempts up to the maximum attempt count (processing policy) fail, the link request is blocked with file_link_request.failure_code=SCAN_FAILED. Threats found is not a technical error and is recorded in scan_result | `SCAN_TIMEOUT` |
-| 188 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | Y | Y | Detailed reason for the technical failure. Does not include secrets, signed URLs, or file contents | `Scan response timeout` |
-| 189 | Registered File ID | `result_file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | Y | Y | N | Y | File asset registered after no threats were found and the identity with the original was confirmed. NULL before registration; only one attempt is linked per upload | `00000000-0000-0000-0000-000000000001` |
+| 174 | Scan Job ID | `scan_job_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of one scan attempt. Basis for preventing duplicate processing of queue delivery and result receipt | `00000000-0000-0000-0000-000000000001` |
+| 175 | Upload ID | `upload_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | Logical identifier of one upload, issued by the server. Retry attempts for the same original keep the same value; not an FK to a separate table | `00000000-0000-0000-0000-000000000001` |
+| 176 | Scan Attempt | `attempt_no` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | 1 for the initial scan. Retries and rescans are added as the next attempt of the same upload_id; not incremented merely by receiving a duplicate message | `1` |
+| 177 | Previous Scan Job ID | `previous_scan_job_id` | `uuid` | N | Y | `file_scan_job.scan_job_id` | N | - | Y | Y | N | Y | Immediately preceding attempt for a retry or rescan. NULL for the first attempt; multiple subsequent attempts do not branch from the preceding job | `00000000-0000-0000-0000-000000000001` |
+| 178 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | The project, if it is a project attachment. NULL is allowed for uploads outside a project, such as original regulation content, in which case separate menu/data access permissions are verified | `00000000-0000-0000-0000-000000000001` |
+| 179 | Uploader ID | `uploaded_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who performed the original upload. The initial uploader is kept even on automatic retries | `00000000-0000-0000-0000-000000000001` |
+| 180 | Original File Name | `original_file_name` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | File name at the time of upload. The same value is used when registering the file asset | `design_document.pdf` |
+| 181 | Quarantine Storage Name | `storage_bucket` | `varchar(255)` | N | N | - | Y | - | N | Y | N | Y | Identifier of the bucket or storage where the original to be scanned is stored. Connection secrets and signed URLs are not stored | `upload-quarantine-example` |
+| 182 | Quarantine File Path | `stored_file_path` | `text` | N | N | - | Y | - | N | Y | N | Y | Quarantine object path unique to the upload. Not exposed as a business download path | `uploads/sample-upload/design_document.pdf` |
+| 183 | Quarantine Object Version | `storage_version_id` | `varchar(255)` | N | N | - | N | - | N | Y | N | Y | Exact object version that was scanned. NULL for storage without version support, in which case overwriting the original path is prohibited | - |
+| 184 | Original Content Hash | `content_hash` | `varchar(64)` | N | N | - | N | - | N | N | N | Y | Lowercase 64-character SHA-256 of the original bytes as confirmed by the server or trusted scan processing. NULL before confirmation; required upon completion with no threats found | - |
+| 185 | File Size | `file_size_bytes` | `bigint` | N | N | - | Y | - | N | N | N | Y | Actual byte size of the stored original | `1048576` |
+| 186 | MIME Type | `mime_type` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Confirmed file format of the original. The file type is not trusted based on user input alone. application/octet-stream if the file was scanned but its format could not be determined; NULL if not yet checked | `application/pdf` |
+| 187 | File Category | `file_category` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | ATTACHMENT / EVIDENCE / REPORT / EXPORT. Business purpose category; not used as grounds for skipping the scan | `ATTACHMENT` |
+| 188 | Job Status | `job_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED. COMPLETED means the scan has finished; whether use is allowed is determined by scan_result | `PENDING` |
+| 189 | Scan Result | `scan_result` | `varchar(30)` | N | N | - | N | - | N | Y | N | Y | NO_THREATS_FOUND / THREATS_FOUND / UNSCANNABLE. Distinguishes no threats found, threats found, and unscannable; NULL before completion or on technical failure or cancellation | `NO_THREATS_FOUND` |
+| 190 | Scan Service/Engine Name | `scanner_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Identifier of the scan service or engine designated for the attempt. Not tied to a specific product | `MALWARE_SCANNER` |
+| 191 | Scan Engine Version | `scanner_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Engine version actually used. NULL is allowed if the scan service does not provide it | - |
+| 192 | Detection Signature Version | `signature_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Version of the malware detection information used for the scan. NULL is allowed if not provided | - |
+| 193 | Scan Service Request ID | `scanner_request_id` | `varchar(255)` | N | N | - | N | - | N | Y | N | Y | Execution/request identifier issued by the scan service. Used to match results against the job and the original object | - |
+| 194 | Scan Details | `scan_details` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Verifiable grounds for the scan, such as provider_result (the clamd raw response with the leading stream: label removed, e.g. OK, <malware name> FOUND, ERROR; the platform judgment is in scan_result), reason_code (detailed reason for UNSCANNABLE: FORMAT_MISMATCH, ENCRYPTED, UNSUPPORTED_EXTENSION, SOURCE_MISMATCH, ENGINE_UNSCANNABLE, SIZE_LIMIT_EXCEEDED; carried over as the block reason in file_link_request.failure_code), format_detail (description of the format mismatch), engine_reason_code (the original reason returned by the scan engine), threat_names, and report_reference. Excludes passwords, tokens, signed URLs, and file contents | `{"provider_result":"OK","threat_names":[]}` |
+| 195 | Scan Requested By ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Party that requested the scan attempt. Stores the uploader (uploaded_by) for the initial attempt automatically registered right after upload, the requesting user for manual rescans, and the user_id of the SYSTEM account for automatic retries | `00000000-0000-0000-0000-000000000001` |
+| 196 | Scan Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the scan attempt was registered | `2026-09-18T01:00:00Z` |
+| 197 | Scan Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the scan for the attempt started. May be NULL on failure or cancellation before execution | `2026-09-18T01:00:05Z` |
+| 198 | Scan Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time completion, failure, or cancellation was finalized. Distinct from the file asset registration time | `2026-09-18T01:00:20Z` |
+| 199 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Last change time of the job status, scan result, or result file link | `2026-09-18T01:00:21Z` |
+| 200 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Technical error code for FAILED. Values in use (a reference list, not restricted by a CHECK): SOURCE_NOT_FOUND (quarantined source not found), SOURCE_READ_FAILED (failed to read the source), SCANNER_UNAVAILABLE (could not connect to the scan engine), SCAN_TIMEOUT (scan response timed out), SCANNER_ERROR (the scan engine responded with an error), WORKER_IO_FAILED (Worker temporary file handling failed), PROCESSING_STALLED (an attempt that stayed in processing beyond the time limit (processing policy), recorded as failed by the check job). Retried automatically; if all attempts up to the maximum attempt count (processing policy) fail, the link request is blocked with file_link_request.failure_code=SCAN_FAILED. Threats found is not a technical error and is recorded in scan_result | `SCAN_TIMEOUT` |
+| 201 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | Y | Y | Detailed reason for the technical failure. Does not include secrets, signed URLs, or file contents | `Scan response timeout` |
+| 202 | Registered File ID | `result_file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | Y | Y | N | Y | File asset registered after no threats were found and the identity with the original was confirmed. NULL before registration; only one attempt is linked per upload | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -982,7 +1048,7 @@ Replacement is handled with a new file_id and a new storage object. During the r
 ---
 
 <a id="table-evidence_link"></a>
-### 15. Evidence File Link (`evidence_link`)
+### 16. Evidence File Link (`evidence_link`)
 
 | Item | Definition |
 |---|---|
@@ -999,18 +1065,18 @@ Replacement is handled with a new file_id and a new storage object. During the r
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 190 | Evidence Link ID | `evidence_link_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of a link between a document/test item and an evidence file. Duplicates of (project_id, file_id, target_entity_type, target_entity_id, evidence_type) are not allowed among rows where deleted_at IS NULL. | `00000000-0000-0000-0000-000000000001` |
-| 191 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | ID of the project to which the evidence link belongs | `00000000-0000-0000-0000-000000000001` |
-| 192 | File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | Y | - | N | Y | N | Y | ID of the linked evidence file | `00000000-0000-0000-0000-000000000001` |
-| 193 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT / FDS_SPEC / DDS_SPEC / VP_PLAN / QIA_MODULE_ITEM / VENDOR_AUDIT / DQ_ITEM / FRA_ITEM / IQ_ITEM / OQ_ITEM / PQ_ITEM / IQ_EXECUTION / OQ_EXECUTION / PQ_EXECUTION / IQ_STEP_EXECUTION / OQ_STEP_EXECUTION / PQ_STEP_EXECUTION / VSR_ASSESSMENT / DEVIATION / DELIVERABLE_REVISION | `IQ_STEP_EXECUTION` |
-| 194 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK value of the table corresponding to target_entity_type. No physical FK is set because this is a polymorphic reference | `00000000-0000-0000-0000-000000000001` |
-| 195 | Evidence Type | `evidence_type` | `varchar(50)` | N | N | - | Y | `'TEST_RESULT'` | N | Y | N | Y | TEST_RESULT, SCREENSHOT, LOG, REPORT, APPROVAL_DOCUMENT | `TEST_RESULT` |
-| 196 | Evidence Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Content of the evidence file and purpose of the link | `Screen capture of IQ execution results` |
-| 197 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Evidence link creation time (UTC) | `2026-09-01T10:00:00Z` |
-| 198 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who created the evidence link | `00000000-0000-0000-0000-000000000001` |
-| 199 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Evidence link last update time (UTC) | `2026-09-01T10:00:00Z` |
-| 200 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last updated the evidence link | `00000000-0000-0000-0000-000000000001` |
-| 201 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the evidence link | `2026-09-02T10:00:00Z` |
+| 203 | Evidence Link ID | `evidence_link_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of a link between a document/test item and an evidence file. Duplicates of (project_id, file_id, target_entity_type, target_entity_id, evidence_type) are not allowed among rows where deleted_at IS NULL. | `00000000-0000-0000-0000-000000000001` |
+| 204 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | ID of the project to which the evidence link belongs | `00000000-0000-0000-0000-000000000001` |
+| 205 | File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | Y | - | N | Y | N | Y | ID of the linked evidence file | `00000000-0000-0000-0000-000000000001` |
+| 206 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT / FDS_SPEC / DDS_SPEC / VP_PLAN / QIA_MODULE_ITEM / VENDOR_AUDIT / DQ_ITEM / FRA_ITEM / IQ_ITEM / OQ_ITEM / PQ_ITEM / IQ_EXECUTION / OQ_EXECUTION / PQ_EXECUTION / IQ_STEP_EXECUTION / OQ_STEP_EXECUTION / PQ_STEP_EXECUTION / VSR_ASSESSMENT / DEVIATION / DELIVERABLE_REVISION | `IQ_STEP_EXECUTION` |
+| 207 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK value of the table corresponding to target_entity_type. No physical FK is set because this is a polymorphic reference | `00000000-0000-0000-0000-000000000001` |
+| 208 | Evidence Type | `evidence_type` | `varchar(50)` | N | N | - | Y | `'TEST_RESULT'` | N | Y | N | Y | TEST_RESULT, SCREENSHOT, LOG, REPORT, APPROVAL_DOCUMENT | `TEST_RESULT` |
+| 209 | Evidence Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Content of the evidence file and purpose of the link | `Screen capture of IQ execution results` |
+| 210 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Evidence link creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 211 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who created the evidence link | `00000000-0000-0000-0000-000000000001` |
+| 212 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Evidence link last update time (UTC) | `2026-09-01T10:00:00Z` |
+| 213 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last updated the evidence link | `00000000-0000-0000-0000-000000000001` |
+| 214 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the evidence link | `2026-09-02T10:00:00Z` |
 
 #### Constraints
 
@@ -1034,7 +1100,7 @@ When IQ/OQ/PQ step evidence is newly uploaded, it is first requested via file_li
 ---
 
 <a id="table-file_link_request"></a>
-### 16. File Link Request (`file_link_request`)
+### 17. File Link Request (`file_link_request`)
 
 | Item | Definition |
 |---|---|
@@ -1051,24 +1117,24 @@ When IQ/OQ/PQ step evidence is newly uploaded, it is first requested via file_li
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 202 | Link Request ID | `link_request_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the file link request | `00000000-0000-0000-0000-000000000001` |
-| 203 | Upload ID | `upload_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | file_scan_job.upload_id. Because scan_job_id changes on rescan, the request is made per upload rather than per scan attempt. It is not a table key, so no physical FK is defined | `00000000-0000-0000-0000-000000000001` |
-| 204 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Project to which the link target belongs | `00000000-0000-0000-0000-000000000001` |
-| 205 | Link Kind | `link_kind` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | EVIDENCE=create an evidence_link row, PRIMARY_FILE=fill in the file_id of the target row | `EVIDENCE` |
-| 206 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | EVIDENCE: IQ_STEP_EXECUTION / OQ_STEP_EXECUTION / PQ_STEP_EXECUTION. PRIMARY_FILE: FDS_SPEC / DDS_SPEC / VENDOR_AUDIT | `IQ_STEP_EXECUTION` |
-| 207 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK of the target row. No physical FK because this is a polymorphic reference (same approach as evidence_link) | `00000000-0000-0000-0000-000000000001` |
-| 208 | Evidence Type | `evidence_type` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Required for EVIDENCE; same value as evidence_link.evidence_type. NULL for PRIMARY_FILE | `TEST_RESULT` |
-| 209 | Evidence Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Used only for EVIDENCE and moved to evidence_link.description when linked. NULL for PRIMARY_FILE | `Screen capture of IQ step 3 results` |
-| 210 | Request Status | `request_status` | `varchar(20)` | N | N | - | Y | `'WAITING'` | N | Y | N | Y | WAITING=awaiting scan, LINKED=link completed, BLOCKED=blocked by the scan (no file_asset), FAILED=the file passed but linking failed (target locked, etc.), CANCELLED=cancelled by the user or target draft deleted | `WAITING` |
-| 211 | Linked File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | File that passed the scan and was linked. Required for LINKED | `00000000-0000-0000-0000-000000000001` |
-| 212 | Created Evidence Link ID | `evidence_link_id` | `uuid` | N | Y | `evidence_link.evidence_link_id` | N | - | N | Y | N | Y | evidence_link row created by linking as EVIDENCE. Required when EVIDENCE and LINKED | `00000000-0000-0000-0000-000000000001` |
-| 213 | Linked At | `linked_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the link to the business target was completed. Required for LINKED | `2026-09-01T10:05:00Z` |
-| 214 | Failure Reason Code | `failure_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Block/failure reason code. BLOCKED (the file did not pass the scan and must be uploaded again): THREATS_FOUND, ENCRYPTED, FORMAT_MISMATCH, UNSUPPORTED_EXTENSION, SOURCE_MISMATCH, ENGINE_UNSCANNABLE, SIZE_LIMIT_EXCEEDED, SCAN_FAILED, SCAN_CANCELLED. FAILED (the file is valid but could not be linked to the business target): TARGET_NOT_FOUND, TARGET_LOCKED, FILE_NOT_FOUND, FILE_PROJECT_MISMATCH, FILE_CATEGORY_MISMATCH. Required for BLOCKED/FAILED and used as the reason shown to the user on screen (ck_file_link_failure_code) | - |
-| 215 | Failure Reason | `failure_message` | `text` | N | N | - | N | - | N | N | N | Y | Description of the block/failure reason | - |
-| 216 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Request creation time (UTC) | `2026-09-01T10:00:00Z` |
-| 217 | Requester ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who made the request. Must be the same as the user who uploaded the file | `00000000-0000-0000-0000-000000000001` |
-| 218 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Request last update time (UTC) | `2026-09-01T10:05:00Z` |
-| 219 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Party that last changed the request status. The user_id of the SYSTEM account if changed by the Worker | `00000000-0000-0000-0000-000000000001` |
+| 215 | Link Request ID | `link_request_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the file link request | `00000000-0000-0000-0000-000000000001` |
+| 216 | Upload ID | `upload_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | file_scan_job.upload_id. Because scan_job_id changes on rescan, the request is made per upload rather than per scan attempt. It is not a table key, so no physical FK is defined | `00000000-0000-0000-0000-000000000001` |
+| 217 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Project to which the link target belongs | `00000000-0000-0000-0000-000000000001` |
+| 218 | Link Kind | `link_kind` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | EVIDENCE=create an evidence_link row, PRIMARY_FILE=fill in the file_id of the target row | `EVIDENCE` |
+| 219 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | EVIDENCE: IQ_STEP_EXECUTION / OQ_STEP_EXECUTION / PQ_STEP_EXECUTION. PRIMARY_FILE: FDS_SPEC / DDS_SPEC / VENDOR_AUDIT | `IQ_STEP_EXECUTION` |
+| 220 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK of the target row. No physical FK because this is a polymorphic reference (same approach as evidence_link) | `00000000-0000-0000-0000-000000000001` |
+| 221 | Evidence Type | `evidence_type` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Required for EVIDENCE; same value as evidence_link.evidence_type. NULL for PRIMARY_FILE | `TEST_RESULT` |
+| 222 | Evidence Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Used only for EVIDENCE and moved to evidence_link.description when linked. NULL for PRIMARY_FILE | `Screen capture of IQ step 3 results` |
+| 223 | Request Status | `request_status` | `varchar(20)` | N | N | - | Y | `'WAITING'` | N | Y | N | Y | WAITING=awaiting scan, LINKED=link completed, BLOCKED=blocked by the scan (no file_asset), FAILED=the file passed but linking failed (target locked, etc.), CANCELLED=cancelled by the user or target draft deleted | `WAITING` |
+| 224 | Linked File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | File that passed the scan and was linked. Required for LINKED | `00000000-0000-0000-0000-000000000001` |
+| 225 | Created Evidence Link ID | `evidence_link_id` | `uuid` | N | Y | `evidence_link.evidence_link_id` | N | - | N | Y | N | Y | evidence_link row created by linking as EVIDENCE. Required when EVIDENCE and LINKED | `00000000-0000-0000-0000-000000000001` |
+| 226 | Linked At | `linked_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the link to the business target was completed. Required for LINKED | `2026-09-01T10:05:00Z` |
+| 227 | Failure Reason Code | `failure_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Block/failure reason code. BLOCKED (the file did not pass the scan and must be uploaded again): THREATS_FOUND, ENCRYPTED, FORMAT_MISMATCH, UNSUPPORTED_EXTENSION, SOURCE_MISMATCH, ENGINE_UNSCANNABLE, SIZE_LIMIT_EXCEEDED, SCAN_FAILED, SCAN_CANCELLED. FAILED (the file is valid but could not be linked to the business target): TARGET_NOT_FOUND, TARGET_LOCKED, FILE_NOT_FOUND, FILE_PROJECT_MISMATCH, FILE_CATEGORY_MISMATCH. Required for BLOCKED/FAILED and used as the reason shown to the user on screen (ck_file_link_failure_code) | - |
+| 228 | Failure Reason | `failure_message` | `text` | N | N | - | N | - | N | N | N | Y | Description of the block/failure reason | - |
+| 229 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Request creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 230 | Requester ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who made the request. Must be the same as the user who uploaded the file | `00000000-0000-0000-0000-000000000001` |
+| 231 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Request last update time (UTC) | `2026-09-01T10:05:00Z` |
+| 232 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Party that last changed the request status. The user_id of the SYSTEM account if changed by the Worker | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -1102,7 +1168,7 @@ When carrying existing evidence over to a new revision during a revision, or att
 ## System
 
 <a id="table-system_asset"></a>
-### 17. System/Equipment Identification (`system_asset`)
+### 18. System/Equipment Identification (`system_asset`)
 
 | Item | Definition |
 |---|---|
@@ -1119,30 +1185,37 @@ When carrying existing evidence over to a new revision during a revision, or att
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 220 | System ID | `system_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique system identifier | `00000000-0000-0000-0000-000000000001` |
-| 221 | Organization ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | Customer company or operating organization to which the system/equipment belongs | `00000000-0000-0000-0000-000000000001` |
-| 222 | Management Number | `management_number` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Asset/equipment management number | `EQ-MES-2024-001` |
-| 223 | System Name | `system_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | System/equipment name | `Sample System` |
-| 224 | Major Category | `major_category` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Computerized system / equipment / facility & utility | `Computerized system` |
-| 225 | Middle Category | `middle_category` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Middle category belonging to the selected major category | `Quality system` |
-| 226 | Target | `target_type` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Target belonging to the selected major and middle categories | `LIMS` |
-| 227 | Responsible Department | `department_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Department responsible for management/operation | `Production Engineering Team` |
-| 228 | Installation Location | `location` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Physical/logical installation location | `Server room, Building A, 3F` |
-| 229 | Vendor | `vendor` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Equipment/system vendor name | `Sample Vendor` |
-| 230 | Model Name | `model_name` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Equipment/system model name | `FillMaster 500` |
-| 231 | System Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the system's purpose and operating scope | `Production process data collection and control` |
-| 232 | CS Included | `is_cs_included` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether it is included as a Computerized System | `TRUE` |
-| 233 | Software Version | `software_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Software version of the computerized system. Distinct from the inventory revision number. | `4.8.2` |
-| 234 | Inventory Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Integer version incremented by the revision function. Separate from the software version | `2` |
-| 235 | GAMP Category | `gamp_category` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Screen selection value CATEGORY_1/CATEGORY_3/CATEGORY_4/CATEGORY_5 (GAMP 5 software categories: 1=infrastructure software, 3=non-configured products, 4=configured products, 5=custom applications). Category 2 was retired in GAMP 5 and is not used. NULL if not selected | `CATEGORY_4` |
-| 236 | GxP Applicability | `gxp_applicability` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | APPLICABLE=applicable, NOT_APPLICABLE=not applicable. NULL if not selected | `APPLICABLE` |
-| 237 | Part 11 Applicability | `part11_applicability` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | APPLICABLE=applicable, NOT_APPLICABLE=not applicable. NULL if not selected | `APPLICABLE` |
-| 238 | Approval Status | `approval_status` | `varchar(30)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT=in progress, REVIEW=under review, APPROVAL=under approval, APPROVED=approved, REAPPROVAL_REQUIRED=re-approval required, REJECTED=rejected, CANCELLED=cancelled. Modifications after REJECTED or CANCELLED are handled as a new revision with an incremented revision_number | `DRAFT` |
-| 239 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-25T00:00:00Z` |
-| 240 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-25T00:00:00Z` |
-| 241 | In-use/Disposal Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE=in use, DISPOSED=disposed. Separate from the approval status | `ACTIVE` |
-| 242 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal electronic signature was completed | `2026-09-01T00:00:00Z` |
-| 243 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason entered on the disposal screen | - |
+| 233 | System ID | `system_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique system identifier | `00000000-0000-0000-0000-000000000001` |
+| 234 | Organization ID | `organization_id` | `uuid` | N | Y | `organization.organization_id` | Y | - | N | Y | N | Y | Customer company or operating organization to which the system/equipment belongs | `00000000-0000-0000-0000-000000000001` |
+| 235 | Management Number | `management_number` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Asset/equipment management number | `EQ-MES-2024-001` |
+| 236 | System Name | `system_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | System/equipment name | `Sample System` |
+| 237 | Major Category | `major_category` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Computerized system / equipment / facility & utility | `Computerized system` |
+| 238 | Middle Category | `middle_category` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Middle category belonging to the selected major category | `Quality system` |
+| 239 | Target | `target_type` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Target belonging to the selected major and middle categories | `LIMS` |
+| 240 | Formal Name | `formal_name` | `varchar(300)` | N | N | - | Y | - | N | N | N | Y | Full name of the target. Entered after choosing the target in 'Target · Formal Name' on the screen | `Laboratory Information Management System` |
+| 241 | Responsible Department | `department_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Department responsible for management/operation | `Production Engineering Team` |
+| 242 | Installation Location | `location` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Physical/logical installation location | `Server room, Building A, 3F` |
+| 243 | Vendor | `vendor` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Equipment/system vendor name | `Sample Vendor` |
+| 244 | Model Name | `model_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Equipment/system model name | `FillMaster 500` |
+| 245 | System Description | `description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the system's purpose and operating scope | `Production process data collection and control` |
+| 246 | Introduction Type | `introduction_type` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | How the system is introduced. Stored as the value selected on the screen (e.g. commercial package); the list of selectable values is pending decision | - |
+| 247 | Build Structure | `build_structure` | `text` | N | N | - | N | - | N | N | N | Y | How the system is built, e.g. when the solution provider and the implementer differ | - |
+| 248 | Existing System Status | `existing_system_status` | `text` | N | N | - | N | - | N | N | N | Y | Whether the existing validation is complete, and the configuration added or changed this time | - |
+| 249 | Components | `components` | `text` | N | N | - | N | - | N | N | N | Y | Servers, PCs, equipment and software, with their specifications and identification numbers | - |
+| 250 | Functional Modules | `functional_modules` | `text` | N | N | - | N | - | N | N | N | Y | Business functions the system provides (e.g. sample receipt, test results, raw data management) | - |
+| 251 | Interfaced Systems | `interfaces` | `text` | N | N | - | N | - | N | N | N | Y | Connected systems and equipment and the confirmed data exchanged with them (e.g. receiving ERP material masters, sending test results) | - |
+| 252 | CS Included | `is_cs_included` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether it is included as a Computerized System | `TRUE` |
+| 253 | Software Version | `software_version` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Software version of the computerized system. Distinct from the inventory revision number. | `4.8.2` |
+| 254 | Inventory Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Integer version incremented by the revision function. Separate from the software version | `2` |
+| 255 | GAMP Category | `gamp_category` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Screen selection value CATEGORY_1/CATEGORY_3/CATEGORY_4/CATEGORY_5 (GAMP 5 software categories: 1=infrastructure software, 3=non-configured products, 4=configured products, 5=custom applications). Category 2 was retired in GAMP 5 and is not used. NULL if not selected | `CATEGORY_4` |
+| 256 | GxP Applicability | `gxp_applicability` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | APPLICABLE=applicable, NOT_APPLICABLE=not applicable. NULL if not selected | `APPLICABLE` |
+| 257 | Part 11 Applicability | `part11_applicability` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | APPLICABLE=applicable, NOT_APPLICABLE=not applicable. NULL if not selected | `APPLICABLE` |
+| 258 | Approval Status | `approval_status` | `varchar(30)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT=in progress, REVIEW=under review, APPROVAL=under approval, APPROVED=approved, REAPPROVAL_REQUIRED=re-approval required, REJECTED=rejected, CANCELLED=cancelled. Modifications after REJECTED or CANCELLED are handled as a new revision with an incremented revision_number | `DRAFT` |
+| 259 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-25T00:00:00Z` |
+| 260 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-25T00:00:00Z` |
+| 261 | In-use/Disposal Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE=in use, DISPOSED=disposed. Separate from the approval status | `ACTIVE` |
+| 262 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal electronic signature was completed | `2026-09-01T00:00:00Z` |
+| 263 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason entered on the disposal screen | - |
 
 #### Constraints
 
@@ -1173,7 +1246,7 @@ Modifications to business fields that have been approved, rejected or cancelled 
 ---
 
 <a id="table-system_asset_revision"></a>
-### 18. System Inventory Revision History (`system_asset_revision`)
+### 19. System Inventory Revision History (`system_asset_revision`)
 
 | Item | Definition |
 |---|---|
@@ -1190,18 +1263,18 @@ Modifications to business fields that have been approved, rejected or cancelled 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 244 | Inventory History ID | `system_revision_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 245 | System ID | `system_id` | `uuid` | N | Y | `system_asset.system_id` | Y | - | N | Y | N | Y | References system_asset.system_id | `00000000-0000-0000-0000-000000000001` |
-| 246 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Inventory revision number at the time of processing | `2` |
-| 247 | Action Type | `action_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | REGISTER=register, SAVE=save, REVISE=revise, APPROVE=approve, DISPOSE=dispose | `REVISE` |
-| 248 | Change / Action Reason | `change_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason, required for revision or disposal | - |
-| 249 | Approval Status After Processing | `approval_status` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | Same codes as system_asset.approval_status | `REVIEW` |
-| 250 | Processed By ID | `processed_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 251 | Processed At | `processed_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Date/time shown on the history screen | `2026-09-01T00:00:00Z` |
-| 252 | Processing Electronic Signature ID | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature linked to the approval or disposal. Multiple signatures are retrieved from the signature history of the same target | `00000000-0000-0000-0000-000000000001` |
-| 253 | Original Content Format Version | `snapshot_schema_version` | `varchar(50)` | N | N | - | Y | `'ASSET-1'` | N | N | N | Y | Version of the field composition and data types of asset_snapshot. Past format definitions are preserved. | `ASSET-1` |
-| 254 | Inventory Original Content at Processing | `asset_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Stores all column values of system_asset after processing, including field names and NULLs. For an approval event, it must match the business original content that received final approval. | - |
-| 255 | Original Content Hash | `snapshot_hash` | `varchar(64)` | N | N | - | Y | - | N | N | N | Y | Lowercase 64-character SHA-256 of {schema_version:snapshot_schema_version,body:asset_snapshot} serialized with the same canonicalization rules as the electronic signature. Distinct from the electronic signature's full signature-bundle hash. | - |
+| 264 | Inventory History ID | `system_revision_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 265 | System ID | `system_id` | `uuid` | N | Y | `system_asset.system_id` | Y | - | N | Y | N | Y | References system_asset.system_id | `00000000-0000-0000-0000-000000000001` |
+| 266 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Inventory revision number at the time of processing | `2` |
+| 267 | Action Type | `action_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | REGISTER=register, SAVE=save, REVISE=revise, APPROVE=approve, DISPOSE=dispose | `REVISE` |
+| 268 | Change / Action Reason | `change_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason, required for revision or disposal | - |
+| 269 | Approval Status After Processing | `approval_status` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | Same codes as system_asset.approval_status | `REVIEW` |
+| 270 | Processed By ID | `processed_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 271 | Processed At | `processed_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Date/time shown on the history screen | `2026-09-01T00:00:00Z` |
+| 272 | Processing Electronic Signature ID | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature linked to the approval or disposal. Multiple signatures are retrieved from the signature history of the same target | `00000000-0000-0000-0000-000000000001` |
+| 273 | Original Content Format Version | `snapshot_schema_version` | `varchar(50)` | N | N | - | Y | `'ASSET-2'` | N | N | N | Y | Version of the field composition and data types of asset_snapshot. Past format definitions are preserved. ASSET-2 is the format that adds the formal name, introduction type, build structure, existing system status, components, functional modules and interfaced systems; rows stored earlier keep ASSET-1. | `ASSET-2` |
+| 274 | Inventory Original Content at Processing | `asset_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Stores all column values of system_asset after processing, including field names and NULLs. For an approval event, it must match the business original content that received final approval. | - |
+| 275 | Original Content Hash | `snapshot_hash` | `varchar(64)` | N | N | - | Y | - | N | N | N | Y | Lowercase 64-character SHA-256 of {schema_version:snapshot_schema_version,body:asset_snapshot} serialized with the same canonicalization rules as the electronic signature. Distinct from the electronic signature's full signature-bundle hash. | - |
 
 #### Constraints
 
@@ -1229,7 +1302,7 @@ The APPROVE event is a record of final approval completion, not a per-review-ste
 ## Library
 
 <a id="table-library_item"></a>
-### 19. Library Item Master (`library_item`)
+### 20. Library Item Master (`library_item`)
 
 | Item | Definition |
 |---|---|
@@ -1246,26 +1319,26 @@ The APPROVE event is a record of final approval completion, not a per-review-ste
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 256 | Library ID | `library_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the library item | `00000000-0000-0000-0000-000000000001` |
-| 257 | Module Type | `module_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | Distinguishes the 5 library tabs: URS/FRA/IQ/OQ/PQ | `URS` |
-| 258 | Code | `code` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Item code within the library type. A composite UNIQUE on (module_type, code) applies | `URS-AT-L01` |
-| 259 | Category / Major Category | `category` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Stores the major category for URS and the category for FRA/IQ/OQ/PQ. | `Audit trail` |
-| 260 | Item Name / Function Name | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Function name for URS, risk item name for FRA, and test item name for IQ/OQ/PQ | `Automatic generation of audit trail for data changes` |
-| 261 | Requirement / Procedure | `requirement_text` | `text` | N | N | - | N | - | N | N | N | Y | URS requirement body. Required for the URS type; NULL allowed for other types | `On every data creation, modification or deletion...` |
-| 262 | Expected Result | `expected_result` | `text` | N | N | - | N | - | N | N | N | Y | IQ/OQ/PQ expected result. Required in test libraries | - |
-| 263 | Acceptance Criteria / Scope of Application | `acceptance_criteria` | `text` | N | N | - | N | - | N | N | N | Y | Scope of application for URS, acceptance criteria for IQ/OQ/PQ. NULL allowed for FRA | `Audit Trail automatically generated on data change...` |
-| 264 | Regulatory Basis | `regulation` | `text` | N | N | - | N | - | N | N | N | Y | Regulatory basis displayed and manually entered on the screen. Structured clauses are linked in library_item_regulation, and the same basis is not edited in both places. | `21 CFR 11.10(e)` |
-| 265 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether active (TRUE/FALSE) | `TRUE` |
-| 266 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-25T00:00:00Z` |
-| 267 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-25T00:00:00Z` |
-| 268 | Provision Type | `provision_type` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | URS only. BUILTIN=built-in, CUSTOM=user-defined | `CUSTOM` |
-| 269 | Middle Category | `middle_category` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | URS-only middle category | - |
-| 270 | Target | `target_type` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | URS-only applicable target | - |
-| 271 | Test Content | `test_content` | `text` | N | N | - | N | - | N | N | N | Y | IQ/OQ/PQ-only test procedure / content | - |
-| 272 | Risk Scenario | `risk_scenario` | `text` | N | N | - | N | - | N | N | N | Y | FRA-only risk scenario | - |
-| 273 | Severity (SEV) | `severity` | `smallint` | N | N | - | N | - | N | N | N | Y | FRA only. 1–5 | - |
-| 274 | Occurrence (OCC) | `occurrence` | `smallint` | N | N | - | N | - | N | N | N | Y | FRA only. 1–5 | - |
-| 275 | Detectability (DET) | `detectability` | `char(1)` | N | N | - | N | - | N | N | N | Y | FRA only. H/M/L | - |
+| 276 | Library ID | `library_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the library item | `00000000-0000-0000-0000-000000000001` |
+| 277 | Module Type | `module_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | Distinguishes the 5 library tabs: URS/FRA/IQ/OQ/PQ | `URS` |
+| 278 | Code | `code` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Item code within the library type. A composite UNIQUE on (module_type, code) applies | `URS-AT-L01` |
+| 279 | Category / Major Category | `category` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Stores the major category for URS and the category for FRA/IQ/OQ/PQ. | `Audit trail` |
+| 280 | Item Name / Function Name | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Function name for URS, risk item name for FRA, and test item name for IQ/OQ/PQ | `Automatic generation of audit trail for data changes` |
+| 281 | Requirement / Procedure | `requirement_text` | `text` | N | N | - | N | - | N | N | N | Y | URS requirement body. Required for the URS type; NULL allowed for other types | `On every data creation, modification or deletion...` |
+| 282 | Expected Result | `expected_result` | `text` | N | N | - | N | - | N | N | N | Y | IQ/OQ/PQ expected result. Required in test libraries | - |
+| 283 | Acceptance Criteria / Scope of Application | `acceptance_criteria` | `text` | N | N | - | N | - | N | N | N | Y | Scope of application for URS, acceptance criteria for IQ/OQ/PQ. NULL allowed for FRA | `Audit Trail automatically generated on data change...` |
+| 284 | Regulatory Basis | `regulation` | `text` | N | N | - | N | - | N | N | N | Y | Regulatory basis displayed and manually entered on the screen. Structured clauses are linked in library_item_regulation, and the same basis is not edited in both places. | `21 CFR 11.10(e)` |
+| 285 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether active (TRUE/FALSE) | `TRUE` |
+| 286 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-25T00:00:00Z` |
+| 287 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-25T00:00:00Z` |
+| 288 | Provision Type | `provision_type` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | URS only. BUILTIN=built-in, CUSTOM=user-defined | `CUSTOM` |
+| 289 | Middle Category | `middle_category` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | URS-only middle category | - |
+| 290 | Target | `target_type` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | URS-only applicable target | - |
+| 291 | Test Content | `test_content` | `text` | N | N | - | N | - | N | N | N | Y | IQ/OQ/PQ-only test procedure / content | - |
+| 292 | Risk Scenario | `risk_scenario` | `text` | N | N | - | N | - | N | N | N | Y | FRA-only risk scenario | - |
+| 293 | Severity (SEV) | `severity` | `smallint` | N | N | - | N | - | N | N | N | Y | FRA only. 1–5 | - |
+| 294 | Occurrence (OCC) | `occurrence` | `smallint` | N | N | - | N | - | N | N | N | Y | FRA only. 1–5 | - |
+| 295 | Detectability (DET) | `detectability` | `char(1)` | N | N | - | N | - | N | N | N | Y | FRA only. H/M/L | - |
 
 #### Constraints
 
@@ -1290,7 +1363,7 @@ When a template is applied to a requirement, risk or test, its body and input va
 ## Validation
 
 <a id="table-validation_project"></a>
-### 20. Validation Project (`validation_project`)
+### 21. Validation Project (`validation_project`)
 
 | Item | Definition |
 |---|---|
@@ -1307,28 +1380,30 @@ When a template is applied to a requirement, risk or test, its body and input va
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 276 | Project ID | `project_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique project identifier | `00000000-0000-0000-0000-000000000001` |
-| 277 | Project Code | `project_code` | `varchar(100)` | N | N | - | Y | - | Y | Y | N | Y | Project identification code | `VP-SYS-008-20260422` |
-| 278 | Project Name | `project_name` | `varchar(200)` | N | N | - | Y | - | N | Y | N | Y | Project Name | `Test Equipment 3 CSV Project` |
-| 279 | System ID | `system_id` | `uuid` | N | Y | `system_asset.system_id` | Y | - | N | Y | N | Y | References system_asset.system_id | `00000000-0000-0000-0000-000000000001` |
-| 280 | Status | `status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | IN_PROGRESS=in progress, CLOSED_NORMAL=normal closure, CLOSED_FORCED=forced closure | `IN_PROGRESS` |
-| 281 | Validation Type | `validation_type` | `varchar(50)` | N | N | - | Y | `'NEW'` | N | N | N | Y | NEW=new, CHANGE=change, REVALIDATION=revalidation | `NEW` |
-| 282 | Validation Level | `validation_level` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | LEVEL_1/LEVEL_2/LEVEL_3/CUSTOM. CUSTOM=user-defined, and the activities are stored in project_activity | `LEVEL_2` |
-| 283 | Remarks | `remarks` | `text` | N | N | - | N | - | N | N | N | Y | Additional notes | - |
-| 284 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-25T00:00:00Z` |
-| 285 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who created the project | `00000000-0000-0000-0000-000000000001` |
-| 286 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 287 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who updated the project | `00000000-0000-0000-0000-000000000001` |
-| 288 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
-| 289 | Closure Type | `closure_type` | `varchar(20)` | N | N | - | N | - | N | Y | N | Y | Summary of the closure type of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `FORCED` |
-| 290 | Forced Closure Reason | `closure_reason` | `text` | N | N | - | N | - | N | N | N | Y | Summary of the forced closure reason of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `Validation discontinued due to a change in business priorities` |
-| 291 | Closure Requester ID | `closure_requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Summary of the closure requester ID of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `00000000-0000-0000-0000-000000000001` |
-| 292 | Closure Requested At | `closure_requested_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Summary of the closure request time of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `2026-09-14T09:00:00Z` |
-| 293 | Closure Completed At | `closed_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Summary of the closure completion time of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `2026-09-14T09:05:00Z` |
-| 294 | Current Closure Request ID | `current_closure_request_id` | `uuid` | N | Y | `project_closure_request.closure_request_id` | N | - | N | Y | N | Y | Closure request whose closure progress status and reason are displayed | `00000000-0000-0000-0000-000000000001` |
-| 295 | Current Validation Baseline | `current_system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | The baseline of the same project that currently has is_current=TRUE. Required before the first business submission or test execution | - |
-| 296 | Applied Dependency Condition Version | `dependency_set_version` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Version of the dependency rule set adopted at project creation (activity_dependency.dependency_set_version) | `DEPENDENCY-1` |
-| 297 | Applied Dependency Condition Original Content | `dependency_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Preserves all conditions active at creation time and their judgment semantics. {schema_version,version,definitions,conditions:[{activity_dependency_id,successor_activity_id,predecessor_activity_id,dependency_type,required_status,condition_type,condition_value,evaluation_order}]} | - |
+| 296 | Project ID | `project_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique project identifier | `00000000-0000-0000-0000-000000000001` |
+| 297 | Project Code | `project_code` | `varchar(100)` | N | N | - | Y | - | Y | Y | N | Y | Project identification code | `VP-SYS-008-20260422` |
+| 298 | Project Name | `project_name` | `varchar(200)` | N | N | - | Y | - | N | Y | N | Y | Project Name | `Test Equipment 3 CSV Project` |
+| 299 | System ID | `system_id` | `uuid` | N | Y | `system_asset.system_id` | Y | - | N | Y | N | Y | References system_asset.system_id | `00000000-0000-0000-0000-000000000001` |
+| 300 | Status | `status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | IN_PROGRESS=in progress, CLOSED_NORMAL=normal closure, CLOSED_FORCED=forced closure | `IN_PROGRESS` |
+| 301 | Validation Type | `validation_type` | `varchar(50)` | N | N | - | Y | `'NEW'` | N | N | N | Y | NEW=new, CHANGE=change, REVALIDATION=revalidation | `NEW` |
+| 302 | Validation Level | `validation_level` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | LEVEL_1/LEVEL_2/LEVEL_3/CUSTOM. CUSTOM=user-defined, and the activities are stored in project_activity | `LEVEL_2` |
+| 303 | Remarks | `remarks` | `text` | N | N | - | N | - | N | N | N | Y | Additional notes | - |
+| 304 | Background | `background` | `text` | N | N | - | Y | - | N | N | N | Y | Background of the project. A required input on the creation screen, used at the beginning of deliverables such as the VP | `Initiated to automate backups that had been run manually` |
+| 305 | Purpose | `purpose` | `text` | N | N | - | Y | - | N | N | N | Y | Purpose of the project. A required input on the creation screen, used at the beginning of deliverables such as the VP | `Ensure the efficiency and integrity of test data management` |
+| 306 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-25T00:00:00Z` |
+| 307 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who created the project | `00000000-0000-0000-0000-000000000001` |
+| 308 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 309 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who updated the project | `00000000-0000-0000-0000-000000000001` |
+| 310 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
+| 311 | Closure Type | `closure_type` | `varchar(20)` | N | N | - | N | - | N | Y | N | Y | Summary of the closure type of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `FORCED` |
+| 312 | Forced Closure Reason | `closure_reason` | `text` | N | N | - | N | - | N | N | N | Y | Summary of the forced closure reason of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `Validation discontinued due to a change in business priorities` |
+| 313 | Closure Requester ID | `closure_requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Summary of the closure requester ID of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `00000000-0000-0000-0000-000000000001` |
+| 314 | Closure Requested At | `closure_requested_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Summary of the closure request time of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `2026-09-14T09:00:00Z` |
+| 315 | Closure Completed At | `closed_at` | `timestamptz` | N | N | - | N | - | N | Y | N | Y | Summary of the closure completion time of the current/final project_closure_request. Synchronized from the source request and not edited independently. | `2026-09-14T09:05:00Z` |
+| 316 | Current Closure Request ID | `current_closure_request_id` | `uuid` | N | Y | `project_closure_request.closure_request_id` | N | - | N | Y | N | Y | Closure request whose closure progress status and reason are displayed | `00000000-0000-0000-0000-000000000001` |
+| 317 | Current Validation Baseline | `current_system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | The baseline of the same project that currently has is_current=TRUE. Required before the first business submission or test execution | - |
+| 318 | Applied Dependency Condition Version | `dependency_set_version` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Version of the dependency rule set adopted at project creation (activity_dependency.dependency_set_version) | `DEPENDENCY-1` |
+| 319 | Applied Dependency Condition Original Content | `dependency_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Preserves all conditions active at creation time and their judgment semantics. {schema_version,version,definitions,conditions:[{activity_dependency_id,successor_activity_id,predecessor_activity_id,dependency_type,required_status,condition_type,condition_value,evaluation_order}]} | - |
 
 #### Constraints
 
@@ -1342,7 +1417,7 @@ When a template is applied to a requirement, risk or test, its body and input va
 
 #### Business Rules
 
-The project name, target system, validation type, level and memo shown on the screen are managed in this table. Progress is calculated from the completion status of the selected activities, and RTM is excluded from the denominator.
+The project name, target system, validation type, level, memo, background and purpose shown on the screen are managed in this table; performing organizations are managed in project_party and the responsibility assignment per activity in project_activity_assignment. The background, purpose, performing organizations and responsibility assignment are copied into the body when deliverables such as the VP are written, and later changes to the project values do not change the body of deliverables already written or approved. Progress is calculated from the completion status of the selected activities, and RTM is excluded from the denominator.
 
 The project's validation-target GAMP, GxP and software version are retrieved from the approved original content referenced by current_system_baseline_id. The latest system information and the validation baseline are displayed separately.
 
@@ -1355,7 +1430,7 @@ At project creation, dependency_set_version and dependency_snapshot are fixed to
 ---
 
 <a id="table-project_system_baseline"></a>
-### 21. Project Validation Target Revision (`project_system_baseline`)
+### 22. Project Validation Target Revision (`project_system_baseline`)
 
 | Item | Definition |
 |---|---|
@@ -1372,14 +1447,14 @@ At project creation, dependency_set_version and dependency_snapshot are fixed to
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 298 | Validation Baseline ID | `baseline_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Identifier of a single validation baseline adopted by the project | - |
-| 299 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Project to which the validation baseline belongs | - |
-| 300 | Inventory Approval History ID | `system_revision_id` | `uuid` | N | Y | `system_asset_revision.system_revision_id` | Y | - | N | Y | N | Y | Immutable original-content event with action_type=APPROVE | - |
-| 301 | Baseline Number | `baseline_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Increments from 1 per project; a new row is created on each change. | `1` |
-| 302 | Adoption / Change Reason | `change_reason` | `text` | N | N | - | Y | - | N | N | N | Y | Reason for the initial target selection or for a change of approved revision. Cannot be blank | - |
-| 303 | Is Current | `is_current` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the current project baseline. Past rows are changed to FALSE, and the link to the original content is retained. | - |
-| 304 | Adopted At | `adopted_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Application time recorded by the server | - |
-| 305 | Adopted By | `adopted_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Processing user with permission to set the project target | - |
+| 320 | Validation Baseline ID | `baseline_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Identifier of a single validation baseline adopted by the project | - |
+| 321 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Project to which the validation baseline belongs | - |
+| 322 | Inventory Approval History ID | `system_revision_id` | `uuid` | N | Y | `system_asset_revision.system_revision_id` | Y | - | N | Y | N | Y | Immutable original-content event with action_type=APPROVE | - |
+| 323 | Baseline Number | `baseline_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Increments from 1 per project; a new row is created on each change. | `1` |
+| 324 | Adoption / Change Reason | `change_reason` | `text` | N | N | - | Y | - | N | N | N | Y | Reason for the initial target selection or for a change of approved revision. Cannot be blank | - |
+| 325 | Is Current | `is_current` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the current project baseline. Past rows are changed to FALSE, and the link to the original content is retained. | - |
+| 326 | Adopted At | `adopted_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Application time recorded by the server | - |
+| 327 | Adopted By | `adopted_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Processing user with permission to set the project target | - |
 
 #### Constraints
 
@@ -1402,7 +1477,7 @@ A change of the target revision updates the re-review and re-approval status of 
 ---
 
 <a id="table-project_member"></a>
-### 22. Project Member (`project_member`)
+### 23. Project Member (`project_member`)
 
 | Item | Definition |
 |---|---|
@@ -1419,18 +1494,18 @@ A change of the target revision updates the re-review and re-approval status of 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 306 | Project Member ID | `project_member_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the project member role mapping. Duplicate (project_id, user_id, role_id) values are not allowed among rows where deleted_at IS NULL and member_status is ACTIVE. | `00000000-0000-0000-0000-000000000001` |
-| 307 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | ID of the Validation project to which the member belongs | `00000000-0000-0000-0000-000000000001` |
-| 308 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user participating in the project | `00000000-0000-0000-0000-000000000001` |
-| 309 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | ID of the role the user performs within the project | `00000000-0000-0000-0000-000000000001` |
-| 310 | Membership Status | `member_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | Y | N | Y | Project participation status. ACTIVE, INACTIVE, WITHDRAWN | `ACTIVE` |
-| 311 | Joined At | `joined_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time project participation started | `2026-09-01T10:00:00Z` |
-| 312 | Left At | `left_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time project participation ended. NULL if currently participating | `2026-09-02T10:00:00Z` |
-| 313 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project member information creation time (UTC) | `2026-09-01T10:00:00Z` |
-| 314 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who registered the project member information | `00000000-0000-0000-0000-000000000001` |
-| 315 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project member information last update time (UTC) | `2026-09-01T10:00:00Z` |
-| 316 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last updated the project member information | `00000000-0000-0000-0000-000000000001` |
-| 317 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the project member information | `2026-09-02T10:00:00Z` |
+| 328 | Project Member ID | `project_member_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the project member role mapping. Duplicate (project_id, user_id, role_id) values are not allowed among rows where deleted_at IS NULL and member_status is ACTIVE. | `00000000-0000-0000-0000-000000000001` |
+| 329 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | ID of the Validation project to which the member belongs | `00000000-0000-0000-0000-000000000001` |
+| 330 | User ID | `user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user participating in the project | `00000000-0000-0000-0000-000000000001` |
+| 331 | Role ID | `role_id` | `uuid` | N | Y | `role.role_id` | Y | - | N | Y | N | Y | ID of the role the user performs within the project | `00000000-0000-0000-0000-000000000001` |
+| 332 | Membership Status | `member_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | Y | N | Y | Project participation status. ACTIVE, INACTIVE, WITHDRAWN | `ACTIVE` |
+| 333 | Joined At | `joined_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time project participation started | `2026-09-01T10:00:00Z` |
+| 334 | Left At | `left_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time project participation ended. NULL if currently participating | `2026-09-02T10:00:00Z` |
+| 335 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project member information creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 336 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who registered the project member information | `00000000-0000-0000-0000-000000000001` |
+| 337 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project member information last update time (UTC) | `2026-09-01T10:00:00Z` |
+| 338 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last updated the project member information | `00000000-0000-0000-0000-000000000001` |
+| 339 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the project member information | `2026-09-02T10:00:00Z` |
 
 #### Constraints
 
@@ -1448,7 +1523,7 @@ Manages participants and their roles per project. View/edit/disposal permissions
 ---
 
 <a id="table-validation_activity"></a>
-### 23. Validation Activity Master (`validation_activity`)
+### 24. Validation Activity Master (`validation_activity`)
 
 | Item | Definition |
 |---|---|
@@ -1465,16 +1540,16 @@ Manages participants and their roles per project. View/edit/disposal permissions
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 318 | Activity ID | `activity_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the validation activity | `00000000-0000-0000-0000-000000000001` |
-| 319 | Activity Code | `activity_code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | VP, VA, QIA, URS, FDS_GROUP, FRA, DQ, IQ, OQ, PQ, VSR. FDS_GROUP corresponds to the F&DS display name on the screen | `FDS_GROUP` |
-| 320 | Activity Name | `activity_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Activity name for screen display | `Functional and Detailed Design Specification` |
-| 321 | Activity Order | `display_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Default display order: VP→VA→QIA→URS→F&DS→FRA→DQ→IQ→OQ→PQ→VSR. Within F&DS, the DDS document follows the FDS document | `5` |
-| 322 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the activity master is in use | `TRUE` |
-| 323 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Activity master creation time (UTC) | `2026-09-01T10:00:00Z` |
-| 324 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the activity master | `00000000-0000-0000-0000-000000000001` |
-| 325 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Activity master last update time (UTC) | `2026-09-01T10:00:00Z` |
-| 326 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the activity master | `00000000-0000-0000-0000-000000000001` |
-| 327 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the activity master | `2026-09-02T10:00:00Z` |
+| 340 | Activity ID | `activity_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the validation activity | `00000000-0000-0000-0000-000000000001` |
+| 341 | Activity Code | `activity_code` | `varchar(50)` | N | N | - | Y | - | Y | Y | N | Y | VP, VA, QIA, URS, FDS_GROUP, FRA, DQ, IQ, OQ, PQ, VSR. FDS_GROUP corresponds to the F&DS display name on the screen | `FDS_GROUP` |
+| 342 | Activity Name | `activity_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Activity name for screen display | `Functional and Detailed Design Specification` |
+| 343 | Activity Order | `display_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Default display order: VP→VA→QIA→URS→F&DS→FRA→DQ→IQ→OQ→PQ→VSR. Within F&DS, the DDS document follows the FDS document | `5` |
+| 344 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the activity master is in use | `TRUE` |
+| 345 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Activity master creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 346 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the activity master | `00000000-0000-0000-0000-000000000001` |
+| 347 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Activity master last update time (UTC) | `2026-09-01T10:00:00Z` |
+| 348 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the activity master | `00000000-0000-0000-0000-000000000001` |
+| 349 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the activity master | `2026-09-02T10:00:00Z` |
 
 #### Constraints
 
@@ -1493,7 +1568,7 @@ FDS and DDS are document types belonging to the single F&DS activity. The two ty
 ---
 
 <a id="table-project_activity"></a>
-### 24. Project Activity (`project_activity`)
+### 25. Project Activity (`project_activity`)
 
 | Item | Definition |
 |---|---|
@@ -1510,21 +1585,21 @@ FDS and DDS are document types belonging to the single F&DS activity. The two ty
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 328 | Project Activity ID | `project_activity_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the project activity. Duplicate (project_id, activity_id) values are not allowed among rows where deleted_at IS NULL. This applies regardless of whether the activity is selected for execution. | `00000000-0000-0000-0000-000000000001` |
-| 329 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Validation project to which the activity belongs | `00000000-0000-0000-0000-000000000001` |
-| 330 | Activity ID | `activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | Y | - | N | Y | N | Y | Activity to be performed in the project | `00000000-0000-0000-0000-000000000001` |
-| 331 | Selected for Execution | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Whether this is an actual activity selected for execution in the project settings. No RTM selection row is created. | `TRUE` |
-| 332 | Required Activity | `is_required` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Whether the activity cannot be omitted in this project | `TRUE` |
-| 333 | Activity Status | `activity_status` | `varchar(20)` | N | N | - | Y | `'LOCKED'` | N | Y | N | Y | Activity status. LOCKED, READY, IN_PROGRESS, COMPLETED, APPROVED, SKIPPED. Aggregated based on the current Revision and re-evaluated when a deliverable is changed or revised. COMPLETED/APPROVED are not set by a simple screen input value | `READY` |
-| 334 | Activated At | `activated_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the activity became READY because its predecessor conditions were satisfied | `2026-09-01T10:00:00Z` |
-| 335 | Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the activity execution started | `2026-09-01T11:00:00Z` |
-| 336 | Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the activity execution was completed | `2026-09-02T15:00:00Z` |
-| 337 | Approved At | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the final approval of the activity was completed | `2026-09-02T17:00:00Z` |
-| 338 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project activity creation time (UTC) | `2026-09-01T10:00:00Z` |
-| 339 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the project activity | `00000000-0000-0000-0000-000000000001` |
-| 340 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project activity last update time (UTC) | `2026-09-01T10:00:00Z` |
-| 341 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the project activity | `00000000-0000-0000-0000-000000000001` |
-| 342 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the project activity | `2026-09-02T10:00:00Z` |
+| 350 | Project Activity ID | `project_activity_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the project activity. Duplicate (project_id, activity_id) values are not allowed among rows where deleted_at IS NULL. This applies regardless of whether the activity is selected for execution. | `00000000-0000-0000-0000-000000000001` |
+| 351 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Validation project to which the activity belongs | `00000000-0000-0000-0000-000000000001` |
+| 352 | Activity ID | `activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | Y | - | N | Y | N | Y | Activity to be performed in the project | `00000000-0000-0000-0000-000000000001` |
+| 353 | Selected for Execution | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Whether this is an actual activity selected for execution in the project settings. No RTM selection row is created. | `TRUE` |
+| 354 | Required Activity | `is_required` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Whether the activity cannot be omitted in this project | `TRUE` |
+| 355 | Activity Status | `activity_status` | `varchar(20)` | N | N | - | Y | `'LOCKED'` | N | Y | N | Y | Activity status. LOCKED, READY, IN_PROGRESS, COMPLETED, APPROVED, SKIPPED. Aggregated based on the current Revision and re-evaluated when a deliverable is changed or revised. COMPLETED/APPROVED are not set by a simple screen input value | `READY` |
+| 356 | Activated At | `activated_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the activity became READY because its predecessor conditions were satisfied | `2026-09-01T10:00:00Z` |
+| 357 | Started At | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the activity execution started | `2026-09-01T11:00:00Z` |
+| 358 | Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the activity execution was completed | `2026-09-02T15:00:00Z` |
+| 359 | Approved At | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the final approval of the activity was completed | `2026-09-02T17:00:00Z` |
+| 360 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project activity creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 361 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the project activity | `00000000-0000-0000-0000-000000000001` |
+| 362 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Project activity last update time (UTC) | `2026-09-01T10:00:00Z` |
+| 363 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the project activity | `00000000-0000-0000-0000-000000000001` |
+| 364 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the project activity | `2026-09-02T10:00:00Z` |
 
 #### Constraints
 
@@ -1541,8 +1616,101 @@ Progress, the number of completed activities and the normal closure conditions a
 
 ---
 
+<a id="table-project_party"></a>
+### 26. Project Performing Organization (`project_party`)
+
+| Item | Definition |
+|---|---|
+| Description | User organizations, supplier organizations and CSV consultants of a project, and the responsibility each organization takes |
+| Primary Key | `party_id` |
+| Main References (FK) | `project_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audit Target | Y |
+| Retention / Deletion | Retained for the auditable period. Rows are not physically deleted; deletion is recorded with deleted_at |
+
+#### Column Definitions
+
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: personal / sensitive information
+
+| No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
+|---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
+| 365 | Performing Organization ID | `party_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 366 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Project to which the performing organization belongs | `00000000-0000-0000-0000-000000000001` |
+| 367 | Organization Type | `party_type` | `varchar(30)` | N | N | - | Y | - | N | Y | N | Y | USER_ORG=user organization, SUPPLIER=supplier organization, CSV_CONSULTANT=CSV consultant | `SUPPLIER` |
+| 368 | Organization Name | `organization_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Organization name including the site and department. Free text for display in documents; not linked to the organization table | `BioSync` |
+| 369 | Responsibility | `responsibility` | `text` | N | N | - | N | - | N | N | N | Y | Responsibility this organization takes in the project | `System configuration and installation, training, technical support` |
+| 370 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display order within the same organization type | `1` |
+| 371 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-10-29T00:00:00Z` |
+| 372 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the performing organization | `00000000-0000-0000-0000-000000000001` |
+| 373 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-10-29T00:00:00Z` |
+| 374 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the performing organization | `00000000-0000-0000-0000-000000000001` |
+| 375 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time; NULL before deletion | `2026-10-30T00:00:00Z` |
+
+#### Constraints
+
+| Constraint | Type | Columns | Condition / Rule |
+|---|---|---|---|
+| `ck_project_party_type` | CHECK | `party_type` | CHECK (party_type IN ('USER_ORG','SUPPLIER','CSV_CONSULTANT')) |
+| `ck_project_party_sort_order` | CHECK | `sort_order` | CHECK (sort_order >= 1) |
+| `uq_project_party_order` | UNIQUE | `project_id, party_type, sort_order, deleted_at` | UNIQUE (project_id, party_type, sort_order) WHERE deleted_at IS NULL |
+| `rule_project_party_1` | Business validation | `project_id, party_type` | Each project must have at least 1 each of non-deleted user organizations (USER_ORG) and supplier organizations (SUPPLIER). A CSV consultant (CSV_CONSULTANT) is optional. |
+| `rule_project_party_2` | Business validation | `deleted_at` | When an organization is deleted, the responsibility assignments (project_activity_assignment) that point to it are also marked deleted in the same transaction. |
+
+#### Business Rules
+
+Organization names and responsibilities are entered, several per type, in step 3 (performing organizations) of project creation. This information is for display in deliverables such as the VP and is unrelated to access permissions and approval assignee designation. Because it is copied into the body when a deliverable is written, later edits do not change deliverables already written or approved.
+
+[↑ Back to top](#top)
+
+---
+
+<a id="table-project_activity_assignment"></a>
+### 27. Responsibility Assignment by Activity (`project_activity_assignment`)
+
+| Item | Definition |
+|---|---|
+| Description | Performing organizations responsible for authoring, execution, support, review and approval per project activity |
+| Primary Key | `activity_assignment_id` |
+| Main References (FK) | `project_activity_id, party_id, created_by, updated_by` |
+| GxP Criticality | High |
+| Audit Target | Y |
+| Retention / Deletion | Retained for the auditable period. Rows are not physically deleted; deletion is recorded with deleted_at |
+
+#### Column Definitions
+
+> `NN`: Not Null · `UQ`: Unique · `IDX`: Index · `Sensitive`: personal / sensitive information
+
+| No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
+|---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
+| 376 | Assignment ID | `activity_assignment_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 377 | Project Activity ID | `project_activity_id` | `uuid` | N | Y | `project_activity.project_activity_id` | Y | - | N | Y | N | Y | Activity being assigned | `00000000-0000-0000-0000-000000000001` |
+| 378 | Responsibility Type | `responsibility_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | AUTHOR=authoring, EXECUTE=execution, SUPPORT=support, REVIEW=review, APPROVE=approval | `REVIEW` |
+| 379 | Performing Organization ID | `party_id` | `uuid` | N | Y | `project_party.party_id` | Y | - | N | Y | N | Y | Performing organization that takes this responsibility. Several organizations can be assigned to one activity and responsibility | `00000000-0000-0000-0000-000000000001` |
+| 380 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-10-29T00:00:00Z` |
+| 381 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the assignment | `00000000-0000-0000-0000-000000000001` |
+| 382 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-10-29T00:00:00Z` |
+| 383 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the assignment | `00000000-0000-0000-0000-000000000001` |
+| 384 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time; NULL before deletion | `2026-10-30T00:00:00Z` |
+
+#### Constraints
+
+| Constraint | Type | Columns | Condition / Rule |
+|---|---|---|---|
+| `ck_project_activity_assignment_type` | CHECK | `responsibility_type` | CHECK (responsibility_type IN ('AUTHOR','EXECUTE','SUPPORT','REVIEW','APPROVE')) |
+| `uq_project_activity_assignment_1` | UNIQUE | `project_activity_id, responsibility_type, party_id, deleted_at` | UNIQUE (project_activity_id, responsibility_type, party_id) WHERE deleted_at IS NULL |
+| `rule_project_activity_assignment_2` | Business validation | `project_activity_id, party_id` | The activity (project_activity) and the performing organization (project_party) must belong to the same project, and assignments are made only to non-deleted organizations and to activities selected for execution (is_selected=TRUE). |
+| `rule_project_activity_assignment_3` | Business validation | - | Rows are created only where the assignment differs from the default division of responsibilities; activities and responsibilities without rows follow the default. The default criteria and the range of activities shown in the assignment table are pending decision. |
+
+#### Business Rules
+
+Corresponds to the 'responsibility assignment for authoring, execution, support, review and approval per activity' table in step 3 of project creation. This information is for display in deliverables such as the VP and is unrelated to the actual approval assignee designation (workflow_step_assignee).
+
+[↑ Back to top](#top)
+
+---
+
 <a id="table-activity_dependency"></a>
-### 25. Activity Dependency Condition (`activity_dependency`)
+### 28. Activity Dependency Condition (`activity_dependency`)
 
 | Item | Definition |
 |---|---|
@@ -1559,22 +1727,22 @@ Progress, the number of completed activities and the normal closure conditions a
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 343 | Activity Dependency Condition ID | `activity_dependency_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the activity dependency condition | `00000000-0000-0000-0000-000000000001` |
-| 344 | Condition Set Version | `dependency_set_version` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Version of the dependency condition set to which this condition belongs. All rows with the same version form one set, and rows of a version adopted by a project are not modified, deactivated or deleted. A change creates a full set of condition rows under a new version. validation_project.dependency_set_version points to this value | `DEPENDENCY-1` |
-| 345 | Successor Activity ID | `successor_activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | Y | - | N | Y | N | Y | Activity that is activated once the condition is satisfied | `00000000-0000-0000-0000-000000000001` |
-| 346 | Predecessor Activity ID | `predecessor_activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | N | - | N | Y | N | Y | Activity to check before the successor activity is activated. NULL is allowed for an all-activities condition. Required for a STATUS condition | `00000000-0000-0000-0000-000000000001` |
-| 347 | Dependency Type | `dependency_type` | `varchar(20)` | N | N | - | Y | `'REQUIRED'` | N | Y | N | Y | Type of the predecessor/successor relationship. REQUIRED, RECOMMENDED | `REQUIRED` |
-| 348 | Required Status | `required_status` | `varchar(20)` | N | N | - | N | - | N | Y | N | Y | Judgment criterion for a STATUS condition. CREATED means a valid current deliverable exists, COMPLETED means execution is completed, and APPROVED means final approval of the current deliverable. CREATED is not stored in project_activity.activity_status. Required only for STATUS conditions; detailed judgment follows the business rules below. | `APPROVED` |
-| 349 | Condition Type | `condition_type` | `varchar(50)` | N | N | - | Y | `'STATUS'` | N | Y | N | Y | STATUS, ACTIVITY_SELECTED, TRACEABILITY_EXISTS, HIGH_RISK_COVERED, OPEN_DEVIATION_ZERO, ALL_SELECTED_APPROVED. Type used to judge the predecessor steps and completion conditions on the screen | `STATUS` |
-| 350 | Condition Value | `condition_value` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Argument for condition judgment. For STATUS + CREATED, stores the name of an allowed target deliverable table (e.g. requirement). Arguments for other conditions are validated in the implementation of that condition, and left NULL if not needed. | - |
-| 351 | Condition Description | `condition_description` | `text` | N | N | - | Y | - | N | N | N | Y | Description of the predecessor activities and approval status required to activate the activity | `URS approved` |
-| 352 | Evaluation Order | `evaluation_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Evaluation order of the conditions for the same successor activity. The evaluation order does not change the AND/OR relationship between conditions | `1` |
-| 353 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the activation condition is in use | `TRUE` |
-| 354 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Condition creation time (UTC) | `2026-09-01T10:00:00Z` |
-| 355 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the condition | `00000000-0000-0000-0000-000000000001` |
-| 356 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Condition last update time (UTC) | `2026-09-01T10:00:00Z` |
-| 357 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the condition | `00000000-0000-0000-0000-000000000001` |
-| 358 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the condition | `2026-09-02T10:00:00Z` |
+| 385 | Activity Dependency Condition ID | `activity_dependency_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the activity dependency condition | `00000000-0000-0000-0000-000000000001` |
+| 386 | Condition Set Version | `dependency_set_version` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Version of the dependency condition set to which this condition belongs. All rows with the same version form one set, and rows of a version adopted by a project are not modified, deactivated or deleted. A change creates a full set of condition rows under a new version. validation_project.dependency_set_version points to this value | `DEPENDENCY-1` |
+| 387 | Successor Activity ID | `successor_activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | Y | - | N | Y | N | Y | Activity that is activated once the condition is satisfied | `00000000-0000-0000-0000-000000000001` |
+| 388 | Predecessor Activity ID | `predecessor_activity_id` | `uuid` | N | Y | `validation_activity.activity_id` | N | - | N | Y | N | Y | Activity to check before the successor activity is activated. NULL is allowed for an all-activities condition. Required for a STATUS condition | `00000000-0000-0000-0000-000000000001` |
+| 389 | Dependency Type | `dependency_type` | `varchar(20)` | N | N | - | Y | `'REQUIRED'` | N | Y | N | Y | Type of the predecessor/successor relationship. REQUIRED, RECOMMENDED | `REQUIRED` |
+| 390 | Required Status | `required_status` | `varchar(20)` | N | N | - | N | - | N | Y | N | Y | Judgment criterion for a STATUS condition. CREATED means a valid current deliverable exists, COMPLETED means execution is completed, and APPROVED means final approval of the current deliverable. CREATED is not stored in project_activity.activity_status. Required only for STATUS conditions; detailed judgment follows the business rules below. | `APPROVED` |
+| 391 | Condition Type | `condition_type` | `varchar(50)` | N | N | - | Y | `'STATUS'` | N | Y | N | Y | STATUS, ACTIVITY_SELECTED, TRACEABILITY_EXISTS, HIGH_RISK_COVERED, OPEN_DEVIATION_ZERO, ALL_SELECTED_APPROVED. Type used to judge the predecessor steps and completion conditions on the screen | `STATUS` |
+| 392 | Condition Value | `condition_value` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Argument for condition judgment. For STATUS + CREATED, stores the name of an allowed target deliverable table (e.g. requirement). Arguments for other conditions are validated in the implementation of that condition, and left NULL if not needed. | - |
+| 393 | Condition Description | `condition_description` | `text` | N | N | - | Y | - | N | N | N | Y | Description of the predecessor activities and approval status required to activate the activity | `URS approved` |
+| 394 | Evaluation Order | `evaluation_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Evaluation order of the conditions for the same successor activity. The evaluation order does not change the AND/OR relationship between conditions | `1` |
+| 395 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether the activation condition is in use | `TRUE` |
+| 396 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Condition creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 397 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the condition | `00000000-0000-0000-0000-000000000001` |
+| 398 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Condition last update time (UTC) | `2026-09-01T10:00:00Z` |
+| 399 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the condition | `00000000-0000-0000-0000-000000000001` |
+| 400 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time of the condition | `2026-09-02T10:00:00Z` |
 
 #### Constraints
 
@@ -1602,7 +1770,7 @@ This table is the global condition template applied to new projects. On change, 
 ---
 
 <a id="table-project_closure_request"></a>
-### 26. Project Closure Request (`project_closure_request`)
+### 29. Project Closure Request (`project_closure_request`)
 
 | Item | Definition |
 |---|---|
@@ -1619,21 +1787,21 @@ This table is the global condition template applied to new projects. On change, 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 359 | Closure Request ID | `closure_request_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 360 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
-| 361 | Request Sequence | `request_version` | `integer` | N | N | - | Y | - | N | N | N | Y | Distinguishes closure re-requests for the same project | `1` |
-| 362 | Closure Type | `closure_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | NORMAL=normal closure, FORCED=forced closure | `NORMAL` |
-| 363 | Request Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT=in progress, REVIEW=under review, APPROVAL=under approval, APPROVED=completed, REJECTED=rejected, CANCELLED=cancelled | `REVIEW` |
-| 364 | Closure Reason | `reason` | `text` | N | N | - | N | - | N | N | N | Y | Required for a forced closure | - |
-| 365 | Progress at Request | `progress_snapshot` | `numeric(5,2)` | N | N | - | Y | - | N | N | N | Y | Progress at the time of the request, as shown on the closure confirmation screen. Excludes RTM | `100.00` |
-| 366 | Requester ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 367 | Requested At | `requested_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Request time value | `2026-09-01T00:00:00Z` |
-| 368 | Closure Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
-| 369 | Closure Processed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Closure processing time value | `2026-09-01T00:00:00Z` |
-| 370 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
-| 371 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 372 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
-| 373 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 401 | Closure Request ID | `closure_request_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 402 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 403 | Request Sequence | `request_version` | `integer` | N | N | - | Y | - | N | N | N | Y | Distinguishes closure re-requests for the same project | `1` |
+| 404 | Closure Type | `closure_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | NORMAL=normal closure, FORCED=forced closure | `NORMAL` |
+| 405 | Request Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT=in progress, REVIEW=under review, APPROVAL=under approval, APPROVED=completed, REJECTED=rejected, CANCELLED=cancelled | `REVIEW` |
+| 406 | Closure Reason | `reason` | `text` | N | N | - | N | - | N | N | N | Y | Required for a forced closure | - |
+| 407 | Progress at Request | `progress_snapshot` | `numeric(5,2)` | N | N | - | Y | - | N | N | N | Y | Progress at the time of the request, as shown on the closure confirmation screen. Excludes RTM | `100.00` |
+| 408 | Requester ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 409 | Requested At | `requested_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Request time value | `2026-09-01T00:00:00Z` |
+| 410 | Closure Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 411 | Closure Processed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Closure processing time value | `2026-09-01T00:00:00Z` |
+| 412 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
+| 413 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 414 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
+| 415 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -1661,7 +1829,7 @@ Signers are linked through the electronic signature and approval workflow proces
 ## VP
 
 <a id="table-vp_plan"></a>
-### 27. Validation Plan (`vp_plan`)
+### 30. Validation Plan (`vp_plan`)
 
 | Item | Definition |
 |---|---|
@@ -1678,24 +1846,24 @@ Signers are linked through the electronic signature and approval workflow proces
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 374 | VP Revision ID | `vp_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 375 | Cross-revision Logical ID | `vp_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
-| 376 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
-| 377 | Plan Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Display title of the project validation plan | `System Validation Plan` |
-| 378 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
-| 379 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
-| 380 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
-| 381 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
-| 382 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
-| 383 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
-| 384 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 385 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 386 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 387 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 388 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
-| 389 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
-| 390 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
-| 391 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 416 | VP Revision ID | `vp_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 417 | Cross-revision Logical ID | `vp_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
+| 418 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 419 | Plan Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Display title of the project validation plan | `System Validation Plan` |
+| 420 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
+| 421 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
+| 422 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
+| 423 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
+| 424 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
+| 425 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
+| 426 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 427 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 428 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 429 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 430 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
+| 431 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
+| 432 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
+| 433 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -1723,7 +1891,7 @@ All revisions of the same vp_key belong to the same project. Revision creation a
 ---
 
 <a id="table-vp_section"></a>
-### 28. Validation Plan Section (`vp_section`)
+### 31. Validation Plan Section (`vp_section`)
 
 | Item | Definition |
 |---|---|
@@ -1740,17 +1908,19 @@ All revisions of the same vp_key belong to the same project. Revision creation a
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 392 | Section ID | `vp_section_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 393 | VP Revision ID | `vp_id` | `uuid` | N | Y | `vp_plan.vp_id` | Y | - | N | Y | N | Y | References vp_plan.vp_id | `00000000-0000-0000-0000-000000000001` |
-| 394 | Section Logical Key | `section_key` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Section identification key retained across revisions | `purpose` |
-| 395 | Section Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Section Title | `Purpose` |
-| 396 | Section Content | `content` | `text` | N | N | - | Y | - | N | N | N | Y | Section Content | `Validation purpose of this plan` |
-| 397 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
-| 398 | Included in Deliverable | `is_enabled` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Included in Deliverable | `TRUE` |
-| 399 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 400 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 401 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 402 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 434 | Section ID | `vp_section_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 435 | VP Revision ID | `vp_id` | `uuid` | N | Y | `vp_plan.vp_id` | Y | - | N | Y | N | Y | References vp_plan.vp_id | `00000000-0000-0000-0000-000000000001` |
+| 436 | Section Logical Key | `section_key` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Section identification key retained across revisions | `purpose` |
+| 437 | Section Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Section Title | `Purpose` |
+| 438 | Section Content | `content` | `text` | N | N | - | Y | - | N | N | N | Y | Section Content | `Validation purpose of this plan` |
+| 439 | Translated Title | `translated_title` | `varchar(255)` | N | N | - | N | - | N | N | N | Y | English translation of the section title. Shown below the original in 'View English version'; NULL before translation | `Purpose` |
+| 440 | Translated Content | `translated_content` | `text` | N | N | - | N | - | N | N | N | Y | English translation of the section content. Filled by direct input or by applying an AI translation; re-applying overwrites the previous translation. The original (title, content) is not changed. Whether it is included in the original content covered by an electronic signature is pending decision | `Validation purpose of this plan` |
+| 441 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
+| 442 | Included in Deliverable | `is_enabled` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Included in Deliverable | `TRUE` |
+| 443 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 444 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 445 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 446 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -1762,7 +1932,9 @@ All revisions of the same vp_key belong to the same project. Revision creation a
 
 #### Business Rules
 
-After submission (REVIEW), the child sections of a VP are not modified directly; if a change is needed, they are copied to a new VP revision and edited there. Content the user saves after AI draft generation is also recorded in content.
+After submission (REVIEW), the child sections of a VP are not modified directly; if a change is needed, they are copied to a new VP revision and edited there. Content the user saves after AI draft generation is also recorded in content, and the applied AI result item points to this row with ai_result_item.target_entity_type=VP_SECTION.
+
+Adding a section creates a new section row immediately, without an input popup. The title starts as '새 목차' (New section) and the content as an empty string (''); the server generates section_key, and sort_order is the value after the current last order. The translation fields (translated_title, translated_content) are managed in the same way as deliverable sections (deliverable_section) and are not modified after submission (REVIEW).
 
 [↑ Back to top](#top)
 
@@ -1771,7 +1943,7 @@ After submission (REVIEW), the child sections of a VP are not modified directly;
 ## QIA
 
 <a id="table-qia_assessment"></a>
-### 29. Quality Impact Assessment Header (`qia_assessment`)
+### 32. Quality Impact Assessment Header (`qia_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -1788,23 +1960,23 @@ After submission (REVIEW), the child sections of a VP are not modified directly;
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 403 | QIA ID | `qia_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the QIA assessment | `00000000-0000-0000-0000-000000000001` |
-| 404 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | Y | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
-| 405 | Part 11 Q1 Electronic Records Replace Paper Records | `p11_q1` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Do electronic records replace paper records? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
-| 406 | Part 11 Q2 Electronic Signatures Used | `p11_q2` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Are electronic signatures used? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
-| 407 | Part 11 Q3 Record History Is Regulatory Evidence | `p11_q3` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Is the record creation/change history regulatory evidence? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
-| 408 | Part 11 Q4 Access Control / User Identification Required | `p11_q4` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Are access control and user identification required? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
-| 409 | Part 11 Q5 Long-term Retention / Retrieval Required | `p11_q5` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Is long-term retention and retrieval of records required? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
-| 410 | Part 11 Q6 Electronic Record Transfer Between Systems | `p11_q6` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Are electronic records transferred between systems? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
-| 411 | Part11 Assessment Conclusion | `part11_result` | `text` | N | N | - | N | - | N | N | N | N | Display value calculated automatically from the 6 answers. NULL (not evaluated) if any question is unanswered; when all are answered, applicable if at least one is Yes and not applicable if all are No. Not entered directly | `Part 11 not applicable` |
-| 412 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 413 | Question Set Version | `question_set_version` | `varchar(50)` | N | N | - | Y | `'UI-P11-1'` | N | N | N | Y | Version that fixes the wording and order of the 6 questions | `UI-P11-1` |
-| 414 | Judgment Rule Version | `rule_version` | `varchar(50)` | N | N | - | Y | `'UI-P11-1'` | N | N | N | Y | Version of the rule that judges "applicable" if one or more of the answers are Yes | `UI-P11-1` |
-| 415 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 416 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 417 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 418 | Applied Questions Original Content | `question_set_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,questions:[{question_id,field_name,text,sort_order,answer_options}]}. Stores all questions, wording, order and answer options of the selected version. | - |
-| 419 | Applied Judgment Rule Original Content | `rule_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,input_fields,normalization,expression,result_mapping}. Full definition including the logical expression, answer interpretation and judgment value mapping | - |
+| 447 | QIA ID | `qia_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the QIA assessment | `00000000-0000-0000-0000-000000000001` |
+| 448 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | Y | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 449 | Part 11 Q1 Electronic Records Replace Paper Records | `p11_q1` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Do electronic records replace paper records? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
+| 450 | Part 11 Q2 Electronic Signatures Used | `p11_q2` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Are electronic signatures used? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
+| 451 | Part 11 Q3 Record History Is Regulatory Evidence | `p11_q3` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Is the record creation/change history regulatory evidence? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
+| 452 | Part 11 Q4 Access Control / User Identification Required | `p11_q4` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Are access control and user identification required? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
+| 453 | Part 11 Q5 Long-term Retention / Retrieval Required | `p11_q5` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Is long-term retention and retrieval of records required? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
+| 454 | Part 11 Q6 Electronic Record Transfer Between Systems | `p11_q6` | `varchar(3)` | N | N | - | N | - | N | N | N | Y | Are electronic records transferred between systems? Answer Yes / No. NULL while unanswered during authoring; required when the QIA document is submitted | `No` |
+| 455 | Part11 Assessment Conclusion | `part11_result` | `text` | N | N | - | N | - | N | N | N | N | Display value calculated automatically from the 6 answers. NULL (not evaluated) if any question is unanswered; when all are answered, applicable if at least one is Yes and not applicable if all are No. Not entered directly | `Part 11 not applicable` |
+| 456 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 457 | Question Set Version | `question_set_version` | `varchar(50)` | N | N | - | Y | `'UI-P11-1'` | N | N | N | Y | Version that fixes the wording and order of the 6 questions | `UI-P11-1` |
+| 458 | Judgment Rule Version | `rule_version` | `varchar(50)` | N | N | - | Y | `'UI-P11-1'` | N | N | N | Y | Version of the rule that judges "applicable" if one or more of the answers are Yes | `UI-P11-1` |
+| 459 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 460 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 461 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 462 | Applied Questions Original Content | `question_set_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,questions:[{question_id,field_name,text,sort_order,answer_options}]}. Stores all questions, wording, order and answer options of the selected version. | - |
+| 463 | Applied Judgment Rule Original Content | `rule_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,input_fields,normalization,expression,result_mapping}. Full definition including the logical expression, answer interpretation and judgment value mapping | - |
 
 #### Constraints
 
@@ -1830,7 +2002,7 @@ Even if the common Part 11 answers or the applied definitions change, the evalua
 ---
 
 <a id="table-qia_module_item"></a>
-### 30. QIA Module Detailed Assessment (`qia_module_item`)
+### 33. QIA Module Detailed Assessment (`qia_module_item`)
 
 | Item | Definition |
 |---|---|
@@ -1847,29 +2019,29 @@ Even if the common Part 11 answers or the applied definitions change, the evalua
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 420 | QIA Module Item ID | `qia_module_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the QIA module assessment item | `00000000-0000-0000-0000-000000000001` |
-| 421 | Cross-revision Logical ID | `module_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
-| 422 | QIA ID | `qia_id` | `uuid` | N | Y | `qia_assessment.qia_id` | Y | - | N | Y | N | Y | Identifier of the parent QIA assessment | `00000000-0000-0000-0000-000000000001` |
-| 423 | Module Code | `module_code` | `varchar(20)` | N | N | - | N | - | N | Y | N | Y | Optional internal module code. Distinct from the on-screen approval number item_number | `MOD-001` |
-| 424 | Module Name | `module_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Top-level module name | `Quality Management` |
-| 425 | Module Description | `module_description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the scope and purpose of the module | `Overall assessment related to quality management` |
-| 426 | Assessment Result | `result_type` | `varchar(20)` | N | N | - | N | - | N | N | N | N | Aggregation cache of the process judgments. NULL (not evaluated) if there are no processes or any process has an unanswered question; otherwise GXP if at least one process is GXP, else NON_GXP. Not edited directly | `GXP` |
-| 427 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T10:00:00Z` |
-| 428 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T10:00:00Z` |
-| 429 | Module Display Order | `sort_order` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Module Display Order | `1` |
-| 430 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
-| 431 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
-| 432 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
-| 433 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
-| 434 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
-| 435 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
-| 436 | Item Approval Number | `item_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Assigned at first approval. NULL for drafts; the same number is kept across revisions | `QIA-001` |
-| 437 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 438 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 439 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
-| 440 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
-| 441 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
-| 442 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 464 | QIA Module Item ID | `qia_module_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the QIA module assessment item | `00000000-0000-0000-0000-000000000001` |
+| 465 | Cross-revision Logical ID | `module_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
+| 466 | QIA ID | `qia_id` | `uuid` | N | Y | `qia_assessment.qia_id` | Y | - | N | Y | N | Y | Identifier of the parent QIA assessment | `00000000-0000-0000-0000-000000000001` |
+| 467 | Module Code | `module_code` | `varchar(20)` | N | N | - | N | - | N | Y | N | Y | Optional internal module code. Distinct from the on-screen approval number item_number | `MOD-001` |
+| 468 | Module Name | `module_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Top-level module name | `Quality Management` |
+| 469 | Module Description | `module_description` | `text` | N | N | - | N | - | N | N | N | Y | Description of the scope and purpose of the module | `Overall assessment related to quality management` |
+| 470 | Assessment Result | `result_type` | `varchar(20)` | N | N | - | N | - | N | N | N | N | Aggregation cache of the process judgments. NULL (not evaluated) if there are no processes or any process has an unanswered question; otherwise GXP if at least one process is GXP, else NON_GXP. Not edited directly | `GXP` |
+| 471 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T10:00:00Z` |
+| 472 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T10:00:00Z` |
+| 473 | Module Display Order | `sort_order` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Module Display Order | `1` |
+| 474 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
+| 475 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
+| 476 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
+| 477 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
+| 478 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
+| 479 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
+| 480 | Item Approval Number | `item_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Assigned at first approval. NULL for drafts; the same number is kept across revisions | `QIA-001` |
+| 481 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 482 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 483 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
+| 484 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
+| 485 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
+| 486 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -1903,7 +2075,7 @@ All revisions of the same module_key belong to the same project. The item number
 ---
 
 <a id="table-qia_process"></a>
-### 31. QIA Process Assessment (`qia_process`)
+### 34. QIA Process Assessment (`qia_process`)
 
 | Item | Definition |
 |---|---|
@@ -1920,31 +2092,31 @@ All revisions of the same module_key belong to the same project. The item number
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 443 | Process ID | `qia_process_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 444 | Module Revision ID | `qia_module_item_id` | `uuid` | N | Y | `qia_module_item.qia_module_item_id` | Y | - | N | Y | N | Y | References qia_module_item.qia_module_item_id | `00000000-0000-0000-0000-000000000001` |
-| 445 | Process Logical ID | `process_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | N | N | Y | Process identifier retained across module revisions | `00000000-0000-0000-0000-000000000001` |
-| 446 | Internal Process Code | `process_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Internal Process Code | - |
-| 447 | Process Name | `process_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Process Name | `Test result entry` |
-| 448 | Process Description | `process_description` | `text` | N | N | - | N | - | N | N | N | Y | Process Description | - |
-| 449 | Display Order | `sort_order` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Display Order | `1` |
-| 450 | Question Set Version | `question_set_version` | `varchar(50)` | N | N | - | Y | `'UI-GXP-1'` | N | N | N | Y | Question Set Version | `UI-GXP-1` |
-| 451 | Judgment Rule Version | `rule_version` | `varchar(50)` | N | N | - | Y | `'UI-GXP-1'` | N | N | N | Y | Judgment Rule Version | `UI-GXP-1` |
-| 452 | GxP Q1 | `q1_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it directly affect product quality, patient safety or data integrity? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 453 | GxP Q2 | `q2_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it create or process data used for GxP decision-making? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 454 | GxP Q3 | `q3_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it support batch release or quality approval procedures? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 455 | GxP Q4 | `q4_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Is it used for regulatory submissions or as inspection evidence? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 456 | GxP Q5 | `q5_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it create, modify or retain electronic records? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 457 | GxP Q6 | `q6_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it control critical parameters of equipment or processes? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 458 | GxP Q7 | `q7_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it support deviation, CAPA or change control processes? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 459 | GxP Q8 | `q8_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Do user permissions control access to quality-related functions? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 460 | GxP Q9 | `q9_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it exchange critical data with external GxP systems? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 461 | GxP Q10 | `q10_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does a backup/restore failure affect GxP records? Answer O / X / ▲. NULL while unanswered during authoring; required when the module is submitted | `X` |
-| 462 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 463 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 464 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 465 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 466 | Applied Questions Original Content | `question_set_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,questions:[{question_id,field_name,text,sort_order,answer_options}]}. Stores all questions, wording, order and answer options of the selected version. | - |
-| 467 | Applied Judgment Rule Original Content | `rule_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,input_fields,normalization,expression,result_mapping}. Full definition including the logical expression, answer interpretation and judgment value mapping | - |
+| 487 | Process ID | `qia_process_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 488 | Module Revision ID | `qia_module_item_id` | `uuid` | N | Y | `qia_module_item.qia_module_item_id` | Y | - | N | Y | N | Y | References qia_module_item.qia_module_item_id | `00000000-0000-0000-0000-000000000001` |
+| 489 | Process Logical ID | `process_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | N | N | Y | Process identifier retained across module revisions | `00000000-0000-0000-0000-000000000001` |
+| 490 | Internal Process Code | `process_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Internal Process Code | - |
+| 491 | Process Name | `process_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Process Name | `Test result entry` |
+| 492 | Process Description | `process_description` | `text` | N | N | - | N | - | N | N | N | Y | Process Description | - |
+| 493 | Display Order | `sort_order` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Display Order | `1` |
+| 494 | Question Set Version | `question_set_version` | `varchar(50)` | N | N | - | Y | `'UI-GXP-1'` | N | N | N | Y | Question Set Version | `UI-GXP-1` |
+| 495 | Judgment Rule Version | `rule_version` | `varchar(50)` | N | N | - | Y | `'UI-GXP-1'` | N | N | N | Y | Judgment Rule Version | `UI-GXP-1` |
+| 496 | GxP Q1 | `q1_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it directly affect product quality, patient safety or data integrity? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 497 | GxP Q2 | `q2_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it create or process data used for GxP decision-making? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 498 | GxP Q3 | `q3_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it support batch release or quality approval procedures? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 499 | GxP Q4 | `q4_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Is it used for regulatory submissions or as inspection evidence? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 500 | GxP Q5 | `q5_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it create, modify or retain electronic records? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 501 | GxP Q6 | `q6_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it control critical parameters of equipment or processes? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 502 | GxP Q7 | `q7_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it support deviation, CAPA or change control processes? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 503 | GxP Q8 | `q8_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Do user permissions control access to quality-related functions? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 504 | GxP Q9 | `q9_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does it exchange critical data with external GxP systems? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 505 | GxP Q10 | `q10_val` | `varchar(5)` | N | N | - | N | - | N | N | N | Y | Does a backup/restore failure affect GxP records? Answer O / X. NULL while unanswered during authoring; required when the module is submitted | `X` |
+| 506 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 507 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 508 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 509 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 510 | Applied Questions Original Content | `question_set_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,questions:[{question_id,field_name,text,sort_order,answer_options}]}. Stores all questions, wording, order and answer options of the selected version. | - |
+| 511 | Applied Judgment Rule Original Content | `rule_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,input_fields,normalization,expression,result_mapping}. Full definition including the logical expression, answer interpretation and judgment value mapping | - |
 
 #### Constraints
 
@@ -1954,13 +2126,13 @@ All revisions of the same module_key belong to the same project. The item number
 | `uq_qia_process_1_2` | UNIQUE | `qia_module_item_id, sort_order` | UNIQUE (qia_module_item_id, sort_order) |
 | `ck_qia_process_1_3` | CHECK | `sort_order` | CHECK (sort_order >= 1) |
 | `rule_qia_process_2` | Business validation | `q1_val` | q1_val~q10_val allow NULL (unanswered) during authoring and must all be answered when the module is submitted (rule_qia_module_item_7). |
-| `ck_qia_process_3` | CHECK | `q1_val, q2_val, q3_val, q4_val, q5_val, q6_val, q7_val, q8_val, q9_val, q10_val` | CHECK ((q1_val IS NULL OR q1_val IN ('O','X','▲')) AND (q2_val IS NULL OR q2_val IN ('O','X','▲')) AND (q3_val IS NULL OR q3_val IN ('O','X','▲')) AND (q4_val IS NULL OR q4_val IN ('O','X','▲')) AND (q5_val IS NULL OR q5_val IN ('O','X','▲')) AND (q6_val IS NULL OR q6_val IN ('O','X','▲')) AND (q7_val IS NULL OR q7_val IN ('O','X','▲')) AND (q8_val IS NULL OR q8_val IN ('O','X','▲')) AND (q9_val IS NULL OR q9_val IN ('O','X','▲')) AND (q10_val IS NULL OR q10_val IN ('O','X','▲'))) |
+| `ck_qia_process_3` | CHECK | `q1_val, q2_val, q3_val, q4_val, q5_val, q6_val, q7_val, q8_val, q9_val, q10_val` | CHECK ((q1_val IS NULL OR q1_val IN ('O','X')) AND (q2_val IS NULL OR q2_val IN ('O','X')) AND (q3_val IS NULL OR q3_val IN ('O','X')) AND (q4_val IS NULL OR q4_val IN ('O','X')) AND (q5_val IS NULL OR q5_val IN ('O','X')) AND (q6_val IS NULL OR q6_val IN ('O','X')) AND (q7_val IS NULL OR q7_val IN ('O','X')) AND (q8_val IS NULL OR q8_val IN ('O','X')) AND (q9_val IS NULL OR q9_val IN ('O','X')) AND (q10_val IS NULL OR q10_val IN ('O','X'))) |
 
 #### Business Rules
 
-GxP judgment rule: GXP if Q1=O and at least one of Q2~Q10 is O; otherwise NON_GXP. ▲ does not count toward the O condition. The judgment is calculated from the answers at query time. If any question is unanswered (NULL), no judgment is made and the result is left as not evaluated (NULL).
+GxP judgment rule: GXP if Q1=O and at least one of Q2~Q10 is O; otherwise NON_GXP. The judgment is calculated from the answers at query time. If any question is unanswered (NULL), no judgment is made and the result is left as not evaluated (NULL).
 
-After submission (REVIEW), the question version and answers belonging to the module are not overwritten directly.
+After submission (REVIEW), the question version and answers belonging to the module are not overwritten directly. An automatic AI evaluation (ai_generation_job.job_type=EVALUATION) stores the proposed answer and judgment score per question in ai_result_item (QIA_ANSWER), and they are reflected in q1_val~q10_val when the user reviews and applies them. AI evaluation results are also applied only to a module being authored.
 
 When an assessment is created, the question and rule definitions for the version are copied, and the server validates that their version values match question_set_version and rule_version. A different definition is not registered under the same version name. A new global version is not automatically applied to existing assessments. Calculations use the stored definitions; a bare function name or version string alone does not replace the original content.
 
@@ -1973,7 +2145,7 @@ To change the questions, rules or answers of an approved module, create a new re
 ## VA
 
 <a id="table-vendor_audit"></a>
-### 32. Vendor Audit Assessment (`vendor_audit`)
+### 35. Vendor Audit Assessment (`vendor_audit`)
 
 | Item | Definition |
 |---|---|
@@ -1990,29 +2162,29 @@ To change the questions, rules or answers of an approved module, create a new re
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 468 | Audit ID | `audit_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the vendor audit | `00000000-0000-0000-0000-000000000001` |
-| 469 | Cross-revision Logical ID | `audit_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
-| 470 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
-| 471 | Document Number | `document_number` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Assigned at first approval. NULL for drafts; revisions of the same logical key keep the number | `VA-001` |
-| 472 | Vendor Name | `vendor_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Name of the vendor being audited | `Sample Vendor` |
-| 473 | Audit Date | `audit_date` | `date` | N | N | - | Y | - | N | N | N | Y | Date the audit was actually performed. Entered by the author; on revision, the value from the previous revision is copied | `2026-09-16` |
-| 474 | Auditor | `auditor_name` | `varchar(100)` | N | N | - | Y | - | N | N | Y | Y | Display name of the auditor who performed the audit, as of the time of entry. The history is preserved even if the user name changes; on revision, the value from the previous revision is copied | `Gildong Hong · reviewer@example.test` |
-| 475 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
-| 476 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
-| 477 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
-| 478 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
-| 479 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
-| 480 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 481 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 482 | Auditor Account ID | `auditor_user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Account of the auditor who performed the audit. Selected by the author; on revision, the value from the previous revision is copied | `00000000-0000-0000-0000-000000000001` |
-| 483 | Assessment Attachment ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | Optional uploaded attachment. File name, size and path are looked up from the file asset | `00000000-0000-0000-0000-000000000001` |
-| 484 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
-| 485 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 486 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 487 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
-| 488 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
-| 489 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
-| 490 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 512 | Audit ID | `audit_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the vendor audit | `00000000-0000-0000-0000-000000000001` |
+| 513 | Cross-revision Logical ID | `audit_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
+| 514 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 515 | Document Number | `document_number` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Assigned at first approval. NULL for drafts; revisions of the same logical key keep the number | `VA-001` |
+| 516 | Vendor Name | `vendor_name` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | Name of the vendor being audited | `Sample Vendor` |
+| 517 | Audit Date | `audit_date` | `date` | N | N | - | Y | - | N | N | N | Y | Date the audit was actually performed. Entered by the author; on revision, the value from the previous revision is copied | `2026-09-16` |
+| 518 | Auditor | `auditor_name` | `varchar(100)` | N | N | - | Y | - | N | N | Y | Y | Display name of the auditor who performed the audit, as of the time of entry. The history is preserved even if the user name changes; on revision, the value from the previous revision is copied | `Gildong Hong · reviewer@example.test` |
+| 519 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
+| 520 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
+| 521 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
+| 522 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
+| 523 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
+| 524 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 525 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 526 | Auditor Account ID | `auditor_user_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Account of the auditor who performed the audit. Selected by the author; on revision, the value from the previous revision is copied | `00000000-0000-0000-0000-000000000001` |
+| 527 | Assessment Attachment ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | Optional uploaded attachment. File name, size and path are looked up from the file asset | `00000000-0000-0000-0000-000000000001` |
+| 528 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
+| 529 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 530 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 531 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
+| 532 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
+| 533 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
+| 534 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -2042,7 +2214,7 @@ All revisions of the same audit_key belong to the same project. The item number 
 ## URS
 
 <a id="table-requirement"></a>
-### 33. User Requirements Specification (`requirement`)
+### 36. User Requirements Specification (`requirement`)
 
 | Item | Definition |
 |---|---|
@@ -2059,34 +2231,34 @@ All revisions of the same audit_key belong to the same project. The item number 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 491 | Requirement ID | `requirement_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the requirement | `00000000-0000-0000-0000-000000000001` |
-| 492 | Cross-revision Logical ID | `requirement_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
-| 493 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
-| 494 | Item Number | `item_number` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Assigned at first approval. NULL for drafts; revisions of the same logical key keep the number | `URS-001` |
-| 495 | Category | `category` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | URS major category (same basis as library_item.category). E.g. system administration, audit trail, electronic signature | `Electronic signature` |
-| 496 | Middle Category | `middle_category` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | URS middle category (same basis as library_item.middle_category). When registered from a library or system package, the source value is copied | - |
-| 497 | Target | `target_type` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | URS target (same basis as library_item.target_type). When registered from a library or system package, the source value is copied | - |
-| 498 | Item / Function | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Requirement item name and main function | `Record e-signature signer, date/time and meaning` |
-| 499 | Requirement Details | `requirement_text` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed specification of the requirement | `On electronic signature, the signer ID, signing date/time...` |
-| 500 | Acceptance Criteria | `acceptance_criteria` | `text` | N | N | - | N | - | N | N | N | Y | Acceptance criteria entered on screen | `Access is restricted according to the defined permissions` |
-| 501 | Regulatory Basis | `regulation` | `text` | N | N | - | N | - | N | N | N | Y | Manually entered regulatory basis, or original text not linked to the master. Formal clause links are managed in requirement_regulation | `CSV regulatory basis review note` |
-| 502 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
-| 503 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
-| 504 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
-| 505 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
-| 506 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
-| 507 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the requirement author | `00000000-0000-0000-0000-000000000001` |
-| 508 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 509 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 510 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
-| 511 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 512 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
-| 513 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
-| 514 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
-| 515 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
-| 516 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL / LIBRARY / SYSTEM_PACKAGE / AI_DRAFT | `MANUAL` |
-| 517 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | References library_item.library_id | `00000000-0000-0000-0000-000000000001` |
-| 518 | Other Source Identifier | `source_reference` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Identifier of the system package or AI draft. Not a DB FK because the source is external/polymorphic | - |
+| 535 | Requirement ID | `requirement_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the requirement | `00000000-0000-0000-0000-000000000001` |
+| 536 | Cross-revision Logical ID | `requirement_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
+| 537 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 538 | Item Number | `item_number` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Assigned at first approval. NULL for drafts; revisions of the same logical key keep the number | `URS-001` |
+| 539 | Category | `category` | `varchar(100)` | N | N | - | Y | - | N | Y | N | Y | URS major category (same basis as library_item.category). E.g. system administration, audit trail, electronic signature | `Electronic signature` |
+| 540 | Middle Category | `middle_category` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | URS middle category (same basis as library_item.middle_category). When registered from a library or system package, the source value is copied | - |
+| 541 | Target | `target_type` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | URS target (same basis as library_item.target_type). When registered from a library or system package, the source value is copied | - |
+| 542 | Item / Function | `title` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Requirement item name and main function | `Record e-signature signer, date/time and meaning` |
+| 543 | Requirement Details | `requirement_text` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed specification of the requirement | `On electronic signature, the signer ID, signing date/time...` |
+| 544 | Acceptance Criteria | `acceptance_criteria` | `text` | N | N | - | N | - | N | N | N | Y | Acceptance criteria entered on screen | `Access is restricted according to the defined permissions` |
+| 545 | Regulatory Basis | `regulation` | `text` | N | N | - | N | - | N | N | N | Y | Manually entered regulatory basis, or original text not linked to the master. Formal clause links are managed in requirement_regulation | `CSV regulatory basis review note` |
+| 546 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
+| 547 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
+| 548 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
+| 549 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
+| 550 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
+| 551 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the requirement author | `00000000-0000-0000-0000-000000000001` |
+| 552 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 553 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 554 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
+| 555 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 556 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
+| 557 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
+| 558 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
+| 559 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 560 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL / LIBRARY / SYSTEM_PACKAGE / AI_DRAFT | `MANUAL` |
+| 561 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | References library_item.library_id | `00000000-0000-0000-0000-000000000001` |
+| 562 | Other Source Identifier | `source_reference` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Identifier of the system package or AI draft. Not a DB FK because the source is external/polymorphic | - |
 
 #### Constraints
 
@@ -2125,7 +2297,7 @@ All revisions of the same requirement_key belong to the same project. The item n
 ## FDS
 
 <a id="table-fds_spec"></a>
-### 34. Functional Design Specification (`fds_spec`)
+### 37. Functional Design Specification (`fds_spec`)
 
 | Item | Definition |
 |---|---|
@@ -2142,29 +2314,29 @@ All revisions of the same requirement_key belong to the same project. The item n
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 519 | FDS ID | `fds_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | FDS identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 520 | Cross-revision Logical ID | `fds_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
-| 521 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
-| 522 | FDS Number | `fds_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Assigned at first approval. NULL for drafts; revisions of the same logical key keep the number | `FDS-001` |
-| 523 | FDS Document Name | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | The uploaded file name is used as the display title of the design document | `FDS_ver1.pdf` |
-| 524 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
-| 525 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
-| 526 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
-| 527 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
-| 528 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
-| 529 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 530 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the FDS author | `00000000-0000-0000-0000-000000000001` |
-| 531 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 532 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who last updated the FDS | `00000000-0000-0000-0000-000000000001` |
-| 533 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Items with approval history go through disposal approval instead of deletion | `2026-09-01T00:00:00Z` |
-| 534 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
-| 535 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
-| 536 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
-| 537 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
-| 538 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
-| 539 | Uploaded File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | File uploaded for this design revision. Replacing it creates a new revision row and a new file ID. A draft (DRAFT) created before the file scan may be NULL; it is filled per file_link_request (PRIMARY_FILE) when the scan passes. Required unless DRAFT (ck_fds_spec_file_required) | `00000000-0000-0000-0000-000000000001` |
-| 540 | Uploaded At | `uploaded_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time this file revision was uploaded | `2026-09-01T00:00:00Z` |
-| 541 | Uploader ID | `uploaded_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 563 | FDS ID | `fds_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | FDS identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 564 | Cross-revision Logical ID | `fds_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
+| 565 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 566 | FDS Number | `fds_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Assigned at first approval. NULL for drafts; revisions of the same logical key keep the number | `FDS-001` |
+| 567 | FDS Document Name | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | The uploaded file name is used as the display title of the design document | `FDS_ver1.pdf` |
+| 568 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
+| 569 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
+| 570 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
+| 571 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
+| 572 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
+| 573 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 574 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the FDS author | `00000000-0000-0000-0000-000000000001` |
+| 575 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 576 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who last updated the FDS | `00000000-0000-0000-0000-000000000001` |
+| 577 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Items with approval history go through disposal approval instead of deletion | `2026-09-01T00:00:00Z` |
+| 578 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
+| 579 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
+| 580 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
+| 581 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
+| 582 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 583 | Uploaded File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | File uploaded for this design revision. Replacing it creates a new revision row and a new file ID. A draft (DRAFT) created before the file scan may be NULL; it is filled per file_link_request (PRIMARY_FILE) when the scan passes. Required unless DRAFT (ck_fds_spec_file_required) | `00000000-0000-0000-0000-000000000001` |
+| 584 | Uploaded At | `uploaded_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time this file revision was uploaded | `2026-09-01T00:00:00Z` |
+| 585 | Uploader ID | `uploaded_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -2199,7 +2371,7 @@ All revisions of the same fds_key belong to the same project. The item number fd
 ## DDS
 
 <a id="table-dds_spec"></a>
-### 35. Detailed Design Specification (`dds_spec`)
+### 38. Detailed Design Specification (`dds_spec`)
 
 | Item | Definition |
 |---|---|
@@ -2216,29 +2388,29 @@ All revisions of the same fds_key belong to the same project. The item number fd
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 542 | DDS ID | `dds_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the DDS document | `00000000-0000-0000-0000-000000000001` |
-| 543 | Cross-revision Logical ID | `dds_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
-| 544 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Validation project to which the DDS belongs | `00000000-0000-0000-0000-000000000001` |
-| 545 | DDS Number | `dds_no` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Assigned at first approval. NULL for drafts; revisions of the same logical key keep the number | `DDS-001` |
-| 546 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | The uploaded file name is used as the display title of the design document | `DDS_ver1.pdf` |
-| 547 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
-| 548 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
-| 549 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
-| 550 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
-| 551 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
-| 552 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS creation time (UTC) | `2026-09-01T10:00:00Z` |
-| 553 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who authored the DDS | `00000000-0000-0000-0000-000000000001` |
-| 554 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS last update time (UTC) | `2026-09-01T10:00:00Z` |
-| 555 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the DDS | `00000000-0000-0000-0000-000000000001` |
-| 556 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Items with approval history go through disposal approval instead of deletion | `2026-09-02T10:00:00Z` |
-| 557 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
-| 558 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
-| 559 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-02T10:00:00Z` |
-| 560 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
-| 561 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
-| 562 | Uploaded File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | File uploaded for this design revision. Replacing it creates a new revision row and a new file ID. May be NULL for a draft (DRAFT) created before the file scan; when the scan passes, it is filled according to file_link_request (PRIMARY_FILE). Required unless DRAFT (ck_dds_spec_file_required) | `00000000-0000-0000-0000-000000000001` |
-| 563 | Uploaded At | `uploaded_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time this file revision was uploaded | `2026-09-01T00:00:00Z` |
-| 564 | Uploader ID | `uploaded_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 586 | DDS ID | `dds_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the DDS document | `00000000-0000-0000-0000-000000000001` |
+| 587 | Cross-revision Logical ID | `dds_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
+| 588 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Validation project to which the DDS belongs | `00000000-0000-0000-0000-000000000001` |
+| 589 | DDS Number | `dds_no` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Assigned at first approval. NULL for drafts; revisions of the same logical key keep the number | `DDS-001` |
+| 590 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | The uploaded file name is used as the display title of the design document | `DDS_ver1.pdf` |
+| 591 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
+| 592 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
+| 593 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
+| 594 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
+| 595 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
+| 596 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 597 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who authored the DDS | `00000000-0000-0000-0000-000000000001` |
+| 598 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | DDS last update time (UTC) | `2026-09-01T10:00:00Z` |
+| 599 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the DDS | `00000000-0000-0000-0000-000000000001` |
+| 600 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Items with approval history go through disposal approval instead of deletion | `2026-09-02T10:00:00Z` |
+| 601 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
+| 602 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
+| 603 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-02T10:00:00Z` |
+| 604 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
+| 605 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 606 | Uploaded File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | File uploaded for this design revision. Replacing it creates a new revision row and a new file ID. May be NULL for a draft (DRAFT) created before the file scan; when the scan passes, it is filled according to file_link_request (PRIMARY_FILE). Required unless DRAFT (ck_dds_spec_file_required) | `00000000-0000-0000-0000-000000000001` |
+| 607 | Uploaded At | `uploaded_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time this file revision was uploaded | `2026-09-01T00:00:00Z` |
+| 608 | Uploader ID | `uploaded_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -2273,7 +2445,7 @@ All revisions of the same dds_key belong to the same project. The item number dd
 ## DQ
 
 <a id="table-dq_assessment"></a>
-### 36. Design Qualification Assessment (`dq_assessment`)
+### 39. Design Qualification Assessment (`dq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -2290,14 +2462,14 @@ All revisions of the same dds_key belong to the same project. The item number dd
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 565 | DQ ID | `dq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | DQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 566 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | Y | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
-| 567 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Design qualification assessment document title | `Design Qualification Assessment (URS → FDS/DDS Mapping)` |
-| 568 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 569 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | DQ author identifier | `00000000-0000-0000-0000-000000000001` |
-| 570 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 571 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | DQ updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 572 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
+| 609 | DQ ID | `dq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | DQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 610 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | Y | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 611 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Design qualification assessment document title | `Design Qualification Assessment (URS → FDS/DDS Mapping)` |
+| 612 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 613 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | DQ author identifier | `00000000-0000-0000-0000-000000000001` |
+| 614 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 615 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | DQ updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 616 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
 
 #### Constraints
 
@@ -2314,7 +2486,7 @@ Per-item business approval/revision is managed in the child table, and the numbe
 ---
 
 <a id="table-dq_item"></a>
-### 37. DQ Detailed Assessment Item (`dq_item`)
+### 40. DQ Detailed Assessment Item (`dq_item`)
 
 | Item | Definition |
 |---|---|
@@ -2331,37 +2503,37 @@ Per-item business approval/revision is managed in the child table, and the numbe
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 573 | DQ Item ID | `dq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | DQ detail item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 574 | Cross-revision Logical ID | `dq_item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
-| 575 | DQ ID | `dq_id` | `uuid` | N | Y | `dq_assessment.dq_id` | Y | - | N | Y | N | Y | Parent DQ document identifier | `00000000-0000-0000-0000-000000000001` |
-| 576 | URS Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | Y | N | Y | Identifier of the URS being mapped (FK) | `00000000-0000-0000-0000-000000000001` |
-| 577 | URS Number | `urs_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Snapshot of the number of the approved revision referenced by requirement_id. Not entered directly | `URS-001` |
-| 578 | URS Requirement | `urs_description` | `text` | N | N | - | Y | - | N | N | N | Y | Snapshot of the requirement content of the approved revision referenced by requirement_id. Not entered directly | `User login and electronic signature function` |
-| 579 | Judgment | `result_status` | `varchar(10)` | N | N | - | N | - | N | N | N | Y | PASS / FAIL / NA. NA = not applicable; NULL if not yet judged | `PASS` |
-| 580 | Remarks | `remarks` | `text` | N | N | - | N | - | N | N | N | Y | Review-related notes and remarks | `Confirmed that the design is reflected in FDS and DDS` |
-| 581 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 582 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
-| 583 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 584 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 585 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Items with approval history go through disposal approval instead of deletion | `2026-09-01T00:00:00Z` |
-| 586 | FDS Approved Revision ID | `fds_revision_id` | `uuid` | N | Y | `fds_spec.fds_id` | N | - | N | Y | N | Y | References fds_spec.fds_id | `00000000-0000-0000-0000-000000000001` |
-| 587 | FDS Review Comment | `fds_comment` | `text` | N | N | - | N | - | N | N | N | Y | FDS Review Comment | - |
-| 588 | DDS Approved Revision ID | `dds_revision_id` | `uuid` | N | Y | `dds_spec.dds_id` | N | - | N | Y | N | Y | References dds_spec.dds_id | `00000000-0000-0000-0000-000000000001` |
-| 589 | DDS Review Comment | `dds_comment` | `text` | N | N | - | N | - | N | N | N | Y | DDS Review Comment | - |
-| 590 | Fail Reason | `fail_reason` | `text` | N | N | - | N | - | N | N | N | Y | Fail Reason | - |
-| 591 | Judgment Performer ID | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 592 | Judgment Time | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Judgment Time | `2026-09-01T00:00:00Z` |
-| 593 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
-| 594 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
-| 595 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
-| 596 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
-| 597 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
-| 598 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
-| 599 | Item Approval Number | `item_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Assigned at first approval. NULL for drafts; the same number is kept across revisions | `DQ-001` |
-| 600 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
-| 601 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
-| 602 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
-| 603 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 617 | DQ Item ID | `dq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | DQ detail item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 618 | Cross-revision Logical ID | `dq_item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
+| 619 | DQ ID | `dq_id` | `uuid` | N | Y | `dq_assessment.dq_id` | Y | - | N | Y | N | Y | Parent DQ document identifier | `00000000-0000-0000-0000-000000000001` |
+| 620 | URS Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | Y | N | Y | Identifier of the URS being mapped (FK) | `00000000-0000-0000-0000-000000000001` |
+| 621 | URS Number | `urs_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Snapshot of the number of the approved revision referenced by requirement_id. Not entered directly | `URS-001` |
+| 622 | URS Requirement | `urs_description` | `text` | N | N | - | Y | - | N | N | N | Y | Snapshot of the requirement content of the approved revision referenced by requirement_id. Not entered directly | `User login and electronic signature function` |
+| 623 | Judgment | `result_status` | `varchar(10)` | N | N | - | N | - | N | N | N | Y | PASS / FAIL / NA. NA = not applicable; NULL if not yet judged | `PASS` |
+| 624 | Remarks | `remarks` | `text` | N | N | - | N | - | N | N | N | Y | Review-related notes and remarks | `Confirmed that the design is reflected in FDS and DDS` |
+| 625 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 626 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
+| 627 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 628 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 629 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Items with approval history go through disposal approval instead of deletion | `2026-09-01T00:00:00Z` |
+| 630 | FDS Approved Revision ID | `fds_revision_id` | `uuid` | N | Y | `fds_spec.fds_id` | N | - | N | Y | N | Y | References fds_spec.fds_id | `00000000-0000-0000-0000-000000000001` |
+| 631 | FDS Review Comment | `fds_comment` | `text` | N | N | - | N | - | N | N | N | Y | FDS Review Comment | - |
+| 632 | DDS Approved Revision ID | `dds_revision_id` | `uuid` | N | Y | `dds_spec.dds_id` | N | - | N | Y | N | Y | References dds_spec.dds_id | `00000000-0000-0000-0000-000000000001` |
+| 633 | DDS Review Comment | `dds_comment` | `text` | N | N | - | N | - | N | N | N | Y | DDS Review Comment | - |
+| 634 | Fail Reason | `fail_reason` | `text` | N | N | - | N | - | N | N | N | Y | Fail Reason | - |
+| 635 | Judgment Performer ID | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 636 | Judgment Time | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Judgment Time | `2026-09-01T00:00:00Z` |
+| 637 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
+| 638 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
+| 639 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
+| 640 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
+| 641 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
+| 642 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
+| 643 | Item Approval Number | `item_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Assigned at first approval. NULL for drafts; the same number is kept across revisions | `DQ-001` |
+| 644 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
+| 645 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
+| 646 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
+| 647 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -2396,7 +2568,7 @@ All revisions of the same dq_item_key belong to the same project. The item numbe
 ## FRA
 
 <a id="table-fra_assessment"></a>
-### 38. Functional Risk Assessment (`fra_assessment`)
+### 41. Functional Risk Assessment (`fra_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -2413,14 +2585,14 @@ All revisions of the same dq_item_key belong to the same project. The item numbe
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 604 | FRA ID | `fra_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | FRA assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 605 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | Y | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
-| 606 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the FMEA-based functional risk assessment document | `FMEA-based Functional Risk Assessment` |
-| 607 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 608 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | FRA author identifier | `00000000-0000-0000-0000-000000000001` |
-| 609 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 610 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | FRA updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 611 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
+| 648 | FRA ID | `fra_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | FRA assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 649 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | Y | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 650 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the FMEA-based functional risk assessment document | `FMEA-based Functional Risk Assessment` |
+| 651 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 652 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | FRA author identifier | `00000000-0000-0000-0000-000000000001` |
+| 653 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 654 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | FRA updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 655 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
 
 #### Constraints
 
@@ -2437,7 +2609,7 @@ Per-item business approval/revision is managed in the child table, and the numbe
 ---
 
 <a id="table-fra_item"></a>
-### 39. FRA Risk Detail Item (`fra_item`)
+### 42. FRA Risk Detail Item (`fra_item`)
 
 | Item | Definition |
 |---|---|
@@ -2454,40 +2626,40 @@ Per-item business approval/revision is managed in the child table, and the numbe
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 612 | Risk Item ID | `fra_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | FRA risk detail item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 613 | Cross-revision Logical ID | `fra_item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
-| 614 | FRA ID | `fra_id` | `uuid` | N | Y | `fra_assessment.fra_id` | Y | - | N | Y | N | Y | Parent FRA document identifier | `00000000-0000-0000-0000-000000000001` |
-| 615 | URS Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | N | - | N | Y | N | Y | Approved URS revision of the same project. NULL allowed for drafts; required before approval request | `00000000-0000-0000-0000-000000000001` |
-| 616 | URS Reference Number | `urs_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Display snapshot of the approval number of the linked requirement revision. Matches requirement_id and is not entered independently | `URS-001` |
-| 617 | Function Name | `feature_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Name of the function subject to risk assessment | `Electronic signature` |
-| 618 | Risk Scenario | `risk_scenario` | `text` | N | N | - | Y | - | N | N | N | Y | Description of the FMEA risk occurrence scenario | `Password not verified during electronic signature` |
-| 619 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
-| 620 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 621 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
-| 622 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 623 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 624 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Items with approval history go through disposal approval instead of deletion | `2026-09-01T00:00:00Z` |
-| 625 | Severity SEV | `severity` | `smallint` | N | N | - | N | - | N | N | N | Y | Entered on the screen, 1~5. NULL if not entered; required when the FRA item is submitted | `5` |
-| 626 | Occurrence OCC | `occurrence` | `smallint` | N | N | - | N | - | N | N | N | Y | Entered on the screen, 1~5. NULL if not entered; required when the FRA item is submitted | `2` |
-| 627 | Detectability DET | `detectability` | `varchar(1)` | N | N | - | N | - | N | N | N | Y | H / M / L. NULL if not entered; required when the FRA item is submitted | `M` |
-| 628 | Judgment Rule Version | `rule_version` | `varchar(50)` | N | N | - | Y | `'UI-FRA-1'` | N | N | N | Y | Judgment Rule Version | `UI-FRA-1` |
-| 629 | Calculation Result at Approval | `risk_result_snapshot` | `jsonb` | N | N | - | N | - | N | N | N | Y | Automatic RP, RC, RPG, NT and Action Plan results at the time of approval. Not entered directly | `{"RP":10,"RC":1,"RPG":"H","NT":"N","actionPlan":"Perform Test"}` |
-| 630 | SOP Basis Clause ID | `sop_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | N | - | N | Y | N | Y | Stores the SOP link from the RTM screen on the source risk item | `00000000-0000-0000-0000-000000000001` |
-| 631 | Manual SOP Reference | `sop_reference_note` | `text` | N | N | - | N | - | N | N | N | Y | Original content of an SOP reference that is not yet in the clause master | - |
-| 632 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
-| 633 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
-| 634 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
-| 635 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
-| 636 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
-| 637 | Item Approval Number | `item_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Assigned at first approval. NULL for drafts; the same number is kept across revisions | `FRA-001` |
-| 638 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
-| 639 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
-| 640 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
-| 641 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
-| 642 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL / LIBRARY / SYSTEM_PACKAGE / AI_DRAFT | `MANUAL` |
-| 643 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | References library_item.library_id | `00000000-0000-0000-0000-000000000001` |
-| 644 | Other Source Identifier | `source_reference` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Identifier of the system package or AI draft. Not a DB FK because the source is external/polymorphic | - |
-| 645 | Applied Risk Judgment Rule (Original Content) | `rule_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,input_ranges,formulas,thresholds,matrix,action_mapping}. The complete set of SEV/OCC/DET allowed values, RP and RC formulas, RPG and NT judgment tables, and Action Plan mapping | - |
+| 656 | Risk Item ID | `fra_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | FRA risk detail item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 657 | Cross-revision Logical ID | `fra_item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier retained across revisions. Distinct from the revision row PK | `00000000-0000-0000-0000-000000000001` |
+| 658 | FRA ID | `fra_id` | `uuid` | N | Y | `fra_assessment.fra_id` | Y | - | N | Y | N | Y | Parent FRA document identifier | `00000000-0000-0000-0000-000000000001` |
+| 659 | URS Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | N | - | N | Y | N | Y | Approved URS revision of the same project. NULL allowed for drafts; required before approval request | `00000000-0000-0000-0000-000000000001` |
+| 660 | URS Reference Number | `urs_no` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Display snapshot of the approval number of the linked requirement revision. Matches requirement_id and is not entered independently | `URS-001` |
+| 661 | Function Name | `feature_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Name of the function subject to risk assessment | `Electronic signature` |
+| 662 | Risk Scenario | `risk_scenario` | `text` | N | N | - | Y | - | N | N | N | Y | Description of the FMEA risk occurrence scenario | `Password not verified during electronic signature` |
+| 663 | Approval Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress) / REVIEW (under review) / APPROVAL (under approval) / APPROVED (approved) / REJECTED (rejected) / CANCELLED (cancelled). REJECTED and CANCELLED are terminal states of this revision; any later change is handled as a new revision | `DRAFT` |
+| 664 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 665 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
+| 666 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 667 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 668 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Items with approval history go through disposal approval instead of deletion | `2026-09-01T00:00:00Z` |
+| 669 | Severity SEV | `severity` | `smallint` | N | N | - | N | - | N | N | N | Y | Entered on the screen, 1~5. NULL if not entered; required when the FRA item is submitted | `5` |
+| 670 | Occurrence OCC | `occurrence` | `smallint` | N | N | - | N | - | N | N | N | Y | Entered on the screen, 1~5. NULL if not entered; required when the FRA item is submitted | `2` |
+| 671 | Detectability DET | `detectability` | `varchar(1)` | N | N | - | N | - | N | N | N | Y | H / M / L. NULL if not entered; required when the FRA item is submitted | `M` |
+| 672 | Judgment Rule Version | `rule_version` | `varchar(50)` | N | N | - | Y | `'UI-FRA-1'` | N | N | N | Y | Judgment Rule Version | `UI-FRA-1` |
+| 673 | Calculation Result at Approval | `risk_result_snapshot` | `jsonb` | N | N | - | N | - | N | N | N | Y | Automatic RP, RC, RPG, NT and Action Plan results at the time of approval. Not entered directly | `{"RP":10,"RC":1,"RPG":"H","NT":"N","actionPlan":"Perform Test"}` |
+| 674 | SOP Basis Clause ID | `sop_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | N | - | N | Y | N | Y | Stores the SOP link from the RTM screen on the source risk item | `00000000-0000-0000-0000-000000000001` |
+| 675 | Manual SOP Reference | `sop_reference_note` | `text` | N | N | - | N | - | N | N | N | Y | Original content of an SOP reference that is not yet in the clause master | - |
+| 676 | Display Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Version shown on screen for this revision | `ver1` |
+| 677 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per logical key | `1` |
+| 678 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising. Required when revision_number ≥ 2 | `Requirement change` |
+| 679 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Current revision of the same logical key. Distinct from whether it is the latest approved version | `TRUE` |
+| 680 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Business approval workflow of this revision. Reviewers, approvers and signatures are looked up from the linked workflow / processing history | `00000000-0000-0000-0000-000000000001` |
+| 681 | Item Approval Number | `item_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Assigned at first approval. NULL for drafts; the same number is kept across revisions | `FRA-001` |
+| 682 | Lifecycle Status | `lifecycle_status` | `varchar(20)` | N | N | - | Y | `'ACTIVE'` | N | N | N | Y | ACTIVE / DISPOSED. Separate from the approval status | `ACTIVE` |
+| 683 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the disposal approval was completed | `2026-09-01T00:00:00Z` |
+| 684 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Disposal Reason | - |
+| 685 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 686 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL / LIBRARY / SYSTEM_PACKAGE / AI_DRAFT | `MANUAL` |
+| 687 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | References library_item.library_id | `00000000-0000-0000-0000-000000000001` |
+| 688 | Other Source Identifier | `source_reference` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Identifier of the system package or AI draft. Not a DB FK because the source is external/polymorphic | - |
+| 689 | Applied Risk Judgment Rule (Original Content) | `rule_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | {version,input_ranges,formulas,thresholds,matrix,action_mapping}. The complete set of SEV/OCC/DET allowed values, RP and RC formulas, RPG and NT judgment tables, and Action Plan mapping | - |
 
 #### Constraints
 
@@ -2531,7 +2703,7 @@ All revisions of the same fra_item_key belong to the same project. The item numb
 ## IQ
 
 <a id="table-iq_assessment"></a>
-### 40. Installation Qualification Assessment (`iq_assessment`)
+### 43. Installation Qualification Assessment (`iq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -2548,22 +2720,22 @@ All revisions of the same fra_item_key belong to the same project. The item numb
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 646 | IQ ID | `iq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | IQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 647 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
-| 648 | IQ Number | `iq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | IQ document number. Revision rows of the same document keep the same number. | `IQ-VP-SYS-010-20260529` |
-| 649 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Installation qualification assessment document title | `Installation Qualification` |
-| 650 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the IQ assessment document (e.g. v1.0, v1.1) | `v1.0` |
-| 651 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision number of the IQ assessment document (e.g. 1, 2, 3...) | `1` |
-| 652 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for the initial creation or revision of the IQ assessment document | `Initial creation` |
-| 653 | Is Current Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the currently active, latest version of the IQ assessment document (TRUE/FALSE) | `TRUE` |
-| 654 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | IQ protocol approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
-| 655 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | IQ execution result approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
-| 656 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 657 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | IQ author identifier | `00000000-0000-0000-0000-000000000001` |
-| 658 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 659 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | IQ updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 660 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time. An assessment revision cannot be deleted if its composition (item_revision_refs) contains a test revision with submission history, or if it is referenced by a submitted document or electronic signature (rule_iq_assessment_3) | `2026-09-01T00:00:00Z` |
-| 661 | Test Composition per Assessment Revision | `item_revision_refs` | `jsonb` | N | N | - | Y | `'[]'::jsonb` | N | N | N | Y | [{table_name:"iq_item",record_id,version,sort_order}] array. Identifies the full test composition and order of this assessment revision; PKs of unchanged tests from the previous assessment revision may be reused. | - |
+| 690 | IQ ID | `iq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | IQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 691 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 692 | IQ Number | `iq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | IQ document number. Revision rows of the same document keep the same number. | `IQ-VP-SYS-010-20260529` |
+| 693 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Installation qualification assessment document title | `Installation Qualification` |
+| 694 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the IQ assessment document (e.g. v1.0, v1.1) | `v1.0` |
+| 695 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision number of the IQ assessment document (e.g. 1, 2, 3...) | `1` |
+| 696 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for the initial creation or revision of the IQ assessment document | `Initial creation` |
+| 697 | Is Current Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the currently active, latest version of the IQ assessment document (TRUE/FALSE) | `TRUE` |
+| 698 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | IQ protocol approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
+| 699 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | IQ execution result approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
+| 700 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 701 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | IQ author identifier | `00000000-0000-0000-0000-000000000001` |
+| 702 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 703 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | IQ updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 704 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time. An assessment revision cannot be deleted if its composition (item_revision_refs) contains a test revision with submission history, or if it is referenced by a submitted document or electronic signature (rule_iq_assessment_3) | `2026-09-01T00:00:00Z` |
+| 705 | Test Composition per Assessment Revision | `item_revision_refs` | `jsonb` | N | N | - | Y | `'[]'::jsonb` | N | N | N | Y | [{table_name:"iq_item",record_id,version,sort_order}] array. Identifies the full test composition and order of this assessment revision; PKs of unchanged tests from the previous assessment revision may be reused. | - |
 
 #### Constraints
 
@@ -2591,7 +2763,7 @@ The entries of the composition are actual revisions of iq_item and must belong t
 ---
 
 <a id="table-iq_item"></a>
-### 41. IQ Detailed Test Item (`iq_item`)
+### 44. IQ Detailed Test Item (`iq_item`)
 
 | Item | Definition |
 |---|---|
@@ -2608,37 +2780,37 @@ The entries of the composition are actual revisions of iq_item and must belong t
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 662 | IQ Item ID | `iq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | PK of a specific protocol revision row of an IQ test item. item_key stays the same across revisions. | `00000000-0000-0000-0000-000000000001` |
-| 663 | IQ ID | `iq_id` | `uuid` | N | Y | `iq_assessment.iq_id` | Y | - | N | Y | N | Y | The parent assessment revision in which this logical test was first registered. Subsequent item revisions keep the same original parent. The actual composition of each assessment revision is looked up in item_revision_refs. | `00000000-0000-0000-0000-000000000001` |
-| 664 | Test Item Logical ID | `item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier that groups multiple revisions of the same test item. Issued once for a new item and kept on revision. | `00000000-0000-0000-0000-000000000001` |
-| 665 | Test ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Test display ID on the screen. Keeps the same value across revisions of the same item; duplicates between different item_keys within a project are prohibited. | `IQ-NEW-01` |
-| 666 | Test Case | `test_case` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Test item title on the screen. Not a separate classification value. | `Hardware installation` |
-| 667 | Test Description | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed procedure for performing the test verification | `Verify that the hardware specifications of the server to be installed meet the URS` |
-| 668 | Expected Result | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | Test success criteria and expected result | `Hardware specifications must match the requirements stated in the URS` |
-| 669 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Independent approval status of this test revision; not overwritten by the parent document status. | `DRAFT` |
-| 670 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 671 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
-| 672 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 673 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 674 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Only DRAFT revisions with no submission history can be deleted; items with approval history (an APPROVED revision exists for the same item_key) are handled by disposal (is_disposed, rule_iq_item_7) instead of deletion | `2026-09-01T00:00:00Z` |
-| 675 | Protocol Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Protocol revision version displayed on the screen. | `ver1` |
-| 676 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Revision number within the item_key. 1 or greater. | `1` |
-| 677 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising an approved protocol. | - |
-| 678 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the current working revision of the same item_key. Independent of whether it is the approved version. | `TRUE` |
-| 679 | Acceptance Criteria | `acceptance_criteria` | `text` | N | N | - | Y | - | N | N | N | Y | Acceptance criteria on the screen. Distinct from expected_result (expected result). | `Matches the approved specification` |
-| 680 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL (manual entry), LIBRARY (library), SYSTEM_PACKAGE (system package), AI_DRAFT (AI draft). Same codes as requirement / fra_item.source_type | `MANUAL` |
-| 681 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | The source when registered from the library. The test content is copied at registration and managed independently thereafter. | `00000000-0000-0000-0000-000000000001` |
-| 682 | Source Package Code | `source_package_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Package code when registered from a system package. | `IQ-CORE` |
-| 683 | Source Package Version | `source_package_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Package version selected at registration. | `ver2` |
-| 684 | Source Template Code | `source_template_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Test template code selected within the package. | `IQ-PKG-001` |
-| 685 | Item Approval Number | `approval_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Issued on first approval and displayed as the item number on the screen. The same logical item number is kept on revision. | - |
-| 686 | Protocol Approval Workflow | `protocol_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Authoring/review/approval route and history for this protocol revision. | `00000000-0000-0000-0000-000000000001` |
-| 687 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason entered in the disposal approval on the screen. Required when disposal is completed. | - |
-| 688 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Disposal approval workflow (approval_scope=DISPOSAL). Disposal is completed by the final approval of this approval workflow | `00000000-0000-0000-0000-000000000001` |
-| 689 | Disposal Approval Signature | `disposal_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval electronic signature of the disposal approval workflow (disposal_workflow_id). | `00000000-0000-0000-0000-000000000001` |
-| 690 | Is Disposed | `is_disposed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Disposal status on the screen. Disposed items are excluded from new executions and aggregation; existing records are preserved. | `FALSE` |
-| 691 | Disposed By | `disposed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Final approver of the disposal approval workflow | `00000000-0000-0000-0000-000000000001` |
-| 692 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final approval time of the disposal approval workflow. | `2026-09-01T00:00:00Z` |
+| 706 | IQ Item ID | `iq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | PK of a specific protocol revision row of an IQ test item. item_key stays the same across revisions. | `00000000-0000-0000-0000-000000000001` |
+| 707 | IQ ID | `iq_id` | `uuid` | N | Y | `iq_assessment.iq_id` | Y | - | N | Y | N | Y | The parent assessment revision in which this logical test was first registered. Subsequent item revisions keep the same original parent. The actual composition of each assessment revision is looked up in item_revision_refs. | `00000000-0000-0000-0000-000000000001` |
+| 708 | Test Item Logical ID | `item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier that groups multiple revisions of the same test item. Issued once for a new item and kept on revision. | `00000000-0000-0000-0000-000000000001` |
+| 709 | Test ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Test display ID on the screen. Keeps the same value across revisions of the same item; duplicates between different item_keys within a project are prohibited. | `IQ-NEW-01` |
+| 710 | Test Case | `test_case` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Test item title on the screen. Not a separate classification value. | `Hardware installation` |
+| 711 | Test Description | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed procedure for performing the test verification | `Verify that the hardware specifications of the server to be installed meet the URS` |
+| 712 | Expected Result | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | Test success criteria and expected result | `Hardware specifications must match the requirements stated in the URS` |
+| 713 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Independent approval status of this test revision; not overwritten by the parent document status. | `DRAFT` |
+| 714 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 715 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
+| 716 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 717 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 718 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Only DRAFT revisions with no submission history can be deleted; items with approval history (an APPROVED revision exists for the same item_key) are handled by disposal (is_disposed, rule_iq_item_7) instead of deletion | `2026-09-01T00:00:00Z` |
+| 719 | Protocol Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Protocol revision version displayed on the screen. | `ver1` |
+| 720 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Revision number within the item_key. 1 or greater. | `1` |
+| 721 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising an approved protocol. | - |
+| 722 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the current working revision of the same item_key. Independent of whether it is the approved version. | `TRUE` |
+| 723 | Acceptance Criteria | `acceptance_criteria` | `text` | N | N | - | Y | - | N | N | N | Y | Acceptance criteria on the screen. Distinct from expected_result (expected result). | `Matches the approved specification` |
+| 724 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL (manual entry), LIBRARY (library), SYSTEM_PACKAGE (system package), AI_DRAFT (AI draft). Same codes as requirement / fra_item.source_type | `MANUAL` |
+| 725 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | The source when registered from the library. The test content is copied at registration and managed independently thereafter. | `00000000-0000-0000-0000-000000000001` |
+| 726 | Source Package Code | `source_package_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Package code when registered from a system package. | `IQ-CORE` |
+| 727 | Source Package Version | `source_package_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Package version selected at registration. | `ver2` |
+| 728 | Source Template Code | `source_template_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Test template code selected within the package. | `IQ-PKG-001` |
+| 729 | Item Approval Number | `approval_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Issued on first approval and displayed as the item number on the screen. The same logical item number is kept on revision. | `IQ-001` |
+| 730 | Protocol Approval Workflow | `protocol_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Authoring/review/approval route and history for this protocol revision. | `00000000-0000-0000-0000-000000000001` |
+| 731 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason entered in the disposal approval on the screen. Required when disposal is completed. | - |
+| 732 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Disposal approval workflow (approval_scope=DISPOSAL). Disposal is completed by the final approval of this approval workflow | `00000000-0000-0000-0000-000000000001` |
+| 733 | Disposal Approval Signature | `disposal_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval electronic signature of the disposal approval workflow (disposal_workflow_id). | `00000000-0000-0000-0000-000000000001` |
+| 734 | Is Disposed | `is_disposed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Disposal status on the screen. Disposed items are excluded from new executions and aggregation; existing records are preserved. | `FALSE` |
+| 735 | Disposed By | `disposed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Final approver of the disposal approval workflow | `00000000-0000-0000-0000-000000000001` |
+| 736 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final approval time of the disposal approval workflow. | `2026-09-01T00:00:00Z` |
 
 #### Constraints
 
@@ -2647,7 +2819,7 @@ The entries of the composition are actual revisions of iq_item and must belong t
 | `uq_iq_item_1` | UNIQUE | `item_key, revision_number` | UNIQUE(item_key, revision_number) |
 | `rule_iq_item_1` | Business validation | `item_key, revision_number, is_current_version` | The same item_key belongs to the same project and IQ phase. At most 1 row with is_current_version = TRUE per item_key |
 | `rule_iq_item_2` | Business validation | - | protocol_status is DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). The protocol and steps are not modified directly after submission (REVIEW); modifications after rejection/cancellation and changes after approval are handled as a new revision row. |
-| `rule_iq_item_3` | Business validation | - | approval_number is the first approval number of the logical item and is kept even when the revision changes. Approval and disposal signatures are preserved in the workflow_instance / approval_action / electronic_signature records that target the item revision. |
+| `rule_iq_item_3` | Business validation | - | approval_number is the first approval number of the logical item and is kept even when the revision changes. Approval and disposal signatures are preserved in the workflow_instance / approval_action / electronic_signature records that target the item revision. The same approval number is not assigned to different logical items within the same project. |
 | `rule_iq_item_4` | Business validation | `source_library_id, source_package_code, source_package_version, source_template_code` | For LIBRARY registration, source_library_id is required. For SYSTEM_PACKAGE registration, source_package_code / source_package_version / source_template_code are required. |
 | `rule_iq_item_5` | Business validation | - | Multiple URS links are managed as REQUIREMENT → IQ_ITEM / VERIFIED_BY in traceability_link. |
 | `rule_iq_item_6` | Business validation | - | Registering an active test and approving its protocol require at least 1 linked URS revision and at least 1 detailed step with non-empty content. |
@@ -2671,7 +2843,7 @@ All revisions of the same item_key belong to the same project. The item numbers 
 ---
 
 <a id="table-iq_step"></a>
-### 42. IQ Test Step (`iq_step`)
+### 45. IQ Test Step (`iq_step`)
 
 | Item | Definition |
 |---|---|
@@ -2688,14 +2860,14 @@ All revisions of the same item_key belong to the same project. The item numbers 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 693 | Step ID | `step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 694 | Test Revision ID | `iq_item_id` | `uuid` | N | Y | `iq_item.iq_item_id` | Y | - | N | Y | N | Y | References iq_item.iq_item_id | `00000000-0000-0000-0000-000000000001` |
-| 695 | Step Order | `step_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display order of the detailed step on the screen. 1 or greater. | `1` |
-| 696 | Step Content | `instruction` | `text` | N | N | - | Y | - | N | N | N | Y | Step body text that is added, edited and deleted on the screen. | - |
-| 697 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 698 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 699 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 700 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 737 | Step ID | `step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 738 | Test Revision ID | `iq_item_id` | `uuid` | N | Y | `iq_item.iq_item_id` | Y | - | N | Y | N | Y | References iq_item.iq_item_id | `00000000-0000-0000-0000-000000000001` |
+| 739 | Step Order | `step_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display order of the detailed step on the screen. 1 or greater. | `1` |
+| 740 | Step Content | `instruction` | `text` | N | N | - | Y | - | N | N | N | Y | Step body text that is added, edited and deleted on the screen. | - |
+| 741 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 742 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 743 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 744 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -2714,7 +2886,7 @@ Step completion status and attached evidence are not design values of this table
 ---
 
 <a id="table-iq_execution"></a>
-### 43. IQ Test Execution (`iq_execution`)
+### 46. IQ Test Execution (`iq_execution`)
 
 | Item | Definition |
 |---|---|
@@ -2731,31 +2903,31 @@ Step completion status and attached evidence are not design values of this table
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 701 | Execution ID | `execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 702 | Executed Protocol Revision ID | `iq_item_id` | `uuid` | N | Y | `iq_item.iq_item_id` | Y | - | N | Y | N | Y | References iq_item.iq_item_id | `00000000-0000-0000-0000-000000000001` |
-| 703 | Execution Attempt | `attempt_no` | `integer` | N | N | - | Y | `1` | N | N | N | Y | 1 for the first execution, 2 or greater for re-execution. The re-execution count on the screen is attempt_no - 1. | `1` |
-| 704 | Result Correction Number | `record_revision` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Sequence number in the correction history of results of the same attempt. Distinct from re-execution. | `1` |
-| 705 | Is Current Result Correction | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the currently valid result record for the same test revision and attempt. Result correction rows that are in progress or cancelled are FALSE; the value is switched when the correction is finalized as RECORDED. | `TRUE` |
-| 706 | Actual Result | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | Actual result entered on the screen. Required when registering the judgment result. | - |
-| 707 | Execution Judgment | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | PASS, FAIL, NA (not applicable). Not executed is represented as NULL; distinct from the approval status. | `PASS` |
-| 708 | Execution Date | `performed_on` | `date` | N | N | - | N | - | N | N | N | Y | Execution date selected on the screen. Distinct from the electronic signature date and time. | `2026-09-16` |
-| 709 | Executed By | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 710 | Result Recorded At | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the judgment result was registered via electronic signature. | `2026-09-01T00:00:00Z` |
-| 711 | Execution Signature ID | `execution_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered when registering the execution result. The password is not stored. | `00000000-0000-0000-0000-000000000001` |
-| 712 | Execution Progress Status | `execution_status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | IN_PROGRESS (performing steps / entering results), RECORDED (judgment result registered), ABORTED (aborted without registering a result; for a result correction row, cancellation of the in-progress correction). Deviations and final approval are managed separately. | `IN_PROGRESS` |
-| 713 | Result Approval Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Managed independently of the protocol approval status. A correction after rejection/cancellation is handled as a new record_revision of the same attempt_no. | `DRAFT` |
-| 714 | Result Approval Workflow | `result_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Final result review and approval route for this attempt and result correction. | `00000000-0000-0000-0000-000000000001` |
-| 715 | Result Approval Version | `approval_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Display version of the finally approved test result. Distinct from the protocol version. | `ver1` |
-| 716 | Deviation Reason | `deviation_reason` | `text` | N | N | - | N | - | N | N | N | Y | Deviation reason as entered at the time the FAIL result was registered. | - |
-| 717 | Immediate Action | `immediate_action` | `text` | N | N | - | N | - | N | N | N | Y | Immediate action as entered at the time the FAIL result was registered. | - |
-| 718 | Result Correction Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for correcting the result when record_revision is incremented. | - |
-| 719 | Abort Reason | `abort_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for aborting the execution without registering a result, or for cancelling an in-progress result correction (ABORTED). Required for ABORTED | - |
-| 720 | Abort Signature ID | `abort_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered by the assignee after confirming the abort reason when aborting the execution or cancelling a result correction (signature_action=ABORT; the signature target is this execution_id). Distinct from the result registration signature (execution_signature_id); required for ABORTED | `00000000-0000-0000-0000-000000000001` |
-| 721 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 722 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 723 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 724 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 725 | Validation Baseline at Execution | `system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | Fixes the project's current baseline at the start of execution. Required before result registration and signing; not overwritten by later changes to the project baseline. | - |
+| 745 | Execution ID | `execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 746 | Executed Protocol Revision ID | `iq_item_id` | `uuid` | N | Y | `iq_item.iq_item_id` | Y | - | N | Y | N | Y | References iq_item.iq_item_id | `00000000-0000-0000-0000-000000000001` |
+| 747 | Execution Attempt | `attempt_no` | `integer` | N | N | - | Y | `1` | N | N | N | Y | 1 for the first execution, 2 or greater for re-execution. The re-execution count on the screen is attempt_no - 1. | `1` |
+| 748 | Result Correction Number | `record_revision` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Sequence number in the correction history of results of the same attempt. Distinct from re-execution. | `1` |
+| 749 | Is Current Result Correction | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the currently valid result record for the same test revision and attempt. Result correction rows that are in progress or cancelled are FALSE; the value is switched when the correction is finalized as RECORDED. | `TRUE` |
+| 750 | Actual Result | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | Actual result entered on the screen. Required when registering the judgment result. | - |
+| 751 | Execution Judgment | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | PASS, FAIL, NA (not applicable). Not executed is represented as NULL; distinct from the approval status. | `PASS` |
+| 752 | Execution Date | `performed_on` | `date` | N | N | - | N | - | N | N | N | Y | Execution date selected on the screen. Distinct from the electronic signature date and time. | `2026-09-16` |
+| 753 | Executed By | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 754 | Result Recorded At | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the judgment result was registered via electronic signature. | `2026-09-01T00:00:00Z` |
+| 755 | Execution Signature ID | `execution_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered when registering the execution result. The password is not stored. | `00000000-0000-0000-0000-000000000001` |
+| 756 | Execution Progress Status | `execution_status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | IN_PROGRESS (performing steps / entering results), RECORDED (judgment result registered), ABORTED (aborted without registering a result; for a result correction row, cancellation of the in-progress correction). Deviations and final approval are managed separately. | `IN_PROGRESS` |
+| 757 | Result Approval Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Managed independently of the protocol approval status. A correction after rejection/cancellation is handled as a new record_revision of the same attempt_no. | `DRAFT` |
+| 758 | Result Approval Workflow | `result_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Final result review and approval route for this attempt and result correction. | `00000000-0000-0000-0000-000000000001` |
+| 759 | Result Approval Version | `approval_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Display version of the finally approved test result. Distinct from the protocol version. | `ver1` |
+| 760 | Deviation Reason | `deviation_reason` | `text` | N | N | - | N | - | N | N | N | Y | Deviation reason as entered at the time the FAIL result was registered. | - |
+| 761 | Immediate Action | `immediate_action` | `text` | N | N | - | N | - | N | N | N | Y | Immediate action as entered at the time the FAIL result was registered. | - |
+| 762 | Result Correction Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for correcting the result when record_revision is incremented. | - |
+| 763 | Abort Reason | `abort_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for aborting the execution without registering a result, or for cancelling an in-progress result correction (ABORTED). Required for ABORTED | - |
+| 764 | Abort Signature ID | `abort_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered by the assignee after confirming the abort reason when aborting the execution or cancelling a result correction (signature_action=ABORT; the signature target is this execution_id). Distinct from the result registration signature (execution_signature_id); required for ABORTED | `00000000-0000-0000-0000-000000000001` |
+| 765 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 766 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 767 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 768 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 769 | Validation Baseline at Execution | `system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | Fixes the project's current baseline at the start of execution. Required before result registration and signing; not overwritten by later changes to the project baseline. | - |
 
 #### Constraints
 
@@ -2790,7 +2962,7 @@ system_baseline_id must belong to the same project as the test. The validity of 
 ---
 
 <a id="table-iq_step_execution"></a>
-### 44. IQ Step Execution (`iq_step_execution`)
+### 47. IQ Step Execution (`iq_step_execution`)
 
 | Item | Definition |
 |---|---|
@@ -2807,16 +2979,16 @@ system_baseline_id must belong to the same project as the test. The validity of 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 726 | Step Execution ID | `step_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 727 | Execution ID | `execution_id` | `uuid` | N | Y | `iq_execution.execution_id` | Y | - | N | Y | N | Y | References iq_execution.execution_id | `00000000-0000-0000-0000-000000000001` |
-| 728 | Step ID | `step_id` | `uuid` | N | Y | `iq_step.step_id` | Y | - | N | Y | N | Y | References iq_step.step_id | `00000000-0000-0000-0000-000000000001` |
-| 729 | Step Completed | `is_confirmed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Complete/cancel value of the detailed step on the screen. | `FALSE` |
-| 730 | Completed By | `confirmed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 731 | Completed At | `confirmed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the step was marked as completed. | `2026-09-01T00:00:00Z` |
-| 732 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 733 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 734 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 735 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 770 | Step Execution ID | `step_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 771 | Execution ID | `execution_id` | `uuid` | N | Y | `iq_execution.execution_id` | Y | - | N | Y | N | Y | References iq_execution.execution_id | `00000000-0000-0000-0000-000000000001` |
+| 772 | Step ID | `step_id` | `uuid` | N | Y | `iq_step.step_id` | Y | - | N | Y | N | Y | References iq_step.step_id | `00000000-0000-0000-0000-000000000001` |
+| 773 | Step Completed | `is_confirmed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Complete/cancel value of the detailed step on the screen. | `FALSE` |
+| 774 | Completed By | `confirmed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 775 | Completed At | `confirmed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the step was marked as completed. | `2026-09-01T00:00:00Z` |
+| 776 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 777 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 778 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 779 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -2837,7 +3009,7 @@ Step attachment files are linked via evidence_link with IQ_STEP_EXECUTION / step
 ## OQ
 
 <a id="table-oq_assessment"></a>
-### 45. Operational Qualification Assessment (`oq_assessment`)
+### 48. Operational Qualification Assessment (`oq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -2854,22 +3026,22 @@ Step attachment files are linked via evidence_link with IQ_STEP_EXECUTION / step
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 736 | OQ ID | `oq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | OQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 737 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
-| 738 | OQ Number | `oq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | OQ document number. Revision rows of the same document keep the same number. | `OQ-VP-SYS-010-20260529` |
-| 739 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the operational qualification assessment document | `Operational Qualification` |
-| 740 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the OQ assessment document (e.g. v1.0, v1.1) | `v1.0` |
-| 741 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision number of the OQ assessment document (e.g. 1, 2, 3...) | `1` |
-| 742 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for the initial creation or revision of the OQ assessment document | `Initial creation` |
-| 743 | Is Current Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the currently active, latest version of the OQ assessment document (TRUE/FALSE) | `TRUE` |
-| 744 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | OQ protocol approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
-| 745 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | OQ execution result approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
-| 746 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 747 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | OQ author identifier | `00000000-0000-0000-0000-000000000001` |
-| 748 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 749 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | OQ updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 750 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time. An assessment revision cannot be deleted if its composition (item_revision_refs) contains a test revision with a submission history, or if it is referenced by a submitted document or an electronic signature (rule_oq_assessment_3) | `2026-09-01T00:00:00Z` |
-| 751 | Test Composition per Assessment Revision | `item_revision_refs` | `jsonb` | N | N | - | Y | `'[]'::jsonb` | N | N | N | Y | [{table_name:"oq_item",record_id,version,sort_order}] array. Identifies the full test composition and order of this assessment revision; PKs of unchanged tests from the previous assessment revision may be reused. | - |
+| 780 | OQ ID | `oq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | OQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 781 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 782 | OQ Number | `oq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | OQ document number. Revision rows of the same document keep the same number. | `OQ-VP-SYS-010-20260529` |
+| 783 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the operational qualification assessment document | `Operational Qualification` |
+| 784 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the OQ assessment document (e.g. v1.0, v1.1) | `v1.0` |
+| 785 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision number of the OQ assessment document (e.g. 1, 2, 3...) | `1` |
+| 786 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for the initial creation or revision of the OQ assessment document | `Initial creation` |
+| 787 | Is Current Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the currently active, latest version of the OQ assessment document (TRUE/FALSE) | `TRUE` |
+| 788 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | OQ protocol approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
+| 789 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | OQ execution result approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
+| 790 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 791 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | OQ author identifier | `00000000-0000-0000-0000-000000000001` |
+| 792 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 793 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | OQ updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 794 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time. An assessment revision cannot be deleted if its composition (item_revision_refs) contains a test revision with a submission history, or if it is referenced by a submitted document or an electronic signature (rule_oq_assessment_3) | `2026-09-01T00:00:00Z` |
+| 795 | Test Composition per Assessment Revision | `item_revision_refs` | `jsonb` | N | N | - | Y | `'[]'::jsonb` | N | N | N | Y | [{table_name:"oq_item",record_id,version,sort_order}] array. Identifies the full test composition and order of this assessment revision; PKs of unchanged tests from the previous assessment revision may be reused. | - |
 
 #### Constraints
 
@@ -2897,7 +3069,7 @@ The entries of the composition are actual revisions of oq_item and must belong t
 ---
 
 <a id="table-oq_item"></a>
-### 46. OQ Detailed Test Item (`oq_item`)
+### 49. OQ Detailed Test Item (`oq_item`)
 
 | Item | Definition |
 |---|---|
@@ -2914,37 +3086,37 @@ The entries of the composition are actual revisions of oq_item and must belong t
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 752 | OQ Item ID | `oq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | PK of a specific protocol revision row of an OQ test item. item_key stays the same across revisions. | `00000000-0000-0000-0000-000000000001` |
-| 753 | OQ ID | `oq_id` | `uuid` | N | Y | `oq_assessment.oq_id` | Y | - | N | Y | N | Y | The parent assessment revision in which this logical test was first registered. Subsequent item revisions keep the same original parent. The actual composition of each assessment revision is looked up in item_revision_refs. | `00000000-0000-0000-0000-000000000001` |
-| 754 | Test Item Logical ID | `item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier that groups multiple revisions of the same test item. Issued once for a new item and kept on revision. | `00000000-0000-0000-0000-000000000001` |
-| 755 | Test ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Test display ID on the screen. Keeps the same value across revisions of the same item; duplicates between different item_keys within a project are prohibited. | `OQ-AT-L01` |
-| 756 | Test Case | `test_case` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Test item title on the screen. Not a separate classification value. | `Audit Trail` |
-| 757 | Test Description | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed procedure for performing the test verification | `Audit trail automatically generated when user data is changed` |
-| 758 | Expected Result | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | Test success criteria and expected result | `Before/after values, user, date/time and IP recorded` |
-| 759 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Independent approval status of this test revision; not overwritten by the parent document status. | `DRAFT` |
-| 760 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 761 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
-| 762 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 763 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 764 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Only DRAFT revisions with no submission history can be deleted; an item with an approval history (an APPROVED revision exists for the same item_key) is handled by disposal (is_disposed, rule_oq_item_7) instead of deletion | `2026-09-01T00:00:00Z` |
-| 765 | Protocol Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Protocol revision version displayed on the screen. | `ver1` |
-| 766 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Revision number within the item_key. 1 or greater. | `1` |
-| 767 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising an approved protocol. | - |
-| 768 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the current working revision of the same item_key. Independent of whether it is the approved version. | `TRUE` |
-| 769 | Acceptance Criteria | `acceptance_criteria` | `text` | N | N | - | Y | - | N | N | N | Y | Acceptance criteria on the screen. Distinct from expected_result (expected result). | `Matches the approved specification` |
-| 770 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL (manual entry), LIBRARY (library), SYSTEM_PACKAGE (system package), AI_DRAFT (AI draft). Same codes as requirement / fra_item.source_type | `MANUAL` |
-| 771 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | The source when registered from the library. The test content is copied at registration and managed independently thereafter. | `00000000-0000-0000-0000-000000000001` |
-| 772 | Source Package Code | `source_package_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Package code when registered from a system package. | `OQ-CORE` |
-| 773 | Source Package Version | `source_package_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Package version selected at registration. | `ver2` |
-| 774 | Source Template Code | `source_template_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Test template code selected within the package. | `OQ-PKG-001` |
-| 775 | Item Approval Number | `approval_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Issued on first approval and displayed as the item number on the screen. The same logical item number is kept on revision. | - |
-| 776 | Protocol Approval Workflow | `protocol_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Authoring/review/approval route and history for this protocol revision. | `00000000-0000-0000-0000-000000000001` |
-| 777 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason entered in the disposal approval on the screen. Required when disposal is completed. | - |
-| 778 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Disposal approval workflow (approval_scope=DISPOSAL). Disposal is completed by the final approval of this approval workflow | `00000000-0000-0000-0000-000000000001` |
-| 779 | Disposal Approval Signature | `disposal_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval electronic signature of the disposal approval workflow (disposal_workflow_id). | `00000000-0000-0000-0000-000000000001` |
-| 780 | Is Disposed | `is_disposed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Disposal status on the screen. Disposed items are excluded from new executions and aggregation; existing records are preserved. | `FALSE` |
-| 781 | Disposed By | `disposed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Final approver of the disposal approval workflow | `00000000-0000-0000-0000-000000000001` |
-| 782 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final approval time of the disposal approval workflow. | `2026-09-01T00:00:00Z` |
+| 796 | OQ Item ID | `oq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | PK of a specific protocol revision row of an OQ test item. item_key stays the same across revisions. | `00000000-0000-0000-0000-000000000001` |
+| 797 | OQ ID | `oq_id` | `uuid` | N | Y | `oq_assessment.oq_id` | Y | - | N | Y | N | Y | The parent assessment revision in which this logical test was first registered. Subsequent item revisions keep the same original parent. The actual composition of each assessment revision is looked up in item_revision_refs. | `00000000-0000-0000-0000-000000000001` |
+| 798 | Test Item Logical ID | `item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier that groups multiple revisions of the same test item. Issued once for a new item and kept on revision. | `00000000-0000-0000-0000-000000000001` |
+| 799 | Test ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Test display ID on the screen. Keeps the same value across revisions of the same item; duplicates between different item_keys within a project are prohibited. | `OQ-AT-L01` |
+| 800 | Test Case | `test_case` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Test item title on the screen. Not a separate classification value. | `Audit Trail` |
+| 801 | Test Description | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed procedure for performing the test verification | `Audit trail automatically generated when user data is changed` |
+| 802 | Expected Result | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | Test success criteria and expected result | `Before/after values, user, date/time and IP recorded` |
+| 803 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Independent approval status of this test revision; not overwritten by the parent document status. | `DRAFT` |
+| 804 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 805 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
+| 806 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 807 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 808 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Only DRAFT revisions with no submission history can be deleted; an item with an approval history (an APPROVED revision exists for the same item_key) is handled by disposal (is_disposed, rule_oq_item_7) instead of deletion | `2026-09-01T00:00:00Z` |
+| 809 | Protocol Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Protocol revision version displayed on the screen. | `ver1` |
+| 810 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Revision number within the item_key. 1 or greater. | `1` |
+| 811 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising an approved protocol. | - |
+| 812 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the current working revision of the same item_key. Independent of whether it is the approved version. | `TRUE` |
+| 813 | Acceptance Criteria | `acceptance_criteria` | `text` | N | N | - | Y | - | N | N | N | Y | Acceptance criteria on the screen. Distinct from expected_result (expected result). | `Matches the approved specification` |
+| 814 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL (manual entry), LIBRARY (library), SYSTEM_PACKAGE (system package), AI_DRAFT (AI draft). Same codes as requirement / fra_item.source_type | `MANUAL` |
+| 815 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | The source when registered from the library. The test content is copied at registration and managed independently thereafter. | `00000000-0000-0000-0000-000000000001` |
+| 816 | Source Package Code | `source_package_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Package code when registered from a system package. | `OQ-CORE` |
+| 817 | Source Package Version | `source_package_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Package version selected at registration. | `ver2` |
+| 818 | Source Template Code | `source_template_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Test template code selected within the package. | `OQ-PKG-001` |
+| 819 | Item Approval Number | `approval_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Issued on first approval and displayed as the item number on the screen. The same logical item number is kept on revision. | `OQ-001` |
+| 820 | Protocol Approval Workflow | `protocol_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Authoring/review/approval route and history for this protocol revision. | `00000000-0000-0000-0000-000000000001` |
+| 821 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason entered in the disposal approval on the screen. Required when disposal is completed. | - |
+| 822 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Disposal approval workflow (approval_scope=DISPOSAL). Disposal is completed by the final approval of this approval workflow | `00000000-0000-0000-0000-000000000001` |
+| 823 | Disposal Approval Signature | `disposal_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval electronic signature of the disposal approval workflow (disposal_workflow_id). | `00000000-0000-0000-0000-000000000001` |
+| 824 | Is Disposed | `is_disposed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Disposal status on the screen. Disposed items are excluded from new executions and aggregation; existing records are preserved. | `FALSE` |
+| 825 | Disposed By | `disposed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Final approver of the disposal approval workflow | `00000000-0000-0000-0000-000000000001` |
+| 826 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final approval time of the disposal approval workflow. | `2026-09-01T00:00:00Z` |
 
 #### Constraints
 
@@ -2953,7 +3125,7 @@ The entries of the composition are actual revisions of oq_item and must belong t
 | `uq_oq_item_1` | UNIQUE | `item_key, revision_number` | UNIQUE(item_key, revision_number) |
 | `rule_oq_item_1` | Business validation | `item_key, revision_number, is_current_version` | The same item_key belongs to the same project and OQ phase. At most 1 row with is_current_version = TRUE per item_key |
 | `rule_oq_item_2` | Business validation | - | protocol_status is DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). The protocol and steps are not modified directly after submission (REVIEW); modifications after rejection/cancellation and changes after approval are handled as a new revision row. |
-| `rule_oq_item_3` | Business validation | - | approval_number is the first approval number of the logical item and is kept even when the revision changes. Approval and disposal signatures are preserved in the workflow_instance / approval_action / electronic_signature records that target the item revision. |
+| `rule_oq_item_3` | Business validation | - | approval_number is the first approval number of the logical item and is kept even when the revision changes. Approval and disposal signatures are preserved in the workflow_instance / approval_action / electronic_signature records that target the item revision. The same approval number is not assigned to different logical items within the same project. |
 | `rule_oq_item_4` | Business validation | `source_library_id, source_package_code, source_package_version, source_template_code` | For LIBRARY registration, source_library_id is required. For SYSTEM_PACKAGE registration, source_package_code / source_package_version / source_template_code are required. |
 | `rule_oq_item_5` | Business validation | - | Links to multiple URSs are managed in traceability_link as REQUIREMENT → OQ_ITEM / VERIFIED_BY. |
 | `rule_oq_item_6` | Business validation | - | Registering an active test and approving its protocol require at least 1 linked URS revision and at least 1 detailed step with non-empty content. |
@@ -2977,7 +3149,7 @@ All revisions of the same item_key belong to the same project. The item numbers 
 ---
 
 <a id="table-oq_step"></a>
-### 47. OQ Test Step (`oq_step`)
+### 50. OQ Test Step (`oq_step`)
 
 | Item | Definition |
 |---|---|
@@ -2994,14 +3166,14 @@ All revisions of the same item_key belong to the same project. The item numbers 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 783 | Step ID | `step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 784 | Test Revision ID | `oq_item_id` | `uuid` | N | Y | `oq_item.oq_item_id` | Y | - | N | Y | N | Y | References oq_item.oq_item_id | `00000000-0000-0000-0000-000000000001` |
-| 785 | Step Order | `step_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display order of the detailed step on the screen. 1 or greater. | `1` |
-| 786 | Step Content | `instruction` | `text` | N | N | - | Y | - | N | N | N | Y | Step body text that is added, edited and deleted on the screen. | - |
-| 787 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 788 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 789 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 790 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 827 | Step ID | `step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 828 | Test Revision ID | `oq_item_id` | `uuid` | N | Y | `oq_item.oq_item_id` | Y | - | N | Y | N | Y | References oq_item.oq_item_id | `00000000-0000-0000-0000-000000000001` |
+| 829 | Step Order | `step_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display order of the detailed step on the screen. 1 or greater. | `1` |
+| 830 | Step Content | `instruction` | `text` | N | N | - | Y | - | N | N | N | Y | Step body text that is added, edited and deleted on the screen. | - |
+| 831 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 832 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 833 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 834 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -3020,7 +3192,7 @@ Step completion status and attached evidence are not design values of this table
 ---
 
 <a id="table-oq_execution"></a>
-### 48. OQ Test Execution (`oq_execution`)
+### 51. OQ Test Execution (`oq_execution`)
 
 | Item | Definition |
 |---|---|
@@ -3037,31 +3209,31 @@ Step completion status and attached evidence are not design values of this table
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 791 | Execution ID | `execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 792 | Executed Protocol Revision ID | `oq_item_id` | `uuid` | N | Y | `oq_item.oq_item_id` | Y | - | N | Y | N | Y | References oq_item.oq_item_id | `00000000-0000-0000-0000-000000000001` |
-| 793 | Execution Attempt | `attempt_no` | `integer` | N | N | - | Y | `1` | N | N | N | Y | 1 for the first execution, 2 or greater for re-execution. The re-execution count on the screen is attempt_no - 1. | `1` |
-| 794 | Result Correction Number | `record_revision` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Sequence number in the correction history of results of the same attempt. Distinct from re-execution. | `1` |
-| 795 | Is Current Result Correction | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the currently valid result record for the same test revision and attempt. Result correction rows that are in progress or cancelled are FALSE; the value is switched when the correction is finalized as RECORDED. | `TRUE` |
-| 796 | Actual Result | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | Actual result entered on the screen. Required when registering the judgment result. | - |
-| 797 | Execution Judgment | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | PASS, FAIL, NA (not applicable). Not executed is represented as NULL; distinct from the approval status. | `PASS` |
-| 798 | Execution Date | `performed_on` | `date` | N | N | - | N | - | N | N | N | Y | Execution date selected on the screen. Distinct from the electronic signature date and time. | `2026-09-16` |
-| 799 | Executed By | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 800 | Result Recorded At | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the judgment result was registered via electronic signature. | `2026-09-01T00:00:00Z` |
-| 801 | Execution Signature ID | `execution_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered when registering the execution result. The password is not stored. | `00000000-0000-0000-0000-000000000001` |
-| 802 | Execution Progress Status | `execution_status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | IN_PROGRESS (performing steps / entering results), RECORDED (judgment result registered), ABORTED (aborted without registering a result; for a result correction row, cancellation of the in-progress correction). Deviations and final approval are managed separately. | `IN_PROGRESS` |
-| 803 | Result Approval Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Managed independently of the protocol approval status. A correction after rejection/cancellation is handled as a new record_revision of the same attempt_no. | `DRAFT` |
-| 804 | Result Approval Workflow | `result_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Final result review and approval route for this attempt and result correction. | `00000000-0000-0000-0000-000000000001` |
-| 805 | Result Approval Version | `approval_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Display version of the finally approved test result. Distinct from the protocol version. | `ver1` |
-| 806 | Deviation Reason | `deviation_reason` | `text` | N | N | - | N | - | N | N | N | Y | Deviation reason as entered at the time the FAIL result was registered. | - |
-| 807 | Immediate Action | `immediate_action` | `text` | N | N | - | N | - | N | N | N | Y | Immediate action as entered at the time the FAIL result was registered. | - |
-| 808 | Result Correction Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for correcting the result when record_revision is incremented. | - |
-| 809 | Abort Reason | `abort_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for aborting the execution without registering a result, or for cancelling an in-progress result correction (ABORTED). Required for ABORTED | - |
-| 810 | Abort Signature ID | `abort_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered by the assignee after confirming the abort reason when aborting the execution or cancelling a result correction (signature_action=ABORT; the signature target is this execution_id). Distinct from the result registration signature (execution_signature_id); required for ABORTED | `00000000-0000-0000-0000-000000000001` |
-| 811 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 812 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 813 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 814 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 815 | Validation Baseline at Execution | `system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | Fixes the project's current baseline at the start of execution. Required before result registration and signing; not overwritten by later changes to the project baseline. | - |
+| 835 | Execution ID | `execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 836 | Executed Protocol Revision ID | `oq_item_id` | `uuid` | N | Y | `oq_item.oq_item_id` | Y | - | N | Y | N | Y | References oq_item.oq_item_id | `00000000-0000-0000-0000-000000000001` |
+| 837 | Execution Attempt | `attempt_no` | `integer` | N | N | - | Y | `1` | N | N | N | Y | 1 for the first execution, 2 or greater for re-execution. The re-execution count on the screen is attempt_no - 1. | `1` |
+| 838 | Result Correction Number | `record_revision` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Sequence number in the correction history of results of the same attempt. Distinct from re-execution. | `1` |
+| 839 | Is Current Result Correction | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the currently valid result record for the same test revision and attempt. Result correction rows that are in progress or cancelled are FALSE; the value is switched when the correction is finalized as RECORDED. | `TRUE` |
+| 840 | Actual Result | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | Actual result entered on the screen. Required when registering the judgment result. | - |
+| 841 | Execution Judgment | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | PASS, FAIL, NA (not applicable). Not executed is represented as NULL; distinct from the approval status. | `PASS` |
+| 842 | Execution Date | `performed_on` | `date` | N | N | - | N | - | N | N | N | Y | Execution date selected on the screen. Distinct from the electronic signature date and time. | `2026-09-16` |
+| 843 | Executed By | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 844 | Result Recorded At | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the judgment result was registered via electronic signature. | `2026-09-01T00:00:00Z` |
+| 845 | Execution Signature ID | `execution_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered when registering the execution result. The password is not stored. | `00000000-0000-0000-0000-000000000001` |
+| 846 | Execution Progress Status | `execution_status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | IN_PROGRESS (performing steps / entering results), RECORDED (judgment result registered), ABORTED (aborted without registering a result; for a result correction row, cancellation of the in-progress correction). Deviations and final approval are managed separately. | `IN_PROGRESS` |
+| 847 | Result Approval Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Managed independently of the protocol approval status. A correction after rejection/cancellation is handled as a new record_revision of the same attempt_no. | `DRAFT` |
+| 848 | Result Approval Workflow | `result_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Final result review and approval route for this attempt and result correction. | `00000000-0000-0000-0000-000000000001` |
+| 849 | Result Approval Version | `approval_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Display version of the finally approved test result. Distinct from the protocol version. | `ver1` |
+| 850 | Deviation Reason | `deviation_reason` | `text` | N | N | - | N | - | N | N | N | Y | Deviation reason as entered at the time the FAIL result was registered. | - |
+| 851 | Immediate Action | `immediate_action` | `text` | N | N | - | N | - | N | N | N | Y | Immediate action as entered at the time the FAIL result was registered. | - |
+| 852 | Result Correction Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for correcting the result when record_revision is incremented. | - |
+| 853 | Abort Reason | `abort_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for aborting the execution without registering a result, or for cancelling an in-progress result correction (ABORTED). Required for ABORTED | - |
+| 854 | Abort Signature ID | `abort_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered by the assignee after confirming the abort reason when aborting the execution or cancelling a result correction (signature_action=ABORT; the signature target is this execution_id). Distinct from the result registration signature (execution_signature_id); required for ABORTED | `00000000-0000-0000-0000-000000000001` |
+| 855 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 856 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 857 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 858 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 859 | Validation Baseline at Execution | `system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | Fixes the project's current baseline at the start of execution. Required before result registration and signing; not overwritten by later changes to the project baseline. | - |
 
 #### Constraints
 
@@ -3096,7 +3268,7 @@ system_baseline_id must belong to the same project as the test. The validity of 
 ---
 
 <a id="table-oq_step_execution"></a>
-### 49. OQ Step Execution (`oq_step_execution`)
+### 52. OQ Step Execution (`oq_step_execution`)
 
 | Item | Definition |
 |---|---|
@@ -3113,16 +3285,16 @@ system_baseline_id must belong to the same project as the test. The validity of 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 816 | Step Execution ID | `step_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 817 | Execution ID | `execution_id` | `uuid` | N | Y | `oq_execution.execution_id` | Y | - | N | Y | N | Y | References oq_execution.execution_id | `00000000-0000-0000-0000-000000000001` |
-| 818 | Step ID | `step_id` | `uuid` | N | Y | `oq_step.step_id` | Y | - | N | Y | N | Y | References oq_step.step_id | `00000000-0000-0000-0000-000000000001` |
-| 819 | Step Completed | `is_confirmed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Complete/cancel value of the detailed step on the screen. | `FALSE` |
-| 820 | Completed By | `confirmed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 821 | Completed At | `confirmed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the step was marked as completed. | `2026-09-01T00:00:00Z` |
-| 822 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 823 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 824 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 825 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 860 | Step Execution ID | `step_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 861 | Execution ID | `execution_id` | `uuid` | N | Y | `oq_execution.execution_id` | Y | - | N | Y | N | Y | References oq_execution.execution_id | `00000000-0000-0000-0000-000000000001` |
+| 862 | Step ID | `step_id` | `uuid` | N | Y | `oq_step.step_id` | Y | - | N | Y | N | Y | References oq_step.step_id | `00000000-0000-0000-0000-000000000001` |
+| 863 | Step Completed | `is_confirmed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Complete/cancel value of the detailed step on the screen. | `FALSE` |
+| 864 | Completed By | `confirmed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 865 | Completed At | `confirmed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the step was marked as completed. | `2026-09-01T00:00:00Z` |
+| 866 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 867 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 868 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 869 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -3143,7 +3315,7 @@ Step attachment files are linked via evidence_link with OQ_STEP_EXECUTION / step
 ## PQ
 
 <a id="table-pq_assessment"></a>
-### 50. Performance Qualification Assessment (`pq_assessment`)
+### 53. Performance Qualification Assessment (`pq_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -3160,22 +3332,22 @@ Step attachment files are linked via evidence_link with OQ_STEP_EXECUTION / step
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 826 | PQ ID | `pq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | PQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 827 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
-| 828 | PQ Number | `pq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | PQ document number. Revision rows of the same document keep the same number. | `PQ-VP-SYS-008-20260422` |
-| 829 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the performance qualification assessment document | `Performance Qualification` |
-| 830 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the PQ assessment document (e.g. v1.0, v1.1) | `v1.0` |
-| 831 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision number of the PQ assessment document (e.g. 1, 2, 3...) | `1` |
-| 832 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for the initial creation or revision of the PQ assessment document | `Initial creation` |
-| 833 | Is Current Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the currently active, latest version of the PQ assessment document (TRUE/FALSE) | `TRUE` |
-| 834 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | PQ protocol approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
-| 835 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | PQ execution result approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
-| 836 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 837 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | PQ author identifier | `00000000-0000-0000-0000-000000000001` |
-| 838 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 839 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | PQ updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 840 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time. An assessment revision cannot be deleted if its composition (item_revision_refs) contains a test revision with a submission history, or if it is referenced by a submitted document or an electronic signature (rule_pq_assessment_3) | `2026-09-01T00:00:00Z` |
-| 841 | Test Composition per Assessment Revision | `item_revision_refs` | `jsonb` | N | N | - | Y | `'[]'::jsonb` | N | N | N | Y | [{table_name:"pq_item",record_id,version,sort_order}] array. Identifies the full test composition and order of this assessment revision; PKs of unchanged tests from the previous assessment revision may be reused. | - |
+| 870 | PQ ID | `pq_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | PQ assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 871 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 872 | PQ Number | `pq_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | PQ document number. Revision rows of the same document keep the same number. | `PQ-VP-SYS-008-20260422` |
+| 873 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the performance qualification assessment document | `Performance Qualification` |
+| 874 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the PQ assessment document (e.g. v1.0, v1.1) | `v1.0` |
+| 875 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision number of the PQ assessment document (e.g. 1, 2, 3...) | `1` |
+| 876 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for the initial creation or revision of the PQ assessment document | `Initial creation` |
+| 877 | Is Current Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the currently active, latest version of the PQ assessment document (TRUE/FALSE) | `TRUE` |
+| 878 | Protocol Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | PQ protocol approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
+| 879 | Record Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | PQ execution result approval summary. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected). A display value derived from the statuses of the child rows in the composition using the aggregation rule in the business rules; it is not bulk-written to the child rows. Since the header is not subject to the approval workflow, it has no CANCELLED value. | `DRAFT` |
+| 880 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 881 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | PQ author identifier | `00000000-0000-0000-0000-000000000001` |
+| 882 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 883 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | PQ updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 884 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time. An assessment revision cannot be deleted if its composition (item_revision_refs) contains a test revision with a submission history, or if it is referenced by a submitted document or an electronic signature (rule_pq_assessment_3) | `2026-09-01T00:00:00Z` |
+| 885 | Test Composition per Assessment Revision | `item_revision_refs` | `jsonb` | N | N | - | Y | `'[]'::jsonb` | N | N | N | Y | [{table_name:"pq_item",record_id,version,sort_order}] array. Identifies the full test composition and order of this assessment revision; PKs of unchanged tests from the previous assessment revision may be reused. | - |
 
 #### Constraints
 
@@ -3203,7 +3375,7 @@ The entries of the composition are actual revisions of pq_item and must belong t
 ---
 
 <a id="table-pq_item"></a>
-### 51. PQ Detailed Test Item (`pq_item`)
+### 54. PQ Detailed Test Item (`pq_item`)
 
 | Item | Definition |
 |---|---|
@@ -3220,37 +3392,37 @@ The entries of the composition are actual revisions of pq_item and must belong t
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 842 | PQ Item ID | `pq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | PK of a specific protocol revision row of a PQ test item. item_key stays the same across revisions. | `00000000-0000-0000-0000-000000000001` |
-| 843 | PQ ID | `pq_id` | `uuid` | N | Y | `pq_assessment.pq_id` | Y | - | N | Y | N | Y | The parent assessment revision in which this logical test was first registered. Subsequent item revisions keep the same original parent. The actual composition of each assessment revision is looked up in item_revision_refs. | `00000000-0000-0000-0000-000000000001` |
-| 844 | Test Display ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Test display ID on the screen. Keeps the same value across revisions of the same item; duplicates between different item_keys within a project are prohibited. | `PQ-NEW-01` |
-| 845 | Test Item Name | `test_case` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Test item title on the screen. | `Business scenario verification` |
-| 846 | Test Item Logical ID | `item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier that groups multiple revisions of the same test item. Issued once for a new item and kept on revision. | `00000000-0000-0000-0000-000000000001` |
-| 847 | Test Description | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed procedure for performing the PQ test verification | `Verify normal completion of the production process for 3 or more consecutive batches` |
-| 848 | Expected Result | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | Test success criteria and expected result | `All batches must be produced normally to completion in accordance with specifications` |
-| 849 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 850 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
-| 851 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 852 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 853 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Only DRAFT revisions with no submission history can be deleted; an item with an approval history (an APPROVED revision exists for the same item_key) is handled by disposal (is_disposed, rule_pq_item_7) instead of deletion | `2026-09-01T00:00:00Z` |
-| 854 | Protocol Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Protocol revision version displayed on the screen. | `ver1` |
-| 855 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Revision number within the item_key. 1 or greater. | `1` |
-| 856 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising an approved protocol. | - |
-| 857 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the current working revision of the same item_key. Independent of whether it is the approved version. | `TRUE` |
-| 858 | Protocol Approval Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled) | `DRAFT` |
-| 859 | Acceptance Criteria | `acceptance_criteria` | `text` | N | N | - | Y | - | N | N | N | Y | Acceptance criteria on the screen. Distinct from expected_result (expected result). | `Matches the approved specification` |
-| 860 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL (manual entry), LIBRARY (library), SYSTEM_PACKAGE (system package), AI_DRAFT (AI draft). Same codes as requirement / fra_item.source_type | `MANUAL` |
-| 861 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | The source when registered from the library. The test content is copied at registration and managed independently thereafter. | `00000000-0000-0000-0000-000000000001` |
-| 862 | Source Package Code | `source_package_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Package code when registered from a system package. | `PQ-CORE` |
-| 863 | Source Package Version | `source_package_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Package version selected at registration. | `ver2` |
-| 864 | Source Template Code | `source_template_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Test template code selected within the package. | `PQ-PKG-001` |
-| 865 | Item Approval Number | `approval_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Issued on first approval and displayed as the item number on the screen. The same logical item number is kept on revision. | - |
-| 866 | Protocol Approval Workflow | `protocol_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Authoring/review/approval route and history for this protocol revision. | `00000000-0000-0000-0000-000000000001` |
-| 867 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason entered in the disposal approval on the screen. Required when disposal is completed. | - |
-| 868 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Disposal approval workflow (approval_scope=DISPOSAL). Disposal is completed by the final approval of this approval workflow | `00000000-0000-0000-0000-000000000001` |
-| 869 | Disposal Approval Signature | `disposal_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval electronic signature of the disposal approval workflow (disposal_workflow_id). | `00000000-0000-0000-0000-000000000001` |
-| 870 | Is Disposed | `is_disposed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Disposal status on the screen. Disposed items are excluded from new executions and aggregation; existing records are preserved. | `FALSE` |
-| 871 | Disposed By | `disposed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Final approver of the disposal approval workflow | `00000000-0000-0000-0000-000000000001` |
-| 872 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final approval time of the disposal approval workflow. | `2026-09-01T00:00:00Z` |
+| 886 | PQ Item ID | `pq_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | PK of a specific protocol revision row of a PQ test item. item_key stays the same across revisions. | `00000000-0000-0000-0000-000000000001` |
+| 887 | PQ ID | `pq_id` | `uuid` | N | Y | `pq_assessment.pq_id` | Y | - | N | Y | N | Y | The parent assessment revision in which this logical test was first registered. Subsequent item revisions keep the same original parent. The actual composition of each assessment revision is looked up in item_revision_refs. | `00000000-0000-0000-0000-000000000001` |
+| 888 | Test Display ID | `test_id` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | Test display ID on the screen. Keeps the same value across revisions of the same item; duplicates between different item_keys within a project are prohibited. | `PQ-NEW-01` |
+| 889 | Test Item Name | `test_case` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Test item title on the screen. | `Business scenario verification` |
+| 890 | Test Item Logical ID | `item_key` | `uuid` | N | N | - | Y | `gen_random_uuid()` | N | Y | N | Y | Identifier that groups multiple revisions of the same test item. Issued once for a new item and kept on revision. | `00000000-0000-0000-0000-000000000001` |
+| 891 | Test Description | `test_description` | `text` | N | N | - | Y | - | N | N | N | Y | Detailed procedure for performing the PQ test verification | `Verify normal completion of the production process for 3 or more consecutive batches` |
+| 892 | Expected Result | `expected_result` | `text` | N | N | - | Y | - | N | N | N | Y | Test success criteria and expected result | `All batches must be produced normally to completion in accordance with specifications` |
+| 893 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 894 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
+| 895 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 896 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 897 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deletion time of an unapproved draft. Only DRAFT revisions with no submission history can be deleted; an item with an approval history (an APPROVED revision exists for the same item_key) is handled by disposal (is_disposed, rule_pq_item_7) instead of deletion | `2026-09-01T00:00:00Z` |
+| 898 | Protocol Version | `version` | `varchar(20)` | N | N | - | Y | `'ver1'` | N | N | N | Y | Protocol revision version displayed on the screen. | `ver1` |
+| 899 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Revision number within the item_key. 1 or greater. | `1` |
+| 900 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for change entered when revising an approved protocol. | - |
+| 901 | Is Current Revision | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the current working revision of the same item_key. Independent of whether it is the approved version. | `TRUE` |
+| 902 | Protocol Approval Status | `protocol_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled) | `DRAFT` |
+| 903 | Acceptance Criteria | `acceptance_criteria` | `text` | N | N | - | Y | - | N | N | N | Y | Acceptance criteria on the screen. Distinct from expected_result (expected result). | `Matches the approved specification` |
+| 904 | Registration Source | `source_type` | `varchar(30)` | N | N | - | Y | `'MANUAL'` | N | N | N | Y | MANUAL (manual entry), LIBRARY (library), SYSTEM_PACKAGE (system package), AI_DRAFT (AI draft). Same codes as requirement / fra_item.source_type | `MANUAL` |
+| 905 | Source Library ID | `source_library_id` | `uuid` | N | Y | `library_item.library_id` | N | - | N | Y | N | Y | The source when registered from the library. The test content is copied at registration and managed independently thereafter. | `00000000-0000-0000-0000-000000000001` |
+| 906 | Source Package Code | `source_package_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Package code when registered from a system package. | `PQ-CORE` |
+| 907 | Source Package Version | `source_package_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Package version selected at registration. | `ver2` |
+| 908 | Source Template Code | `source_template_code` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Test template code selected within the package. | `PQ-PKG-001` |
+| 909 | Item Approval Number | `approval_number` | `varchar(50)` | N | N | - | N | - | N | N | N | Y | Issued on first approval and displayed as the item number on the screen. The same logical item number is kept on revision. | `PQ-001` |
+| 910 | Protocol Approval Workflow | `protocol_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Authoring/review/approval route and history for this protocol revision. | `00000000-0000-0000-0000-000000000001` |
+| 911 | Disposal Reason | `disposal_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason entered in the disposal approval on the screen. Required when disposal is completed. | - |
+| 912 | Disposal Approval Workflow ID | `disposal_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Disposal approval workflow (approval_scope=DISPOSAL). Disposal is completed by the final approval of this approval workflow | `00000000-0000-0000-0000-000000000001` |
+| 913 | Disposal Approval Signature | `disposal_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval electronic signature of the disposal approval workflow (disposal_workflow_id). | `00000000-0000-0000-0000-000000000001` |
+| 914 | Is Disposed | `is_disposed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Disposal status on the screen. Disposed items are excluded from new executions and aggregation; existing records are preserved. | `FALSE` |
+| 915 | Disposed By | `disposed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | Final approver of the disposal approval workflow | `00000000-0000-0000-0000-000000000001` |
+| 916 | Disposed At | `disposed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final approval time of the disposal approval workflow. | `2026-09-01T00:00:00Z` |
 
 #### Constraints
 
@@ -3259,7 +3431,7 @@ The entries of the composition are actual revisions of pq_item and must belong t
 | `uq_pq_item_1` | UNIQUE | `item_key, revision_number` | UNIQUE(item_key, revision_number) |
 | `rule_pq_item_1` | Business validation | `item_key, revision_number, is_current_version` | The same item_key belongs to the same project and PQ phase. At most 1 row with is_current_version = TRUE per item_key |
 | `rule_pq_item_2` | Business validation | - | protocol_status is DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). The protocol and steps are not modified directly after submission (REVIEW); modifications after rejection/cancellation and changes after approval are handled as a new revision row. |
-| `rule_pq_item_3` | Business validation | - | approval_number is the first approval number of the logical item and is kept even when the revision changes. Approval and disposal signatures are preserved in the workflow_instance / approval_action / electronic_signature records that target the item revision. |
+| `rule_pq_item_3` | Business validation | - | approval_number is the first approval number of the logical item and is kept even when the revision changes. Approval and disposal signatures are preserved in the workflow_instance / approval_action / electronic_signature records that target the item revision. The same approval number is not assigned to different logical items within the same project. |
 | `rule_pq_item_4` | Business validation | `source_library_id, source_package_code, source_package_version, source_template_code` | For LIBRARY registration, source_library_id is required. For SYSTEM_PACKAGE registration, source_package_code / source_package_version / source_template_code are required. |
 | `rule_pq_item_5` | Business validation | - | Links to multiple URSs are managed in traceability_link as REQUIREMENT → PQ_ITEM / VERIFIED_BY. |
 | `rule_pq_item_6` | Business validation | - | Registering an active test and approving its protocol require at least 1 linked URS revision and at least 1 detailed step with non-empty content. |
@@ -3283,7 +3455,7 @@ All revisions of the same item_key belong to the same project. The item numbers 
 ---
 
 <a id="table-pq_step"></a>
-### 52. PQ Test Step (`pq_step`)
+### 55. PQ Test Step (`pq_step`)
 
 | Item | Definition |
 |---|---|
@@ -3300,14 +3472,14 @@ All revisions of the same item_key belong to the same project. The item numbers 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 873 | Step ID | `step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 874 | Test Revision ID | `pq_item_id` | `uuid` | N | Y | `pq_item.pq_item_id` | Y | - | N | Y | N | Y | References pq_item.pq_item_id | `00000000-0000-0000-0000-000000000001` |
-| 875 | Step Order | `step_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display order of the detailed step on the screen. 1 or greater. | `1` |
-| 876 | Step Content | `instruction` | `text` | N | N | - | Y | - | N | N | N | Y | Step body text that is added, edited and deleted on the screen. | - |
-| 877 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 878 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 879 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 880 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 917 | Step ID | `step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 918 | Test Revision ID | `pq_item_id` | `uuid` | N | Y | `pq_item.pq_item_id` | Y | - | N | Y | N | Y | References pq_item.pq_item_id | `00000000-0000-0000-0000-000000000001` |
+| 919 | Step Order | `step_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display order of the detailed step on the screen. 1 or greater. | `1` |
+| 920 | Step Content | `instruction` | `text` | N | N | - | Y | - | N | N | N | Y | Step body text that is added, edited and deleted on the screen. | - |
+| 921 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 922 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 923 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 924 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -3326,7 +3498,7 @@ Step completion status and attached evidence are not design values of this table
 ---
 
 <a id="table-pq_execution"></a>
-### 53. PQ Test Execution (`pq_execution`)
+### 56. PQ Test Execution (`pq_execution`)
 
 | Item | Definition |
 |---|---|
@@ -3343,31 +3515,31 @@ Step completion status and attached evidence are not design values of this table
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 881 | Execution ID | `execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 882 | Executed Protocol Revision ID | `pq_item_id` | `uuid` | N | Y | `pq_item.pq_item_id` | Y | - | N | Y | N | Y | References pq_item.pq_item_id | `00000000-0000-0000-0000-000000000001` |
-| 883 | Execution Attempt | `attempt_no` | `integer` | N | N | - | Y | `1` | N | N | N | Y | 1 for the first execution, 2 or greater for re-execution. The re-execution count on the screen is attempt_no - 1. | `1` |
-| 884 | Result Correction Number | `record_revision` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Sequence number in the correction history of results of the same attempt. Distinct from re-execution. | `1` |
-| 885 | Is Current Result Correction | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the currently valid result record for the same test revision and attempt. Result correction rows that are in progress or cancelled are FALSE; the value is switched when the correction is finalized as RECORDED. | `TRUE` |
-| 886 | Actual Result | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | Actual result entered on the screen. Required when registering the judgment result. | - |
-| 887 | Execution Judgment | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | PASS, FAIL, NA (not applicable). Not executed is represented as NULL; distinct from the approval status. | `PASS` |
-| 888 | Execution Date | `performed_on` | `date` | N | N | - | N | - | N | N | N | Y | Execution date selected on the screen. Distinct from the electronic signature date and time. | `2026-09-16` |
-| 889 | Executed By | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 890 | Result Recorded At | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the judgment result was registered via electronic signature. | `2026-09-01T00:00:00Z` |
-| 891 | Execution Signature ID | `execution_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered when registering the execution result. The password is not stored. | `00000000-0000-0000-0000-000000000001` |
-| 892 | Execution Progress Status | `execution_status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | IN_PROGRESS (performing steps / entering results), RECORDED (judgment result registered), ABORTED (aborted without registering a result; for a result correction row, cancellation of the in-progress correction). Deviations and final approval are managed separately. | `IN_PROGRESS` |
-| 893 | Result Approval Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Managed independently of the protocol approval status. A correction after rejection/cancellation is handled as a new record_revision of the same attempt_no. | `DRAFT` |
-| 894 | Result Approval Workflow | `result_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Final result review and approval route for this attempt and result correction. | `00000000-0000-0000-0000-000000000001` |
-| 895 | Result Approval Version | `approval_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Display version of the finally approved test result. Distinct from the protocol version. | `ver1` |
-| 896 | Deviation Reason | `deviation_reason` | `text` | N | N | - | N | - | N | N | N | Y | Deviation reason as entered at the time the FAIL result was registered. | - |
-| 897 | Immediate Action | `immediate_action` | `text` | N | N | - | N | - | N | N | N | Y | Immediate action as entered at the time the FAIL result was registered. | - |
-| 898 | Result Correction Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for correcting the result when record_revision is incremented. | - |
-| 899 | Abort Reason | `abort_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for aborting the execution without registering a result, or for cancelling an in-progress result correction (ABORTED). Required for ABORTED | - |
-| 900 | Abort Signature ID | `abort_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered by the assignee after confirming the abort reason when aborting the execution or cancelling a result correction (signature_action=ABORT; the signature target is this execution_id). Distinct from the result registration signature (execution_signature_id); required for ABORTED | `00000000-0000-0000-0000-000000000001` |
-| 901 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 902 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 903 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 904 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 905 | Validation Baseline at Execution | `system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | Fixes the project's current baseline at the start of execution. Required before result registration and signing; not overwritten by later changes to the project baseline. | - |
+| 925 | Execution ID | `execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 926 | Executed Protocol Revision ID | `pq_item_id` | `uuid` | N | Y | `pq_item.pq_item_id` | Y | - | N | Y | N | Y | References pq_item.pq_item_id | `00000000-0000-0000-0000-000000000001` |
+| 927 | Execution Attempt | `attempt_no` | `integer` | N | N | - | Y | `1` | N | N | N | Y | 1 for the first execution, 2 or greater for re-execution. The re-execution count on the screen is attempt_no - 1. | `1` |
+| 928 | Result Correction Number | `record_revision` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Sequence number in the correction history of results of the same attempt. Distinct from re-execution. | `1` |
+| 929 | Is Current Result Correction | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Whether this is the currently valid result record for the same test revision and attempt. Result correction rows that are in progress or cancelled are FALSE; the value is switched when the correction is finalized as RECORDED. | `TRUE` |
+| 930 | Actual Result | `actual_result` | `text` | N | N | - | N | - | N | N | N | Y | Actual result entered on the screen. Required when registering the judgment result. | - |
+| 931 | Execution Judgment | `qualification_result` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | PASS, FAIL, NA (not applicable). Not executed is represented as NULL; distinct from the approval status. | `PASS` |
+| 932 | Execution Date | `performed_on` | `date` | N | N | - | N | - | N | N | N | Y | Execution date selected on the screen. Distinct from the electronic signature date and time. | `2026-09-16` |
+| 933 | Executed By | `executed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 934 | Result Recorded At | `executed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the judgment result was registered via electronic signature. | `2026-09-01T00:00:00Z` |
+| 935 | Execution Signature ID | `execution_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered when registering the execution result. The password is not stored. | `00000000-0000-0000-0000-000000000001` |
+| 936 | Execution Progress Status | `execution_status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | IN_PROGRESS (performing steps / entering results), RECORDED (judgment result registered), ABORTED (aborted without registering a result; for a result correction row, cancellation of the in-progress correction). Deviations and final approval are managed separately. | `IN_PROGRESS` |
+| 937 | Result Approval Status | `record_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Managed independently of the protocol approval status. A correction after rejection/cancellation is handled as a new record_revision of the same attempt_no. | `DRAFT` |
+| 938 | Result Approval Workflow | `result_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Final result review and approval route for this attempt and result correction. | `00000000-0000-0000-0000-000000000001` |
+| 939 | Result Approval Version | `approval_version` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Display version of the finally approved test result. Distinct from the protocol version. | `ver1` |
+| 940 | Deviation Reason | `deviation_reason` | `text` | N | N | - | N | - | N | N | N | Y | Deviation reason as entered at the time the FAIL result was registered. | - |
+| 941 | Immediate Action | `immediate_action` | `text` | N | N | - | N | - | N | N | N | Y | Immediate action as entered at the time the FAIL result was registered. | - |
+| 942 | Result Correction Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for correcting the result when record_revision is incremented. | - |
+| 943 | Abort Reason | `abort_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for aborting the execution without registering a result, or for cancelling an in-progress result correction (ABORTED). Required for ABORTED | - |
+| 944 | Abort Signature ID | `abort_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature entered by the assignee after confirming the abort reason when aborting the execution or cancelling a result correction (signature_action=ABORT; the signature target is this execution_id). Distinct from the result registration signature (execution_signature_id); required for ABORTED | `00000000-0000-0000-0000-000000000001` |
+| 945 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 946 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 947 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 948 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 949 | Validation Baseline at Execution | `system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | Fixes the project's current baseline at the start of execution. Required before result registration and signing; not overwritten by later changes to the project baseline. | - |
 
 #### Constraints
 
@@ -3402,7 +3574,7 @@ system_baseline_id must belong to the same project as the test. The validity of 
 ---
 
 <a id="table-pq_step_execution"></a>
-### 54. PQ Step Execution (`pq_step_execution`)
+### 57. PQ Step Execution (`pq_step_execution`)
 
 | Item | Definition |
 |---|---|
@@ -3419,16 +3591,16 @@ system_baseline_id must belong to the same project as the test. The validity of 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 906 | Step Execution ID | `step_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 907 | Execution ID | `execution_id` | `uuid` | N | Y | `pq_execution.execution_id` | Y | - | N | Y | N | Y | References pq_execution.execution_id | `00000000-0000-0000-0000-000000000001` |
-| 908 | Step ID | `step_id` | `uuid` | N | Y | `pq_step.step_id` | Y | - | N | Y | N | Y | References pq_step.step_id | `00000000-0000-0000-0000-000000000001` |
-| 909 | Step Completed | `is_confirmed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Complete/cancel value of the detailed step on the screen. | `FALSE` |
-| 910 | Completed By | `confirmed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 911 | Completed At | `confirmed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the step was marked as completed. | `2026-09-01T00:00:00Z` |
-| 912 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 913 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 914 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 915 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 950 | Step Execution ID | `step_execution_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 951 | Execution ID | `execution_id` | `uuid` | N | Y | `pq_execution.execution_id` | Y | - | N | Y | N | Y | References pq_execution.execution_id | `00000000-0000-0000-0000-000000000001` |
+| 952 | Step ID | `step_id` | `uuid` | N | Y | `pq_step.step_id` | Y | - | N | Y | N | Y | References pq_step.step_id | `00000000-0000-0000-0000-000000000001` |
+| 953 | Step Completed | `is_confirmed` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Complete/cancel value of the detailed step on the screen. | `FALSE` |
+| 954 | Completed By | `confirmed_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 955 | Completed At | `confirmed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time the step was marked as completed. | `2026-09-01T00:00:00Z` |
+| 956 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 957 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 958 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 959 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -3449,7 +3621,7 @@ Step attachment files are linked through evidence_link with PQ_STEP_EXECUTION / 
 ## VSR
 
 <a id="table-vsr_assessment"></a>
-### 55. Validation Summary Report (`vsr_assessment`)
+### 58. Validation Summary Report (`vsr_assessment`)
 
 | Item | Definition |
 |---|---|
@@ -3466,26 +3638,26 @@ Step attachment files are linked through evidence_link with PQ_STEP_EXECUTION / 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 916 | VSR ID | `vsr_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | VSR assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 917 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
-| 918 | VSR Number | `vsr_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | VSR document number. The same number is kept across revisions. | `VSR-VP-SYS-008-20260422` |
-| 919 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the validation summary report | `Validation Summary Report` |
-| 920 | Validation Conclusion | `overall_conclusion` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Overall validation conclusion. Optional, and distinct from the business approval status. | - |
-| 921 | Conclusion Details | `conclusion_remarks` | `text` | N | N | - | N | - | N | N | N | Y | Detailed explanation and conditions of the validation conclusion. NULL is allowed. | `Final approval possible after the OQ-GMP-02 deviation is resolved` |
-| 922 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the VSR assessment document (e.g. v1.0, v1.1) | `v1.0` |
-| 923 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision number of the VSR assessment document (e.g. 1, 2, 3...) | `1` |
-| 924 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for the new creation or revision of the VSR assessment document | `Initial creation` |
-| 925 | Is Current Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the currently active latest version of the VSR assessment document (TRUE/FALSE) | `TRUE` |
-| 926 | Document Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | VSR business confirmation status. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Modifications after REJECTED or CANCELLED are handled as a new VSR revision. Distinct from the approval status of the separately generated deliverable. | `DRAFT` |
-| 927 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 928 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the VSR author | `00000000-0000-0000-0000-000000000001` |
-| 929 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 930 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who updated the VSR | `00000000-0000-0000-0000-000000000001` |
-| 931 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
-| 932 | Source Fingerprint | `source_fingerprint` | `varchar(64)` | N | N | - | Y | - | N | N | N | Y | SHA-256 computed from the project's selected activities and the source revision references and summary values. Used to determine what needs re-confirmation when changes occur. | - |
-| 933 | Aggregation Time | `captured_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time when the current VSR activity summary was generated. | `2026-09-01T00:00:00Z` |
-| 934 | VSR Confirmation Workflow | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Request, review and approval route for VSR business confirmation. | `00000000-0000-0000-0000-000000000001` |
-| 935 | VSR Confirmation Signature | `approval_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature on completion of the final VSR confirmation. | `00000000-0000-0000-0000-000000000001` |
+| 960 | VSR ID | `vsr_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | VSR assessment document identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 961 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Associated Validation project ID | `00000000-0000-0000-0000-000000000001` |
+| 962 | VSR Number | `vsr_no` | `varchar(50)` | N | N | - | Y | - | N | N | N | Y | VSR document number. The same number is kept across revisions. | `VSR-VP-SYS-008-20260422` |
+| 963 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Title of the validation summary report | `Validation Summary Report` |
+| 964 | Validation Conclusion | `overall_conclusion` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Overall validation conclusion. Optional, and distinct from the business approval status. | - |
+| 965 | Conclusion Details | `conclusion_remarks` | `text` | N | N | - | N | - | N | N | N | Y | Detailed explanation and conditions of the validation conclusion. NULL is allowed. | `Final approval possible after the OQ-GMP-02 deviation is resolved` |
+| 966 | Document Display Version | `version` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Display version of the VSR assessment document (e.g. v1.0, v1.1) | `v1.0` |
+| 967 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision number of the VSR assessment document (e.g. 1, 2, 3...) | `1` |
+| 968 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for the new creation or revision of the VSR assessment document | `Initial creation` |
+| 969 | Is Current Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the currently active latest version of the VSR assessment document (TRUE/FALSE) | `TRUE` |
+| 970 | Document Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | VSR business confirmation status. DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Modifications after REJECTED or CANCELLED are handled as a new VSR revision. Distinct from the approval status of the separately generated deliverable. | `DRAFT` |
+| 971 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 972 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the VSR author | `00000000-0000-0000-0000-000000000001` |
+| 973 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 974 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Identifier of the user who updated the VSR | `00000000-0000-0000-0000-000000000001` |
+| 975 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
+| 976 | Source Fingerprint | `source_fingerprint` | `varchar(64)` | N | N | - | Y | - | N | N | N | Y | SHA-256 computed from the project's selected activities and the source revision references and summary values. Used to determine what needs re-confirmation when changes occur. | - |
+| 977 | Aggregation Time | `captured_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time when the current VSR activity summary was generated. | `2026-09-01T00:00:00Z` |
+| 978 | VSR Confirmation Workflow | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Request, review and approval route for VSR business confirmation. | `00000000-0000-0000-0000-000000000001` |
+| 979 | VSR Confirmation Signature | `approval_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature on completion of the final VSR confirmation. | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -3508,7 +3680,7 @@ This is a record for confirming the source status of the on-screen activity summ
 ---
 
 <a id="table-vsr_item"></a>
-### 56. VSR Activity Summary Item (`vsr_item`)
+### 59. VSR Activity Summary Item (`vsr_item`)
 
 | Item | Definition |
 |---|---|
@@ -3525,26 +3697,26 @@ This is a record for confirming the source status of the on-screen activity summ
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 936 | VSR Item ID | `vsr_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | VSR activity summary item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
-| 937 | VSR ID | `vsr_id` | `uuid` | N | Y | `vsr_assessment.vsr_id` | Y | - | N | Y | N | Y | Identifier of the parent VSR document | `00000000-0000-0000-0000-000000000001` |
-| 938 | Activity Type | `activity_code` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Aggregated activity code: VP, VA, QIA, URS, FDS_GROUP (F&DS on screen), FRA, DQ, IQ, OQ, PQ. RTM excluded; the VSR's own status is shown in the header. | `IQ` |
-| 939 | Document Number | `doc_no` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Document number of the activity as displayed at aggregation time. NULL if not approved or not generated. | `VP-SYS-008-20260422 · URS` |
-| 940 | Revision No. | `revision_no` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Source approval version as displayed at aggregation time. NULL if not approved or not generated. Identification of the specific revision is preserved in source_revision_refs. | `ver1` |
-| 941 | Deviation Count | `deviation_info` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Snapshot of the deviation count and open-item status displayed at aggregation time. Not edited manually on its own. | - |
-| 942 | Conclusion / Status | `item_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | Activity approval status at aggregation time: DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Snapshot automatically retrieved from the source business status. | `APPROVED` |
-| 943 | Approver Name | `approver_name` | `varchar(50)` | N | N | - | N | - | N | N | Y | Y | Snapshot of the approver's display name at the time of source approval. | `Gildong Hong` |
-| 944 | Approval Date | `approval_date` | `date` | N | N | - | N | - | N | N | N | Y | Snapshot of the approval date for screen display at the time of source approval. The exact signature time is retrieved from the source record. | `2024-02-20` |
-| 945 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
-| 946 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
-| 947 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
-| 948 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
-| 949 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
-| 950 | Project Activity ID | `project_activity_id` | `uuid` | N | Y | `project_activity.project_activity_id` | Y | - | N | Y | N | Y | Selected activity in the same project as the VSR. | `00000000-0000-0000-0000-000000000001` |
-| 951 | Deliverable Revision ID | `document_revision_id` | `uuid` | N | Y | `deliverable_revision.document_revision_id` | N | - | N | Y | N | Y | Revision referenced when a deliverable document has been generated. For IQ/OQ/PQ it is a revision of a document_type=RECORD document, and for other activities a revision of a STAGE_DELIVERABLE document; the document's project_activity_id must be the same as this row's. May be NULL for stages that have only business item approval. | `00000000-0000-0000-0000-000000000001` |
-| 952 | Source Revision References | `source_revision_refs` | `jsonb` | N | N | - | Y | `'[]'::jsonb` | N | N | N | Y | List of the exact business revisions on which the aggregation is based: [{table_name, record_id, version}]. table_name is the actual table name; IQ/OQ/PQ results use the execution_id of iq_execution / oq_execution / pq_execution, and FDS/DDS use the revision PK fds_spec.fds_id / dds_spec.dds_id. Empty array for unapproved stages. | `[]` |
-| 953 | Source Summary Snapshot | `source_snapshot` | `jsonb` | N | N | - | Y | `'{}'::jsonb` | N | N | Y | Y | The columns / rows of the approval table and the approval information at aggregation time. Together with the source revision references it fixes the displayed values; empty object for unapproved stages. | `{}` |
-| 954 | Activity Source Fingerprint | `source_fingerprint` | `varchar(64)` | N | N | - | N | - | N | N | N | Y | Hash of the source references and snapshot of the stage. NULL if there is no approved source. | - |
-| 955 | Activity Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Order of the selected activities in the project. | `1` |
+| 980 | VSR Item ID | `vsr_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | VSR activity summary item identifier (PK) | `00000000-0000-0000-0000-000000000001` |
+| 981 | VSR ID | `vsr_id` | `uuid` | N | Y | `vsr_assessment.vsr_id` | Y | - | N | Y | N | Y | Identifier of the parent VSR document | `00000000-0000-0000-0000-000000000001` |
+| 982 | Activity Type | `activity_code` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Aggregated activity code: VP, VA, QIA, URS, FDS_GROUP (F&DS on screen), FRA, DQ, IQ, OQ, PQ. RTM excluded; the VSR's own status is shown in the header. | `IQ` |
+| 983 | Document Number | `doc_no` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Document number of the activity as displayed at aggregation time. NULL if not approved or not generated. | `VP-SYS-008-20260422 · URS` |
+| 984 | Revision No. | `revision_no` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Source approval version as displayed at aggregation time. NULL if not approved or not generated. Identification of the specific revision is preserved in source_revision_refs. | `ver1` |
+| 985 | Deviation Count | `deviation_info` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Snapshot of the deviation count and open-item status displayed at aggregation time. Not edited manually on its own. | - |
+| 986 | Conclusion / Status | `item_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | Activity approval status at aggregation time: DRAFT (in progress), REVIEW (under review), APPROVAL (under approval), APPROVED (approved), REJECTED (rejected), CANCELLED (cancelled). Snapshot automatically retrieved from the source business status. | `APPROVED` |
+| 987 | Approver Name | `approver_name` | `varchar(50)` | N | N | - | N | - | N | N | Y | Y | Snapshot of the approver's display name at the time of source approval. | `Gildong Hong` |
+| 988 | Approval Date | `approval_date` | `date` | N | N | - | N | - | N | N | N | Y | Snapshot of the approval date for screen display at the time of source approval. The exact signature time is retrieved from the source record. | `2024-02-20` |
+| 989 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-26T00:00:00Z` |
+| 990 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item author identifier | `00000000-0000-0000-0000-000000000001` |
+| 991 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-26T00:00:00Z` |
+| 992 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Item updater identifier | `00000000-0000-0000-0000-000000000001` |
+| 993 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
+| 994 | Project Activity ID | `project_activity_id` | `uuid` | N | Y | `project_activity.project_activity_id` | Y | - | N | Y | N | Y | Selected activity in the same project as the VSR. | `00000000-0000-0000-0000-000000000001` |
+| 995 | Deliverable Revision ID | `document_revision_id` | `uuid` | N | Y | `deliverable_revision.document_revision_id` | N | - | N | Y | N | Y | Revision referenced when a deliverable document has been generated. For IQ/OQ/PQ it is a revision of a document_type=RECORD document, and for other activities a revision of a STAGE_DELIVERABLE document; the document's project_activity_id must be the same as this row's. May be NULL for stages that have only business item approval. | `00000000-0000-0000-0000-000000000001` |
+| 996 | Source Revision References | `source_revision_refs` | `jsonb` | N | N | - | Y | `'[]'::jsonb` | N | N | N | Y | List of the exact business revisions on which the aggregation is based: [{table_name, record_id, version}]. table_name is the actual table name; IQ/OQ/PQ results use the execution_id of iq_execution / oq_execution / pq_execution, and FDS/DDS use the revision PK fds_spec.fds_id / dds_spec.dds_id. Empty array for unapproved stages. | `[]` |
+| 997 | Source Summary Snapshot | `source_snapshot` | `jsonb` | N | N | - | Y | `'{}'::jsonb` | N | N | Y | Y | The columns / rows of the approval table and the approval information at aggregation time. Together with the source revision references it fixes the displayed values; empty object for unapproved stages. | `{}` |
+| 998 | Activity Source Fingerprint | `source_fingerprint` | `varchar(64)` | N | N | - | N | - | N | N | N | Y | Hash of the source references and snapshot of the stage. NULL if there is no approved source. | - |
+| 999 | Activity Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Order of the selected activities in the project. | `1` |
 
 #### Constraints
 
@@ -3570,7 +3742,7 @@ source_revision_refs is a polymorphic reference list of actual table names, revi
 ## Workflow
 
 <a id="table-workflow_instance"></a>
-### 57. Workflow Instance (`workflow_instance`)
+### 60. Workflow Instance (`workflow_instance`)
 
 | Item | Definition |
 |---|---|
@@ -3587,23 +3759,23 @@ source_revision_refs is a polymorphic reference list of actual table names, revi
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 956 | Workflow Instance ID | `workflow_instance_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the per-document review/approval workflow | `00000000-0000-0000-0000-000000000001` |
-| 957 | Target Table Name | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Name of the table subject to review/approval. Only the tables allowed for each approval_scope (see the table in the business rules) are permitted. | `fds_spec` |
-| 958 | Target Record ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | N | N | Y | PK of the target table row. As a polymorphic reference it is not an actual FK; the target's existence, project and version are validated together. | `00000000-0000-0000-0000-000000000001` |
-| 959 | Target Document Version | `target_version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Display version or revision number of the approval target. For inventory it corresponds to system_asset.revision_number, and for a closure request to CLOSE-{request_version} | `v1.0` |
-| 960 | Submitter ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who submitted the document to the review/approval process | `00000000-0000-0000-0000-000000000001` |
-| 961 | Submission Time | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time when the document was submitted to the review/approval process | `2026-08-31T15:00:00Z` |
-| 962 | Workflow Status | `workflow_status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | Overall workflow status. IN_PROGRESS, APPROVED, REJECTED, CANCELLED. The instance is created as IN_PROGRESS at submission time and has no DRAFT (in progress) state | `IN_PROGRESS` |
-| 963 | Current Step Order | `current_step_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Order of the review/approval step currently being processed. On submission, the step_order of the first non-deleted step is stored; it is not fixed to 1 | `1` |
-| 964 | Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the workflow ended through final approval, rejection or cancellation | `2026-08-31T17:00:00Z` |
-| 965 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-31T15:00:00Z` |
-| 966 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creator of the workflow record | `00000000-0000-0000-0000-000000000001` |
-| 967 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-31T16:00:00Z` |
-| 968 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Last updater of the workflow record | `00000000-0000-0000-0000-000000000001` |
-| 969 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
-| 970 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Required if the approval workflow is for project work. NULL for non-project approval workflows such as inventory | `00000000-0000-0000-0000-000000000001` |
-| 971 | Approval Scope | `approval_scope` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | ITEM/PROTOCOL/RESULT/DOCUMENT/INVENTORY/CLOSURE/DISPOSAL/DEVIATION_ACTION/DEVIATION_COMPLETION/DEVIATION_CLOSE | `DOCUMENT` |
-| 972 | Applied Approval Route Config ID | `workflow_config_id` | `uuid` | N | Y | `project_workflow_config.config_id` | N | - | N | Y | N | Y | Project approval route configuration used at submission. NULL for cases such as the inventory's own route | `00000000-0000-0000-0000-000000000001` |
+| 1000 | Workflow Instance ID | `workflow_instance_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the per-document review/approval workflow | `00000000-0000-0000-0000-000000000001` |
+| 1001 | Target Table Name | `target_table_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Name of the table subject to review/approval. Only the tables allowed for each approval_scope (see the table in the business rules) are permitted. | `fds_spec` |
+| 1002 | Target Record ID | `target_record_id` | `uuid` | N | N | - | Y | - | N | N | N | Y | PK of the target table row. As a polymorphic reference it is not an actual FK; the target's existence, project and version are validated together. | `00000000-0000-0000-0000-000000000001` |
+| 1003 | Target Document Version | `target_version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Display version or revision number of the approval target. For inventory it corresponds to system_asset.revision_number, and for a closure request to CLOSE-{request_version} | `v1.0` |
+| 1004 | Submitter ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who submitted the document to the review/approval process | `00000000-0000-0000-0000-000000000001` |
+| 1005 | Submission Time | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time when the document was submitted to the review/approval process | `2026-08-31T15:00:00Z` |
+| 1006 | Workflow Status | `workflow_status` | `varchar(20)` | N | N | - | Y | `'IN_PROGRESS'` | N | N | N | Y | Overall workflow status. IN_PROGRESS, APPROVED, REJECTED, CANCELLED. The instance is created as IN_PROGRESS at submission time and has no DRAFT (in progress) state | `IN_PROGRESS` |
+| 1007 | Current Step Order | `current_step_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Order of the review/approval step currently being processed. On submission, the step_order of the first non-deleted step is stored; it is not fixed to 1 | `1` |
+| 1008 | Completed At | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the workflow ended through final approval, rejection or cancellation | `2026-08-31T17:00:00Z` |
+| 1009 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-31T15:00:00Z` |
+| 1010 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creator of the workflow record | `00000000-0000-0000-0000-000000000001` |
+| 1011 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-31T16:00:00Z` |
+| 1012 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Last updater of the workflow record | `00000000-0000-0000-0000-000000000001` |
+| 1013 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
+| 1014 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Required if the approval workflow is for project work. NULL for non-project approval workflows such as inventory | `00000000-0000-0000-0000-000000000001` |
+| 1015 | Approval Scope | `approval_scope` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | ITEM/PROTOCOL/RESULT/DOCUMENT/INVENTORY/CLOSURE/DISPOSAL/DEVIATION_ACTION/DEVIATION_COMPLETION/DEVIATION_CLOSE | `DOCUMENT` |
+| 1016 | Applied Approval Route Config ID | `workflow_config_id` | `uuid` | N | Y | `project_workflow_config.config_id` | N | - | N | Y | N | Y | Project approval route configuration used at submission. NULL for cases such as the inventory's own route | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -3646,7 +3818,7 @@ DEVIATION_ACTION targets the PK of deviation_action_round and ACTION-{round_numb
 ---
 
 <a id="table-workflow_step"></a>
-### 58. Workflow Step (`workflow_step`)
+### 61. Workflow Step (`workflow_step`)
 
 | Item | Definition |
 |---|---|
@@ -3663,20 +3835,20 @@ DEVIATION_ACTION targets the PK of deviation_action_round and ACTION-{round_numb
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 973 | Workflow Step ID | `workflow_step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the workflow review/approval step. Duplicate (workflow_instance_id, step_order) values are not allowed among rows where deleted_at IS NULL. | `00000000-0000-0000-0000-000000000001` |
-| 974 | Workflow Instance ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | Y | - | N | Y | N | Y | Identifier of the workflow to which the step belongs | `00000000-0000-0000-0000-000000000001` |
-| 975 | Step Order | `step_order` | `integer` | N | N | - | Y | - | N | Y | N | Y | Review/approval processing order within the same workflow | `1` |
-| 976 | Step Type | `step_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Processing step type. REVIEW or APPROVE. SUBMIT/CANCEL are not step types; they are recorded as the action_type of the action history | `REVIEW` |
-| 977 | Step Name | `step_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Review/approval step name displayed on screen | `Quality review` |
-| 978 | Execution Mode | `execution_mode` | `varchar(20)` | N | N | - | Y | `'SERIAL'` | N | N | N | Y | SERIAL=serial, PARALLEL=parallel. Processing order of multiple assignees in the same step | `SERIAL` |
-| 979 | Step Status | `step_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | Step status. PENDING, IN_PROGRESS, APPROVED, REJECTED, SKIPPED | `PENDING` |
-| 980 | Due Date | `due_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Scheduled deadline for review/approval processing of this step | `2026-09-02T18:00:00Z` |
-| 981 | Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the step was completed by approval, rejection, etc. | `2026-09-01T10:00:00Z` |
-| 982 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-31T15:00:00Z` |
-| 983 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creator of the workflow step | `00000000-0000-0000-0000-000000000001` |
-| 984 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-31T16:00:00Z` |
-| 985 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Last updater of the workflow step | `00000000-0000-0000-0000-000000000001` |
-| 986 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
+| 1017 | Workflow Step ID | `workflow_step_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the workflow review/approval step. Duplicate (workflow_instance_id, step_order) values are not allowed among rows where deleted_at IS NULL. | `00000000-0000-0000-0000-000000000001` |
+| 1018 | Workflow Instance ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | Y | - | N | Y | N | Y | Identifier of the workflow to which the step belongs | `00000000-0000-0000-0000-000000000001` |
+| 1019 | Step Order | `step_order` | `integer` | N | N | - | Y | - | N | Y | N | Y | Review/approval processing order within the same workflow | `1` |
+| 1020 | Step Type | `step_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | Processing step type. REVIEW or APPROVE. SUBMIT/CANCEL are not step types; they are recorded as the action_type of the action history | `REVIEW` |
+| 1021 | Step Name | `step_name` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Review/approval step name displayed on screen | `Quality review` |
+| 1022 | Execution Mode | `execution_mode` | `varchar(20)` | N | N | - | Y | `'SERIAL'` | N | N | N | Y | SERIAL=serial, PARALLEL=parallel. Processing order of multiple assignees in the same step | `SERIAL` |
+| 1023 | Step Status | `step_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | Step status. PENDING, IN_PROGRESS, APPROVED, REJECTED, SKIPPED | `PENDING` |
+| 1024 | Due Date | `due_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Scheduled deadline for review/approval processing of this step | `2026-09-02T18:00:00Z` |
+| 1025 | Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when the step was completed by approval, rejection, etc. | `2026-09-01T10:00:00Z` |
+| 1026 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-08-31T15:00:00Z` |
+| 1027 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creator of the workflow step | `00000000-0000-0000-0000-000000000001` |
+| 1028 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record last update time (UTC) | `2026-08-31T16:00:00Z` |
+| 1029 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Last updater of the workflow step | `00000000-0000-0000-0000-000000000001` |
+| 1030 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Soft-deletion time | `2026-09-01T00:00:00Z` |
 
 #### Constraints
 
@@ -3699,7 +3871,7 @@ Even for a parallel step, processing by all designated assignees must be complet
 ---
 
 <a id="table-workflow_step_assignee"></a>
-### 59. Approval Workflow Step Assignee (`workflow_step_assignee`)
+### 62. Approval Workflow Step Assignee (`workflow_step_assignee`)
 
 | Item | Definition |
 |---|---|
@@ -3716,17 +3888,17 @@ Even for a parallel step, processing by all designated assignees must be complet
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 987 | Assignment ID | `assignment_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 988 | Approval Step ID | `workflow_step_id` | `uuid` | N | Y | `workflow_step.workflow_step_id` | Y | - | N | Y | N | Y | References workflow_step.workflow_step_id | `00000000-0000-0000-0000-000000000001` |
-| 989 | Primary Assignee ID | `assignee_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 990 | Substitute Assignee ID | `substitute_user_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 991 | Assignee Order | `assignee_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Processing order in a serial step | `1` |
-| 992 | Processing Status | `assignment_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | N | N | Y | PENDING/IN_PROGRESS/APPROVED/REJECTED/SKIPPED | `PENDING` |
-| 993 | Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Completion time value | `2026-09-01T00:00:00Z` |
-| 994 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
-| 995 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 996 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
-| 997 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1031 | Assignment ID | `assignment_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1032 | Approval Step ID | `workflow_step_id` | `uuid` | N | Y | `workflow_step.workflow_step_id` | Y | - | N | Y | N | Y | References workflow_step.workflow_step_id | `00000000-0000-0000-0000-000000000001` |
+| 1033 | Primary Assignee ID | `assignee_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1034 | Substitute Assignee ID | `substitute_user_id` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1035 | Assignee Order | `assignee_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Processing order in a serial step | `1` |
+| 1036 | Processing Status | `assignment_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | N | N | Y | PENDING/IN_PROGRESS/APPROVED/REJECTED/SKIPPED | `PENDING` |
+| 1037 | Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Completion time value | `2026-09-01T00:00:00Z` |
+| 1038 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
+| 1039 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1040 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
+| 1041 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -3749,7 +3921,7 @@ In serial mode, an assignment can be processed after the preceding assignment is
 ---
 
 <a id="table-approval_action"></a>
-### 60. Approval Action History (`approval_action`)
+### 63. Approval Action History (`approval_action`)
 
 | Item | Definition |
 |---|---|
@@ -3766,16 +3938,16 @@ In serial mode, an assignment can be processed after the preceding assignment is
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 998 | Approval Action ID | `approval_action_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the review/approval action history record | `00000000-0000-0000-0000-000000000001` |
-| 999 | Workflow Step ID | `workflow_step_id` | `uuid` | N | Y | `workflow_step.workflow_step_id` | Y | - | N | Y | N | Y | Workflow step to which the action history belongs. SUBMIT is linked to the first non-deleted step, CANCEL to the current step in progress (the first step if not yet started), and REVIEW/APPROVE/REJECT to the step actually processed. If there is no step to attribute it to, no history record is created. | `00000000-0000-0000-0000-000000000001` |
-| 1000 | Processing Assignment ID | `workflow_step_assignee_id` | `uuid` | N | Y | `workflow_step_assignee.assignment_id` | N | - | N | Y | N | Y | Assignment for REVIEW/APPROVE/REJECT actions. NULL for SUBMIT/CANCEL | `00000000-0000-0000-0000-000000000001` |
-| 1001 | Action Type | `action_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | Type of action performed. SUBMIT, REVIEW, APPROVE, REJECT, CANCEL | `APPROVE` |
-| 1002 | Actor ID | `actor_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who actually performed the review, approval or rejection | `00000000-0000-0000-0000-000000000001` |
-| 1003 | Action Comment | `action_comment` | `text` | N | N | - | N | - | N | N | N | Y | Comment entered during review/approval. For CANCEL, stores the cancellation reason and is required | `No issues found in review` |
-| 1004 | Rejection Reason | `rejection_reason` | `text` | N | N | - | N | - | N | N | N | Y | Rejection reason entered for a REJECT action. Required for REJECT | `Evidence files need to be supplemented` |
-| 1005 | Electronic Signature ID | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature record linked to the action. If a signature exists, signer_id must be the same as actor_id, and the target table, record and version must match the workflow target. For SUBMIT/REVIEW/APPROVE/REJECT, the signature action must be the same as action_type. CANCEL records the cancellation reason and an audit trail without a signature. | `00000000-0000-0000-0000-000000000001` |
-| 1006 | Action Time | `acted_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when the submission, review, approval or rejection was actually processed | `2026-09-01T10:00:00Z` |
-| 1007 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 1042 | Approval Action ID | `approval_action_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the review/approval action history record | `00000000-0000-0000-0000-000000000001` |
+| 1043 | Workflow Step ID | `workflow_step_id` | `uuid` | N | Y | `workflow_step.workflow_step_id` | Y | - | N | Y | N | Y | Workflow step to which the action history belongs. SUBMIT is linked to the first non-deleted step, CANCEL to the current step in progress (the first step if not yet started), and REVIEW/APPROVE/REJECT to the step actually processed. If there is no step to attribute it to, no history record is created. | `00000000-0000-0000-0000-000000000001` |
+| 1044 | Processing Assignment ID | `workflow_step_assignee_id` | `uuid` | N | Y | `workflow_step_assignee.assignment_id` | N | - | N | Y | N | Y | Assignment for REVIEW/APPROVE/REJECT actions. NULL for SUBMIT/CANCEL | `00000000-0000-0000-0000-000000000001` |
+| 1045 | Action Type | `action_type` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | Type of action performed. SUBMIT, REVIEW, APPROVE, REJECT, CANCEL | `APPROVE` |
+| 1046 | Actor ID | `actor_id` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who actually performed the review, approval or rejection | `00000000-0000-0000-0000-000000000001` |
+| 1047 | Action Comment | `action_comment` | `text` | N | N | - | N | - | N | N | N | Y | Comment entered during review/approval. For CANCEL, stores the cancellation reason and is required | `No issues found in review` |
+| 1048 | Rejection Reason | `rejection_reason` | `text` | N | N | - | N | - | N | N | N | Y | Rejection reason entered for a REJECT action. Required for REJECT | `Evidence files need to be supplemented` |
+| 1049 | Electronic Signature ID | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Electronic signature record linked to the action. If a signature exists, signer_id must be the same as actor_id, and the target table, record and version must match the workflow target. For SUBMIT/REVIEW/APPROVE/REJECT, the signature action must be the same as action_type. CANCEL records the cancellation reason and an audit trail without a signature. | `00000000-0000-0000-0000-000000000001` |
+| 1050 | Action Time | `acted_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when the submission, review, approval or rejection was actually processed | `2026-09-01T10:00:00Z` |
+| 1051 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Record creation time (UTC) | `2026-09-01T10:00:00Z` |
 
 #### Constraints
 
@@ -3802,7 +3974,7 @@ A rejection on the same assignment is not overwritten with an approval. On resub
 ---
 
 <a id="table-project_workflow_config"></a>
-### 61. Project Approval Route Configuration (`project_workflow_config`)
+### 64. Project Approval Route Configuration (`project_workflow_config`)
 
 | Item | Definition |
 |---|---|
@@ -3819,18 +3991,18 @@ A rejection on the same assignment is not overwritten with an approval. On resub
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1008 | Approval Route Config ID | `config_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1009 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
-| 1010 | Activity ID | `project_activity_id` | `uuid` | N | Y | `project_activity.project_activity_id` | N | - | N | Y | N | Y | Specified for a per-activity configuration. NULL for the project default configuration | `00000000-0000-0000-0000-000000000001` |
-| 1011 | Config Version | `config_version` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Configuration version, incremented when it is changed after being applied | `1` |
-| 1012 | Route Definition | `route_definition` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Author stage (author_stage), array of review stages (review_stages), array of approval stages (approval_stages). Each stage stores its order, SERIAL/PARALLEL and an array of primary/substitute assignees | - |
-| 1013 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Whether this configuration is currently applied. When a new configuration is applied, the previous row is switched to FALSE, and its earlier application signature, time and original content are preserved. | `FALSE` |
-| 1014 | Application Signature ID | `applied_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | References electronic_signature.signature_id | `00000000-0000-0000-0000-000000000001` |
-| 1015 | Applied At | `applied_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Application time value | `2026-09-01T00:00:00Z` |
-| 1016 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
-| 1017 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1018 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
-| 1019 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1052 | Approval Route Config ID | `config_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1053 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 1054 | Activity ID | `project_activity_id` | `uuid` | N | Y | `project_activity.project_activity_id` | N | - | N | Y | N | Y | Specified for a per-activity configuration. NULL for the project default configuration | `00000000-0000-0000-0000-000000000001` |
+| 1055 | Config Version | `config_version` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Configuration version, incremented when it is changed after being applied | `1` |
+| 1056 | Route Definition | `route_definition` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Author stage (author_stage), array of review stages (review_stages), array of approval stages (approval_stages). Each stage stores its order, SERIAL/PARALLEL and an array of primary/substitute assignees | - |
+| 1057 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Whether this configuration is currently applied. When a new configuration is applied, the previous row is switched to FALSE, and its earlier application signature, time and original content are preserved. | `FALSE` |
+| 1058 | Application Signature ID | `applied_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | References electronic_signature.signature_id | `00000000-0000-0000-0000-000000000001` |
+| 1059 | Applied At | `applied_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Application time value | `2026-09-01T00:00:00Z` |
+| 1060 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Creation time value | `2026-09-01T00:00:00Z` |
+| 1061 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1062 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Update time value | `2026-09-01T00:00:00Z` |
+| 1063 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -3861,7 +4033,7 @@ Switching the applied configuration is performed with the project locked. Cleari
 ## Traceability
 
 <a id="table-traceability_link"></a>
-### 62. Common Traceability Link (`traceability_link`)
+### 65. Common Traceability Link (`traceability_link`)
 
 | Item | Definition |
 |---|---|
@@ -3878,19 +4050,19 @@ Switching the applied configuration is performed with the project locked. Cleari
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1020 | Traceability Link ID | `traceability_link_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of a traceability link between URS, FDS, DDS, DQ, FRA, IQ, OQ and PQ items. For non-deleted data, duplicate (project_id, source_entity_type, source_entity_id, target_entity_type, target_entity_id, link_type) combinations are not allowed. | `00000000-0000-0000-0000-000000000001` |
-| 1021 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | ID of the project to which the traceability link belongs | `00000000-0000-0000-0000-000000000001` |
-| 1022 | Source Entity Type | `source_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Link target type: REQUIREMENT, FDS_SPEC, DDS_SPEC, DQ_ITEM, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM. Links the PK of a specific revision row of each type. | `REQUIREMENT` |
-| 1023 | Source Entity ID | `source_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK of a specific revision row in the table corresponding to the target type. A polymorphic reference, not a physical FK; it must not be replaced with a logical key or display number. | `00000000-0000-0000-0000-000000000001` |
-| 1024 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Link target type: REQUIREMENT, FDS_SPEC, DDS_SPEC, DQ_ITEM, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM. Links the PK of a specific revision row of each type. | `OQ_ITEM` |
-| 1025 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK of a specific revision row in the table corresponding to the target type. A polymorphic reference, not a physical FK; it must not be replaced with a logical key or display number. | `00000000-0000-0000-0000-000000000001` |
-| 1026 | Link Type | `link_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | IMPLEMENTED_BY, ASSESSED_BY, VERIFIED_BY, MITIGATED_BY | `VERIFIED_BY` |
-| 1027 | Link Rationale | `link_reason` | `text` | N | N | - | N | - | N | N | N | Y | Business rationale for linking the two deliverable items | `URS requirement verified by IQ test` |
-| 1028 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Traceability link creation time (UTC) | `2026-09-01T10:00:00Z` |
-| 1029 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who created the traceability link | `00000000-0000-0000-0000-000000000001` |
-| 1030 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Traceability link last update time (UTC) | `2026-09-01T10:00:00Z` |
-| 1031 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last updated the traceability link | `00000000-0000-0000-0000-000000000001` |
-| 1032 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Traceability link soft-deletion time | `2026-09-02T10:00:00Z` |
+| 1064 | Traceability Link ID | `traceability_link_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of a traceability link between URS, FDS, DDS, DQ, FRA, IQ, OQ and PQ items. For non-deleted data, duplicate (project_id, source_entity_type, source_entity_id, target_entity_type, target_entity_id, link_type) combinations are not allowed. | `00000000-0000-0000-0000-000000000001` |
+| 1065 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | ID of the project to which the traceability link belongs | `00000000-0000-0000-0000-000000000001` |
+| 1066 | Source Entity Type | `source_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Link target type: REQUIREMENT, FDS_SPEC, DDS_SPEC, DQ_ITEM, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM. Links the PK of a specific revision row of each type. | `REQUIREMENT` |
+| 1067 | Source Entity ID | `source_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK of a specific revision row in the table corresponding to the target type. A polymorphic reference, not a physical FK; it must not be replaced with a logical key or display number. | `00000000-0000-0000-0000-000000000001` |
+| 1068 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Link target type: REQUIREMENT, FDS_SPEC, DDS_SPEC, DQ_ITEM, FRA_ITEM, IQ_ITEM, OQ_ITEM, PQ_ITEM. Links the PK of a specific revision row of each type. | `OQ_ITEM` |
+| 1069 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | PK of a specific revision row in the table corresponding to the target type. A polymorphic reference, not a physical FK; it must not be replaced with a logical key or display number. | `00000000-0000-0000-0000-000000000001` |
+| 1070 | Link Type | `link_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | IMPLEMENTED_BY, ASSESSED_BY, VERIFIED_BY, MITIGATED_BY | `VERIFIED_BY` |
+| 1071 | Link Rationale | `link_reason` | `text` | N | N | - | N | - | N | N | N | Y | Business rationale for linking the two deliverable items | `URS requirement verified by IQ test` |
+| 1072 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Traceability link creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 1073 | Author ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who created the traceability link | `00000000-0000-0000-0000-000000000001` |
+| 1074 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Traceability link last update time (UTC) | `2026-09-01T10:00:00Z` |
+| 1075 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | ID of the user who last updated the traceability link | `00000000-0000-0000-0000-000000000001` |
+| 1076 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Traceability link soft-deletion time | `2026-09-02T10:00:00Z` |
 
 #### Constraints
 
@@ -3917,7 +4089,7 @@ Coverage is aggregated based on whether URS items are linked to tests, and is di
 ## Deviation
 
 <a id="table-deviation"></a>
-### 63. Deviation Management (`deviation`)
+### 66. Deviation Management (`deviation`)
 
 | Item | Definition |
 |---|---|
@@ -3934,33 +4106,33 @@ Coverage is aggregated based on whether URS items are linked to tests, and is di
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1033 | Deviation ID | `deviation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the deviation | `00000000-0000-0000-0000-000000000001` |
-| 1034 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Validation project in which the deviation occurred | `00000000-0000-0000-0000-000000000001` |
-| 1035 | Originating Entity Type | `source_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Type of the original execution that failed: IQ_EXECUTION, OQ_EXECUTION, PQ_EXECUTION. | `OQ_EXECUTION` |
-| 1036 | Originating Entity ID | `source_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | execution_id in the corresponding execution table. A polymorphic reference pointing to a specific attempt or corrected result; not a physical FK. | `00000000-0000-0000-0000-000000000001` |
-| 1037 | Deviation Number | `deviation_no` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Deviation management number within the project | `DEV-001` |
-| 1038 | Deviation Title | `title` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Report display title built from the test item name and the deviation number. Not a separately required input. | `Expected result mismatch` |
-| 1039 | Deviation Reason | `description` | `text` | N | N | - | Y | - | N | N | N | Y | Display summary of the deviation reason from the current action revision. The original failure reason is retrieved from the execution record of source_entity_id. | `Mismatch between expected and actual results during OQ execution` |
-| 1040 | Deviation Status | `deviation_status` | `varchar(30)` | N | N | - | Y | `'ACTION_PENDING'` | N | Y | N | Y | ACTION_PENDING (awaiting reason/action approval), RERUN_ALLOWED (re-execution allowed), COMPLETION_PENDING (awaiting completion report), CLOSED (closed). | `ACTION_PENDING` |
-| 1041 | Approved At | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final signature time of the completion report approval or of the closure processing for which a reason was entered. | `2026-09-03T17:00:00Z` |
-| 1042 | Approver ID | `approved_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who gave the final signature for the completion report approval or the closure processing. | `00000000-0000-0000-0000-000000000001` |
-| 1043 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Deviation creation time (UTC) | `2026-09-01T10:00:00Z` |
-| 1044 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the deviation | `00000000-0000-0000-0000-000000000001` |
-| 1045 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Deviation last update time (UTC) | `2026-09-01T10:00:00Z` |
-| 1046 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the deviation | `00000000-0000-0000-0000-000000000001` |
-| 1047 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deviation soft-deletion time | `2026-09-02T10:00:00Z` |
-| 1048 | Immediate Action | `immediate_action` | `text` | N | N | - | Y | - | N | N | N | Y | Display summary of the immediate action from the current action revision. The approved original content of each round is preserved in deviation_action_round. | - |
-| 1049 | Reason/Action Approval Status | `action_approval_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | Summary of the approval status of the current action revision. DRAFT / REVIEW / APPROVAL / APPROVED / REJECTED / CANCELLED. Not edited independently. | `DRAFT` |
-| 1050 | Reason/Action Approval Workflow | `action_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Current approval procedure synchronized from the workflow_instance_id of current_action_round_id. Previous rounds are retrieved from deviation_action_round; not edited independently. | `00000000-0000-0000-0000-000000000001` |
-| 1051 | Reason/Action Final Signature | `action_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval signature synchronized from the signature_id of the current action round. Past signatures are preserved per round. | `00000000-0000-0000-0000-000000000001` |
-| 1052 | Latest Re-execution ID | `rerun_execution_id` | `uuid` | N | N | - | N | - | N | N | N | Y | PK of the valid result revision of the latest re-execution. Must belong to the same logical test and attempt_no as the round's initial re-execution. If the initial execution row of the re-execution is aborted (ABORTED), the link is released; if a result correction is finalized as RECORDED, it is updated to the correction row. Cancelling a correction that is still being written has no effect. The table is identified by source_entity_type. | `00000000-0000-0000-0000-000000000001` |
-| 1053 | Corrective and Preventive Action | `corrective_action` | `text` | N | N | - | N | - | N | N | N | Y | Corrective and preventive action synchronized from the approved completion report revision (deviation_completion_revision). Authoring and editing are done in the revision table; not edited independently. | - |
-| 1054 | Completion Report | `completion_report` | `text` | N | N | - | N | - | N | N | N | Y | Completion report synchronized from the approved completion report revision. Authoring and editing are done in the revision table; not edited independently. | - |
-| 1055 | Completion Report Approval Signature | `completion_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Synchronized from the final approval signature (signature_id) of the approved completion report revision. | `00000000-0000-0000-0000-000000000001` |
-| 1056 | Closure Processing Reason | `closure_reason` | `text` | N | N | - | N | - | N | N | N | Y | Closure reason synchronized from the approved closure-without-re-execution revision (closure_kind=CLOSE). Authoring and editing are done in the revision table; not edited independently. | - |
-| 1057 | Closure Processing Signature | `closure_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Synchronized from the final approval signature of the approved closure-without-re-execution revision. Distinct from the completion report approval. | `00000000-0000-0000-0000-000000000001` |
-| 1058 | Current Deviation Action Revision | `current_action_round_id` | `uuid` | N | Y | `deviation_action_round.action_round_id` | N | - | N | Y | N | Y | Current original-content revision in the last action round of this deviation. Required at the end of the transaction that creates the initial failure and the first action draft | - |
-| 1059 | Current Closure Report Revision | `current_completion_revision_id` | `uuid` | N | Y | `deviation_completion_revision.completion_revision_id` | N | - | N | Y | N | Y | Current closure report revision of this deviation (is_current_revision=TRUE). NULL before a closure report is written | `00000000-0000-0000-0000-000000000001` |
+| 1077 | Deviation ID | `deviation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the deviation | `00000000-0000-0000-0000-000000000001` |
+| 1078 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | Validation project in which the deviation occurred | `00000000-0000-0000-0000-000000000001` |
+| 1079 | Originating Entity Type | `source_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Type of the original execution that failed: IQ_EXECUTION, OQ_EXECUTION, PQ_EXECUTION. | `OQ_EXECUTION` |
+| 1080 | Originating Entity ID | `source_entity_id` | `uuid` | N | N | - | Y | - | N | Y | N | Y | execution_id in the corresponding execution table. A polymorphic reference pointing to a specific attempt or corrected result; not a physical FK. | `00000000-0000-0000-0000-000000000001` |
+| 1081 | Deviation Number | `deviation_no` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Deviation management number within the project | `DEV-001` |
+| 1082 | Deviation Title | `title` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Report display title built from the test item name and the deviation number. Not a separately required input. | `Expected result mismatch` |
+| 1083 | Deviation Reason | `description` | `text` | N | N | - | Y | - | N | N | N | Y | Display summary of the deviation reason from the current action revision. The original failure reason is retrieved from the execution record of source_entity_id. | `Mismatch between expected and actual results during OQ execution` |
+| 1084 | Deviation Status | `deviation_status` | `varchar(30)` | N | N | - | Y | `'ACTION_PENDING'` | N | Y | N | Y | ACTION_PENDING (awaiting reason/action approval), RERUN_ALLOWED (re-execution allowed), COMPLETION_PENDING (awaiting completion report), CLOSED (closed). | `ACTION_PENDING` |
+| 1085 | Approved At | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final signature time of the completion report approval or of the closure processing for which a reason was entered. | `2026-09-03T17:00:00Z` |
+| 1086 | Approver ID | `approved_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who gave the final signature for the completion report approval or the closure processing. | `00000000-0000-0000-0000-000000000001` |
+| 1087 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Deviation creation time (UTC) | `2026-09-01T10:00:00Z` |
+| 1088 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who registered the deviation | `00000000-0000-0000-0000-000000000001` |
+| 1089 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Deviation last update time (UTC) | `2026-09-01T10:00:00Z` |
+| 1090 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who last updated the deviation | `00000000-0000-0000-0000-000000000001` |
+| 1091 | Deleted At | `deleted_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Deviation soft-deletion time | `2026-09-02T10:00:00Z` |
+| 1092 | Immediate Action | `immediate_action` | `text` | N | N | - | Y | - | N | N | N | Y | Display summary of the immediate action from the current action revision. The approved original content of each round is preserved in deviation_action_round. | - |
+| 1093 | Reason/Action Approval Status | `action_approval_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | Summary of the approval status of the current action revision. DRAFT / REVIEW / APPROVAL / APPROVED / REJECTED / CANCELLED. Not edited independently. | `DRAFT` |
+| 1094 | Reason/Action Approval Workflow | `action_workflow_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | Current approval procedure synchronized from the workflow_instance_id of current_action_round_id. Previous rounds are retrieved from deviation_action_round; not edited independently. | `00000000-0000-0000-0000-000000000001` |
+| 1095 | Reason/Action Final Signature | `action_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval signature synchronized from the signature_id of the current action round. Past signatures are preserved per round. | `00000000-0000-0000-0000-000000000001` |
+| 1096 | Latest Re-execution ID | `rerun_execution_id` | `uuid` | N | N | - | N | - | N | N | N | Y | PK of the valid result revision of the latest re-execution. Must belong to the same logical test and attempt_no as the round's initial re-execution. If the initial execution row of the re-execution is aborted (ABORTED), the link is released; if a result correction is finalized as RECORDED, it is updated to the correction row. Cancelling a correction that is still being written has no effect. The table is identified by source_entity_type. | `00000000-0000-0000-0000-000000000001` |
+| 1097 | Corrective and Preventive Action | `corrective_action` | `text` | N | N | - | N | - | N | N | N | Y | Corrective and preventive action synchronized from the approved completion report revision (deviation_completion_revision). Authoring and editing are done in the revision table; not edited independently. | - |
+| 1098 | Completion Report | `completion_report` | `text` | N | N | - | N | - | N | N | N | Y | Completion report synchronized from the approved completion report revision. Authoring and editing are done in the revision table; not edited independently. | - |
+| 1099 | Completion Report Approval Signature | `completion_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Synchronized from the final approval signature (signature_id) of the approved completion report revision. | `00000000-0000-0000-0000-000000000001` |
+| 1100 | Closure Processing Reason | `closure_reason` | `text` | N | N | - | N | - | N | N | N | Y | Closure reason synchronized from the approved closure-without-re-execution revision (closure_kind=CLOSE). Authoring and editing are done in the revision table; not edited independently. | - |
+| 1101 | Closure Processing Signature | `closure_signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Synchronized from the final approval signature of the approved closure-without-re-execution revision. Distinct from the completion report approval. | `00000000-0000-0000-0000-000000000001` |
+| 1102 | Current Deviation Action Revision | `current_action_round_id` | `uuid` | N | Y | `deviation_action_round.action_round_id` | N | - | N | Y | N | Y | Current original-content revision in the last action round of this deviation. Required at the end of the transaction that creates the initial failure and the first action draft | - |
+| 1103 | Current Closure Report Revision | `current_completion_revision_id` | `uuid` | N | Y | `deviation_completion_revision.completion_revision_id` | N | - | N | Y | N | Y | Current closure report revision of this deviation (is_current_revision=TRUE). NULL before a closure report is written | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -3995,7 +4167,7 @@ The approval workflow and signature for the completion report and the closure wi
 ---
 
 <a id="table-deviation_action_round"></a>
-### 64. Deviation Action Round (`deviation_action_round`)
+### 67. Deviation Action Round (`deviation_action_round`)
 
 | Item | Definition |
 |---|---|
@@ -4012,22 +4184,22 @@ The approval workflow and signature for the completion report and the closure wi
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1060 | Deviation Action Revision ID | `action_round_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Identifier of a specific original-content revision written within one action round | - |
-| 1061 | Deviation ID | `deviation_id` | `uuid` | N | Y | `deviation.deviation_id` | Y | - | N | Y | N | Y | Source deviation | - |
-| 1062 | Action Round | `round_number` | `integer` | N | N | - | Y | - | N | N | N | Y | 1 for the initial failure. If the re-execution after approval fails, the next round is created. | `1` |
-| 1063 | Original-Content Revision within Round | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Incremented when the content is edited and resubmitted after rejection for the same failure. | `1` |
-| 1064 | Is Current Revision in Round | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Only one current authored revision exists per deviation and action round | - |
-| 1065 | Failed Execution ID of the Round | `failed_execution_id` | `uuid` | N | N | - | Y | - | N | N | N | Y | Execution PK corresponding to deviation.source_entity_type. For the first round, the initial failure; for later rounds, the failed re-execution of the previous round. A polymorphic reference, not a physical FK | - |
-| 1066 | Deviation Reason per Round | `description` | `text` | N | N | - | Y | - | N | N | N | Y | Original reason content subject to approval for that failure | - |
-| 1067 | Immediate Action per Round | `immediate_action` | `text` | N | N | - | Y | - | N | N | N | Y | Original content of the action taken for that failure | - |
-| 1068 | Action Approval Status | `approval_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT / REVIEW / APPROVAL / APPROVED / REJECTED / CANCELLED. REJECTED and CANCELLED are terminal states of this original-content revision | - |
-| 1069 | Action Approval Procedure | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | DEVIATION_ACTION approval workflow targeting this action_round_id and ACTION-{round_number}-{revision_number} | - |
-| 1070 | Action Final Approval Signature | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval signature of the corresponding original action content revision | - |
-| 1071 | Re-execution ID Permitted by Approval | `rerun_execution_id` | `uuid` | N | N | - | N | - | N | N | N | Y | PK of the re-execution started under this approval. The table is identified by source_entity_type. NULL when closed without re-execution, or when the link was released because the re-execution was aborted (ABORTED) | - |
-| 1072 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Original-content revision creation time | - |
-| 1073 | Author | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Author of the original action content | - |
-| 1074 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time of draft editing or management status change | - |
-| 1075 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Processing user | - |
+| 1104 | Deviation Action Revision ID | `action_round_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Identifier of a specific original-content revision written within one action round | - |
+| 1105 | Deviation ID | `deviation_id` | `uuid` | N | Y | `deviation.deviation_id` | Y | - | N | Y | N | Y | Source deviation | - |
+| 1106 | Action Round | `round_number` | `integer` | N | N | - | Y | - | N | N | N | Y | 1 for the initial failure. If the re-execution after approval fails, the next round is created. | `1` |
+| 1107 | Original-Content Revision within Round | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Incremented when the content is edited and resubmitted after rejection for the same failure. | `1` |
+| 1108 | Is Current Revision in Round | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Only one current authored revision exists per deviation and action round | - |
+| 1109 | Failed Execution ID of the Round | `failed_execution_id` | `uuid` | N | N | - | Y | - | N | N | N | Y | Execution PK corresponding to deviation.source_entity_type. For the first round, the initial failure; for later rounds, the failed re-execution of the previous round. A polymorphic reference, not a physical FK | - |
+| 1110 | Deviation Reason per Round | `description` | `text` | N | N | - | Y | - | N | N | N | Y | Original reason content subject to approval for that failure | - |
+| 1111 | Immediate Action per Round | `immediate_action` | `text` | N | N | - | Y | - | N | N | N | Y | Original content of the action taken for that failure | - |
+| 1112 | Action Approval Status | `approval_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT / REVIEW / APPROVAL / APPROVED / REJECTED / CANCELLED. REJECTED and CANCELLED are terminal states of this original-content revision | - |
+| 1113 | Action Approval Procedure | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | DEVIATION_ACTION approval workflow targeting this action_round_id and ACTION-{round_number}-{revision_number} | - |
+| 1114 | Action Final Approval Signature | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval signature of the corresponding original action content revision | - |
+| 1115 | Re-execution ID Permitted by Approval | `rerun_execution_id` | `uuid` | N | N | - | N | - | N | N | N | Y | PK of the re-execution started under this approval. The table is identified by source_entity_type. NULL when closed without re-execution, or when the link was released because the re-execution was aborted (ABORTED) | - |
+| 1116 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Original-content revision creation time | - |
+| 1117 | Author | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Author of the original action content | - |
+| 1118 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time of draft editing or management status change | - |
+| 1119 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Processing user | - |
 
 #### Constraints
 
@@ -4057,7 +4229,7 @@ Re-execution creation locks the deviation and the approved round, checks deviati
 ---
 
 <a id="table-deviation_completion_revision"></a>
-### 65. Deviation Closure Report Revision (`deviation_completion_revision`)
+### 68. Deviation Closure Report Revision (`deviation_completion_revision`)
 
 | Item | Definition |
 |---|---|
@@ -4074,24 +4246,24 @@ Re-execution creation locks the deviation and the approved round, checks deviati
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1076 | Closure Report Revision ID | `completion_revision_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Identifier of a specific original-content revision of the closure report | `00000000-0000-0000-0000-000000000001` |
-| 1077 | Deviation ID | `deviation_id` | `uuid` | N | Y | `deviation.deviation_id` | Y | - | N | Y | N | Y | Deviation to be closed | `00000000-0000-0000-0000-000000000001` |
-| 1078 | Closure Kind | `closure_kind` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | COMPLETION=completion report after successful re-execution, CLOSE=closure without re-execution | `COMPLETION` |
-| 1079 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per deviation. Editing after rejection or cancellation creates a new row with the next number | `1` |
-| 1080 | Is Current Revision | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the current closure report revision of the same deviation | `TRUE` |
-| 1081 | Basis Action Round | `action_round_id` | `uuid` | N | Y | `deviation_action_round.action_round_id` | Y | - | N | Y | N | Y | Current action round at the time of authoring (deviation.current_action_round_id) | `00000000-0000-0000-0000-000000000001` |
-| 1082 | Basis Re-execution Result ID | `rerun_execution_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | PK of the valid re-execution result revision that is the basis for COMPLETION. A polymorphic reference whose table is identified by deviation.source_entity_type; not a physical FK. NULL for CLOSE | `00000000-0000-0000-0000-000000000001` |
-| 1083 | Corrective and Preventive Action | `corrective_action` | `text` | N | N | - | N | - | N | N | N | Y | Original corrective and preventive action content for COMPLETION. Required on submission | `Inspected 3 units of the same equipment model; added an alarm threshold item to the installation checklist` |
-| 1084 | Completion Report | `completion_report` | `text` | N | N | - | N | - | N | N | N | Y | Original completion report content for COMPLETION. Required on submission | `Alarm threshold setting error. Corrected to 8 degrees and retest passed` |
-| 1085 | Closure Reason | `closure_reason` | `text` | N | N | - | N | - | N | N | N | Y | Original content of the reason for closing without re-execution, for CLOSE. Required on submission | - |
-| 1086 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for rewriting after rejection or cancellation. Required if revision_number ≥ 2 | `Incorporated QA rejection comments` |
-| 1087 | Approval Status | `approval_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | DRAFT / REVIEW / APPROVAL / APPROVED / REJECTED / CANCELLED. REJECTED and CANCELLED are terminal states of this revision | `DRAFT` |
-| 1088 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | DEVIATION_COMPLETION or DEVIATION_CLOSE approval workflow targeting this revision | `00000000-0000-0000-0000-000000000001` |
-| 1089 | Final Approval Signature ID | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval electronic signature of this revision | `00000000-0000-0000-0000-000000000001` |
-| 1090 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Original-content revision creation time | `2026-09-03T10:00:00Z` |
-| 1091 | Author | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Closure report author | `00000000-0000-0000-0000-000000000001` |
-| 1092 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time of draft editing or management status change | `2026-09-03T10:00:00Z` |
-| 1093 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Processing user | `00000000-0000-0000-0000-000000000001` |
+| 1120 | Closure Report Revision ID | `completion_revision_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Identifier of a specific original-content revision of the closure report | `00000000-0000-0000-0000-000000000001` |
+| 1121 | Deviation ID | `deviation_id` | `uuid` | N | Y | `deviation.deviation_id` | Y | - | N | Y | N | Y | Deviation to be closed | `00000000-0000-0000-0000-000000000001` |
+| 1122 | Closure Kind | `closure_kind` | `varchar(20)` | N | N | - | Y | - | N | Y | N | Y | COMPLETION=completion report after successful re-execution, CLOSE=closure without re-execution | `COMPLETION` |
+| 1123 | Revision Number | `revision_number` | `integer` | N | N | - | Y | `1` | N | N | N | Y | Increments from 1 per deviation. Editing after rejection or cancellation creates a new row with the next number | `1` |
+| 1124 | Is Current Revision | `is_current_revision` | `boolean` | N | N | - | Y | `TRUE` | N | Y | N | Y | Whether this is the current closure report revision of the same deviation | `TRUE` |
+| 1125 | Basis Action Round | `action_round_id` | `uuid` | N | Y | `deviation_action_round.action_round_id` | Y | - | N | Y | N | Y | Current action round at the time of authoring (deviation.current_action_round_id) | `00000000-0000-0000-0000-000000000001` |
+| 1126 | Basis Re-execution Result ID | `rerun_execution_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | PK of the valid re-execution result revision that is the basis for COMPLETION. A polymorphic reference whose table is identified by deviation.source_entity_type; not a physical FK. NULL for CLOSE | `00000000-0000-0000-0000-000000000001` |
+| 1127 | Corrective and Preventive Action | `corrective_action` | `text` | N | N | - | N | - | N | N | N | Y | Original corrective and preventive action content for COMPLETION. Required on submission | `Inspected 3 units of the same equipment model; added an alarm threshold item to the installation checklist` |
+| 1128 | Completion Report | `completion_report` | `text` | N | N | - | N | - | N | N | N | Y | Original completion report content for COMPLETION. Required on submission | `Alarm threshold setting error. Corrected to 8 degrees and retest passed` |
+| 1129 | Closure Reason | `closure_reason` | `text` | N | N | - | N | - | N | N | N | Y | Original content of the reason for closing without re-execution, for CLOSE. Required on submission | - |
+| 1130 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Reason for rewriting after rejection or cancellation. Required if revision_number ≥ 2 | `Incorporated QA rejection comments` |
+| 1131 | Approval Status | `approval_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | Y | N | Y | DRAFT / REVIEW / APPROVAL / APPROVED / REJECTED / CANCELLED. REJECTED and CANCELLED are terminal states of this revision | `DRAFT` |
+| 1132 | Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | DEVIATION_COMPLETION or DEVIATION_CLOSE approval workflow targeting this revision | `00000000-0000-0000-0000-000000000001` |
+| 1133 | Final Approval Signature ID | `signature_id` | `uuid` | N | Y | `electronic_signature.signature_id` | N | - | N | Y | N | Y | Final approval electronic signature of this revision | `00000000-0000-0000-0000-000000000001` |
+| 1134 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Original-content revision creation time | `2026-09-03T10:00:00Z` |
+| 1135 | Author | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Closure report author | `00000000-0000-0000-0000-000000000001` |
+| 1136 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Time of draft editing or management status change | `2026-09-03T10:00:00Z` |
+| 1137 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Processing user | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4124,7 +4296,7 @@ The approval workflow and electronic signature target this table's completion_re
 ## Document
 
 <a id="table-deliverable_document"></a>
-### 66. Deliverable Document (`deliverable_document`)
+### 69. Deliverable Document (`deliverable_document`)
 
 | Item | Definition |
 |---|---|
@@ -4141,15 +4313,15 @@ The approval workflow and electronic signature target this table's completion_re
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1094 | Document ID | `document_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1095 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
-| 1096 | Activity ID | `project_activity_id` | `uuid` | N | Y | `project_activity.project_activity_id` | Y | - | N | Y | N | Y | References project_activity.project_activity_id | `00000000-0000-0000-0000-000000000001` |
-| 1097 | Document Category | `document_type` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | STAGE_DELIVERABLE / PROTOCOL / RECORD / SUMMARY | `RECORD` |
-| 1098 | Document Number | `document_number` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Document number on the deliverable screen. NULL allowed before approval | `OQ-R-001` |
-| 1099 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1100 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1101 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1102 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1138 | Document ID | `document_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1139 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | Y | - | N | Y | N | Y | References validation_project.project_id | `00000000-0000-0000-0000-000000000001` |
+| 1140 | Activity ID | `project_activity_id` | `uuid` | N | Y | `project_activity.project_activity_id` | Y | - | N | Y | N | Y | References project_activity.project_activity_id | `00000000-0000-0000-0000-000000000001` |
+| 1141 | Document Category | `document_type` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | STAGE_DELIVERABLE / PROTOCOL / RECORD / SUMMARY | `RECORD` |
+| 1142 | Document Number | `document_number` | `varchar(100)` | N | N | - | N | - | N | N | N | Y | Document number on the deliverable screen. NULL allowed before approval | `OQ-R-001` |
+| 1143 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1144 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1145 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1146 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4164,7 +4336,7 @@ The approval workflow and electronic signature target this table's completion_re
 ---
 
 <a id="table-deliverable_revision"></a>
-### 67. Deliverable Revision (`deliverable_revision`)
+### 70. Deliverable Revision (`deliverable_revision`)
 
 | Item | Definition |
 |---|---|
@@ -4181,39 +4353,39 @@ The approval workflow and electronic signature target this table's completion_re
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1103 | Document Revision ID | `document_revision_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1104 | Document ID | `document_id` | `uuid` | N | Y | `deliverable_document.document_id` | Y | - | N | Y | N | Y | References deliverable_document.document_id | `00000000-0000-0000-0000-000000000001` |
-| 1105 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Document Title | `Operational Qualification Result Report` |
-| 1106 | Document Display Version | `version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Document Display Version | `v1.0` |
-| 1107 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision Number | `1` |
-| 1108 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Revision Reason | `Test results incorporated` |
-| 1109 | Is Latest Working Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Is Latest Working Version | `TRUE` |
-| 1110 | Document Approval Status | `approval_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT / REVIEW / APPROVAL / APPROVED / REJECTED / CANCELLED. Edits after REJECTED or CANCELLED are handled as a new document revision | `DRAFT` |
-| 1111 | Document Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
-| 1112 | Basis Business Approval Version | `source_version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Version of the approved data on the screen. Distinct from the document's own version | `v1.0` |
-| 1113 | Basis Business Revision List | `source_refs` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Array of [{table_name,record_id,version}]. Fixes the exact revisions of multiple business items and the approved execution attempts | `[{"table_name":"oq_execution","record_id":"00000000-0000-0000-0000-000000000001","version":"1-1"}]` |
-| 1114 | Approved Data Table | `approved_table_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Columns/rows of the approved data on the screen. {columns:string[],rows:string[][]} | `{"columns":["Item","Result"],"rows":[["OQ-001","Pass"]]}` |
-| 1115 | Part 11 Table | `part11_table_snapshot` | `jsonb` | N | N | - | N | - | N | N | N | Y | Part 11 question/answer/judgment table of the QIA deliverable. NULL for other activities | - |
-| 1116 | Revision History Table | `revision_table_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Revision history columns/rows as of authoring | `{"columns":["Version","Reason"],"rows":[["v1.0","Initial creation"]]}` |
-| 1117 | Re-approval Trigger Activity | `reapproval_source_stage` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Activity code when re-approval is required due to a change in an upstream activity. RTM excluded | `URS` |
-| 1118 | Re-approval Reason | `reapproval_reason` | `text` | N | N | - | N | - | N | N | N | Y | Re-approval Reason | `Content re-reviewed due to URS revision` |
-| 1119 | Approval Invalidated At | `invalidated_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Approval Invalidated At | `2026-09-01T00:00:00Z` |
-| 1120 | Final Approver ID | `approved_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1121 | Final Approved At | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final Approved At | `2026-09-01T00:00:00Z` |
-| 1122 | PDF File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | Linked when the generated PDF is stored | `00000000-0000-0000-0000-000000000001` |
-| 1123 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1124 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1125 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1126 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1127 | Document Validation Baseline | `system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | Baseline of the same project fixed at document submission. Required on submission and approval. For previous executions, each execution's baseline is displayed alongside. | - |
-| 1128 | Original Evaluation Questions & Judgment Rules | `evaluation_definition_snapshot` | `jsonb` | N | N | - | N | - | N | N | N | Y | Array fixing, for each basis evaluation of a QIA/FRA document, the question/rule versions and their actual definitions, inputs and results. NULL for documents unrelated to evaluations | - |
+| 1147 | Document Revision ID | `document_revision_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1148 | Document ID | `document_id` | `uuid` | N | Y | `deliverable_document.document_id` | Y | - | N | Y | N | Y | References deliverable_document.document_id | `00000000-0000-0000-0000-000000000001` |
+| 1149 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Document Title | `Operational Qualification Result Report` |
+| 1150 | Document Display Version | `version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Document display version. Incremented only on final approval (revision rule in section 2) and unique only among approved revisions (uq_deliverable_revision_1_2) | `v1.0` |
+| 1151 | Revision Number | `revision_number` | `integer` | N | N | - | Y | - | N | N | N | Y | Revision Number | `1` |
+| 1152 | Revision Reason | `revision_reason` | `text` | N | N | - | N | - | N | N | N | Y | Revision Reason | `Test results incorporated` |
+| 1153 | Is Latest Working Version | `is_current_version` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | Is Latest Working Version | `TRUE` |
+| 1154 | Document Approval Status | `approval_status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT / REVIEW / APPROVAL / APPROVED / REJECTED / CANCELLED. Edits after REJECTED or CANCELLED are handled as a new document revision | `DRAFT` |
+| 1155 | Document Approval Workflow ID | `workflow_instance_id` | `uuid` | N | Y | `workflow_instance.workflow_instance_id` | N | - | N | Y | N | Y | References workflow_instance.workflow_instance_id | `00000000-0000-0000-0000-000000000001` |
+| 1156 | Basis Business Approval Version | `source_version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Version of the approved data on the screen. Distinct from the document's own version | `v1.0` |
+| 1157 | Basis Business Revision List | `source_refs` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Array of [{table_name,record_id,version}]. Fixes the exact revisions of multiple business items and the approved execution attempts | `[{"table_name":"oq_execution","record_id":"00000000-0000-0000-0000-000000000001","version":"1-1"}]` |
+| 1158 | Approved Data Table | `approved_table_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Columns/rows of the approved data on the screen. {columns:string[],rows:string[][]} | `{"columns":["Item","Result"],"rows":[["OQ-001","Pass"]]}` |
+| 1159 | Part 11 Table | `part11_table_snapshot` | `jsonb` | N | N | - | N | - | N | N | N | Y | Part 11 question/answer/judgment table of the QIA deliverable. NULL for other activities | - |
+| 1160 | Revision History Table | `revision_table_snapshot` | `jsonb` | N | N | - | Y | - | N | N | N | Y | Revision history columns/rows as of authoring | `{"columns":["Version","Reason"],"rows":[["v1.0","Initial creation"]]}` |
+| 1161 | Re-approval Trigger Activity | `reapproval_source_stage` | `varchar(20)` | N | N | - | N | - | N | N | N | Y | Activity code when re-approval is required due to a change in an upstream activity. RTM excluded | `URS` |
+| 1162 | Re-approval Reason | `reapproval_reason` | `text` | N | N | - | N | - | N | N | N | Y | Re-approval Reason | `Content re-reviewed due to URS revision` |
+| 1163 | Approval Invalidated At | `invalidated_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Approval Invalidated At | `2026-09-01T00:00:00Z` |
+| 1164 | Final Approver ID | `approved_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1165 | Final Approved At | `approved_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Final Approved At | `2026-09-01T00:00:00Z` |
+| 1166 | PDF File ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | Linked when the generated PDF is stored | `00000000-0000-0000-0000-000000000001` |
+| 1167 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1168 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1169 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1170 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1171 | Document Validation Baseline | `system_baseline_id` | `uuid` | N | Y | `project_system_baseline.baseline_id` | N | - | N | Y | N | Y | Baseline of the same project fixed at document submission. Required on submission and approval. For previous executions, each execution's baseline is displayed alongside. | - |
+| 1172 | Original Evaluation Questions & Judgment Rules | `evaluation_definition_snapshot` | `jsonb` | N | N | - | N | - | N | N | N | Y | Array fixing, for each basis evaluation of a QIA/FRA document, the question/rule versions and their actual definitions, inputs and results. NULL for documents unrelated to evaluations | - |
 
 #### Constraints
 
 | Constraint | Type | Columns | Condition / Rule |
 |---|---|---|---|
 | `uq_deliverable_revision_1` | UNIQUE | `document_id, revision_number` | UNIQUE(document_id,revision_number) |
-| `uq_deliverable_revision_1_2` | UNIQUE | `document_id, version` | UNIQUE(document_id,version) |
+| `uq_deliverable_revision_1_2` | UNIQUE | `document_id, version, approval_status` | UNIQUE (document_id, version) WHERE approval_status = 'APPROVED' |
 | `rule_deliverable_revision_1` | Business validation | `document_id, version, revision_number, is_current_version` | At most 1 is_current_version=TRUE per document |
 | `rule_deliverable_revision_2` | Business validation | - | Document approval and approval of the basis business items are separate. source_refs validates the exact revision, project and approval status of multiple source items and is preserved together with the tables as of that time. |
 | `rule_deliverable_revision_3` | Business validation | - | If APPROVED, the document approval workflow history, final approver and time are required. Approved body / tables / basis links are not changed; a new revision is written instead. |
@@ -4235,7 +4407,7 @@ On document submission and approval, system_baseline_id is required, and for QIA
 ---
 
 <a id="table-deliverable_section"></a>
-### 68. Deliverable Section/Body (`deliverable_section`)
+### 71. Deliverable Section/Body (`deliverable_section`)
 
 | Item | Definition |
 |---|---|
@@ -4252,17 +4424,19 @@ On document submission and approval, system_baseline_id is required, and for QIA
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1129 | Section ID | `section_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1130 | Document Revision ID | `document_revision_id` | `uuid` | N | Y | `deliverable_revision.document_revision_id` | Y | - | N | Y | N | Y | References deliverable_revision.document_revision_id | `00000000-0000-0000-0000-000000000001` |
-| 1131 | Section Key | `section_key` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Section Key | `purpose` |
-| 1132 | Section Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Section Title | `Purpose` |
-| 1133 | Body | `content` | `text` | N | N | - | Y | - | N | N | N | Y | Body | `Describes the purpose of this test.` |
-| 1134 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
-| 1135 | Authoring Source | `source_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | MANUAL / AI / APPROVED / HISTORY / PART11 | `MANUAL` |
-| 1136 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1137 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1138 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1139 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1173 | Section ID | `section_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1174 | Document Revision ID | `document_revision_id` | `uuid` | N | Y | `deliverable_revision.document_revision_id` | Y | - | N | Y | N | Y | References deliverable_revision.document_revision_id | `00000000-0000-0000-0000-000000000001` |
+| 1175 | Section Key | `section_key` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Section Key | `purpose` |
+| 1176 | Section Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Section Title | `Purpose` |
+| 1177 | Body | `content` | `text` | N | N | - | Y | - | N | N | N | Y | Body | `Describes the purpose of this test.` |
+| 1178 | Translated Title | `translated_title` | `varchar(255)` | N | N | - | N | - | N | N | N | Y | English translation of the section title. Shown below the original in 'View English version'; NULL before translation | `Purpose` |
+| 1179 | Translated Body | `translated_content` | `text` | N | N | - | N | - | N | N | N | Y | English translation of the body. Filled by direct input or by applying an AI translation; re-applying overwrites the previous translation. The original (title, content) is not changed. Whether it is included in the original content covered by an electronic signature is pending decision | `Describes the purpose of this test.` |
+| 1180 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
+| 1181 | Authoring Source | `source_type` | `varchar(20)` | N | N | - | Y | - | N | N | N | Y | MANUAL / AI / APPROVED / HISTORY / PART11 | `MANUAL` |
+| 1182 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1183 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1184 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1185 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4271,7 +4445,7 @@ On document submission and approval, system_baseline_id is required, and for QIA
 | `uq_deliverable_section_1` | UNIQUE | `document_revision_id, section_key` | UNIQUE(document_revision_id,section_key) |
 | `uq_deliverable_section_1_2` | UNIQUE | `document_revision_id, sort_order` | UNIQUE(document_revision_id,sort_order) |
 | `ck_deliverable_section_sort_order` | CHECK | `sort_order` | CHECK (sort_order >= 1) |
-| `rule_deliverable_section_2` | Business validation | - | MANUAL/AI body content can be edited only while the parent document revision is DRAFT, and is locked after submission (REVIEW). Edits after rejection or cancellation are made in a new document revision. APPROVED/HISTORY/PART11 sections are displayed from the corresponding snapshot. Sections of an approved document are not directly modified or deleted. |
+| `rule_deliverable_section_2` | Business validation | - | MANUAL/AI body content can be edited only while the parent document revision is DRAFT, and is locked after submission (REVIEW). Edits after rejection or cancellation are made in a new document revision. APPROVED/HISTORY/PART11 sections are displayed from the corresponding snapshot. Sections of an approved document are not directly modified or deleted. The translation fields (translated_title, translated_content) are also editable only while DRAFT, on the same basis. |
 | `ck_deliverable_section_source_type` | CHECK | `source_type` | CHECK (source_type IN ('MANUAL','AI','APPROVED','HISTORY','PART11')) |
 
 [↑ Back to top](#top)
@@ -4281,7 +4455,7 @@ On document submission and approval, system_baseline_id is required, and for QIA
 ## Report
 
 <a id="table-report_generation"></a>
-### 69. Report Generation Job (`report_generation`)
+### 72. Report Generation Job (`report_generation`)
 
 | Item | Definition |
 |---|---|
@@ -4298,27 +4472,27 @@ On document submission and approval, system_baseline_id is required, and for QIA
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1140 | Report Generation ID | `report_generation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the report generation job | `00000000-0000-0000-0000-000000000001` |
-| 1141 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Linked for a project-level report; NULL allowed for system-wide or organization-level reports | `00000000-0000-0000-0000-000000000001` |
-| 1142 | Report Type | `report_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | DELIVERABLE / AUDIT_TRAIL. Deliverable or audit export on the screen | `AUDIT_TRAIL` |
-| 1143 | Report Name | `report_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Name of the generated report displayed to users | `August 2026 Audit Trail Report` |
-| 1144 | Query Start Date/Time | `period_from` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Start date/time for querying the report's source data. NULL allowed for reports without a query period | `2026-08-01T00:00:00Z` |
-| 1145 | Query End Date/Time | `period_to` | `timestamptz` | N | N | - | N | - | N | N | N | Y | End date/time for querying the report's source data. Cannot be earlier than period_from | `2026-08-31T23:59:59Z` |
-| 1146 | Query Conditions | `report_parameters` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Export filters selected on the screen, such as period, user, role and menu | `{"action_types":["CREATE","UPDATE"]}` |
-| 1147 | Output Format | `output_format` | `varchar(20)` | N | N | - | Y | `'PDF'` | N | Y | N | Y | Output format PDF | `PDF` |
-| 1148 | Generation Status | `generation_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED | `PENDING` |
-| 1149 | Requester ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who requested the PDF/export | `00000000-0000-0000-0000-000000000001` |
-| 1150 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when the user requested the export | `2026-09-02T15:00:00Z` |
-| 1151 | Execution Start Time | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when generation started | `2026-09-02T15:00:05Z` |
-| 1152 | Execution Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when generation success or failure was finalized | `2026-09-02T15:01:30Z` |
-| 1153 | Result File ID | `result_file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | Linked when the result is stored as a file asset. May be NULL if only a download is performed | `00000000-0000-0000-0000-000000000001` |
-| 1154 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | System error code classifying the cause of failure | `REPORT_FILE_CREATE_FAILED` |
-| 1155 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Details of the report generation failure. Sensitive information such as passwords and tokens is not stored | `Error occurred while saving the result file` |
-| 1156 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Report generation job record creation time (UTC) | `2026-09-02T15:00:00Z` |
-| 1157 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who requested the export. For automatic/batch generation, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1158 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Report generation job last update time (UTC) | `2026-09-02T15:01:30Z` |
-| 1159 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who updated the export processing result. For automatic status updates, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1160 | Deliverable Revision ID | `document_revision_id` | `uuid` | N | Y | `deliverable_revision.document_revision_id` | N | - | N | Y | N | Y | References deliverable_revision.document_revision_id | `00000000-0000-0000-0000-000000000001` |
+| 1186 | Report Generation ID | `report_generation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of the report generation job | `00000000-0000-0000-0000-000000000001` |
+| 1187 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Linked for a project-level report; NULL allowed for system-wide or organization-level reports | `00000000-0000-0000-0000-000000000001` |
+| 1188 | Report Type | `report_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | DELIVERABLE / AUDIT_TRAIL. Deliverable or audit export on the screen | `AUDIT_TRAIL` |
+| 1189 | Report Name | `report_name` | `varchar(200)` | N | N | - | Y | - | N | N | N | Y | Name of the generated report displayed to users | `August 2026 Audit Trail Report` |
+| 1190 | Query Start Date/Time | `period_from` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Start date/time for querying the report's source data. NULL allowed for reports without a query period | `2026-08-01T00:00:00Z` |
+| 1191 | Query End Date/Time | `period_to` | `timestamptz` | N | N | - | N | - | N | N | N | Y | End date/time for querying the report's source data. Cannot be earlier than period_from | `2026-08-31T23:59:59Z` |
+| 1192 | Query Conditions | `report_parameters` | `jsonb` | N | N | - | N | - | N | N | Y | Y | Export filters selected on the screen, such as period, user, role and menu | `{"action_types":["CREATE","UPDATE"]}` |
+| 1193 | Output Format | `output_format` | `varchar(20)` | N | N | - | Y | `'PDF'` | N | Y | N | Y | Output format PDF | `PDF` |
+| 1194 | Generation Status | `generation_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED | `PENDING` |
+| 1195 | Requester ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who requested the PDF/export | `00000000-0000-0000-0000-000000000001` |
+| 1196 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time when the user requested the export | `2026-09-02T15:00:00Z` |
+| 1197 | Execution Start Time | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when generation started | `2026-09-02T15:00:05Z` |
+| 1198 | Execution Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Time when generation success or failure was finalized | `2026-09-02T15:01:30Z` |
+| 1199 | Result File ID | `result_file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | Linked when the result is stored as a file asset. May be NULL if only a download is performed | `00000000-0000-0000-0000-000000000001` |
+| 1200 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | System error code classifying the cause of failure | `REPORT_FILE_CREATE_FAILED` |
+| 1201 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Details of the report generation failure. Sensitive information such as passwords and tokens is not stored | `Error occurred while saving the result file` |
+| 1202 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Report generation job record creation time (UTC) | `2026-09-02T15:00:00Z` |
+| 1203 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who requested the export. For automatic/batch generation, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1204 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Report generation job last update time (UTC) | `2026-09-02T15:01:30Z` |
+| 1205 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who updated the export processing result. For automatic status updates, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1206 | Deliverable Revision ID | `document_revision_id` | `uuid` | N | Y | `deliverable_revision.document_revision_id` | N | - | N | Y | N | Y | References deliverable_revision.document_revision_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4340,11 +4514,11 @@ Body, sections, versions and document approval status are stored in deliverable_
 ## AI
 
 <a id="table-ai_generation_job"></a>
-### 70. AI Generation Job (`ai_generation_job`)
+### 73. AI Generation Job (`ai_generation_job`)
 
 | Item | Definition |
 |---|---|
-| Description | AI draft generation requests on the screen, input conditions and progress results |
+| Description | AI draft generation, translation and automatic evaluation requests on the screen, input conditions and progress results |
 | Primary Key | `ai_job_id` |
 | Main References (FK) | `project_id, requested_by, created_by, updated_by` |
 | GxP Criticality | High |
@@ -4357,37 +4531,37 @@ Body, sections, versions and document approval status are stored in deliverable_
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1161 | AI Job ID | `ai_job_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI generation job identifier | `00000000-0000-0000-0000-000000000001` |
-| 1162 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Project link | `00000000-0000-0000-0000-000000000001` |
-| 1163 | Job Type | `job_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | ITEM_GENERATION, DOCUMENT_GENERATION | `ITEM_GENERATION` |
-| 1164 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT / FRA_ITEM / IQ_ITEM / OQ_ITEM / PQ_ITEM / DELIVERABLE_REVISION | `IQ_ITEM` |
-| 1165 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | For an existing target, the PK of the corresponding revision. NULL allowed for previews that generate new items | `00000000-0000-0000-0000-000000000001` |
-| 1166 | AI Model Name | `model_name` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Identifier of the model used for generation. Stored as a fixed version name that includes a date; an alias that points to the latest version is not stored. Recorded when confirmed; NULL is allowed when unconfirmed. | - |
-| 1167 | Prompt Version | `prompt_version` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Version of the prompt template used by the AI service (an item of the WAS↔AI contract). Required when COMPLETED. A different prompt is not deployed under the same version name | `IQ_ITEM_v2` |
-| 1168 | Masked Raw Response | `masked_response` | `text` | N | N | - | N | - | N | N | Y | Y | The raw response returned by the AI service, kept per job in its masked state as is. The mapping table for unmasking is not stored, so it cannot be recreated later. Required when COMPLETED. Classified as sensitive because information not covered by the detection rules may remain. Which one is treated as the original in audits (this value or ai_result_item.content) is pending decision | - |
-| 1169 | Input Parameters | `input_parameters` | `jsonb` | N | N | - | Y | - | N | N | Y | Y | Screen inputs: purpose, scope, basis URS, number of items to generate, or the sections of the document to generate | `{"purpose":"Access permission verification","scope":"Login","count":3}` |
-| 1170 | Generation Status | `generation_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED | `PENDING` |
-| 1171 | Requester ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who requested the generation. For automatic/batch requests, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1172 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the request was received | `2026-09-02T00:00:00Z` |
-| 1173 | Execution Start Time | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing start time | `2026-09-02T00:00:00Z` |
-| 1174 | Execution Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing completion time | `2026-09-02T00:00:00Z` |
-| 1175 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Failure cause code | `LLM_TIMEOUT` |
-| 1176 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Detailed failure message | `Model response timeout` |
-| 1177 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
-| 1178 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1179 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
-| 1180 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1207 | AI Job ID | `ai_job_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI generation job identifier | `00000000-0000-0000-0000-000000000001` |
+| 1208 | Project ID | `project_id` | `uuid` | N | Y | `validation_project.project_id` | N | - | N | Y | N | Y | Project link | `00000000-0000-0000-0000-000000000001` |
+| 1209 | Job Type | `job_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | ITEM_GENERATION=item generation, DOCUMENT_GENERATION=document generation, TRANSLATION=English translation of document sections, EVALUATION=automatic GxP evaluation of a QIA process | `ITEM_GENERATION` |
+| 1210 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT / FRA_ITEM / IQ_ITEM / OQ_ITEM / PQ_ITEM / DELIVERABLE_REVISION / VP_PLAN / QIA_PROCESS. VP_PLAN is the VP revision at request time (vp_plan.vp_id), and QIA_PROCESS is the QIA process to evaluate (qia_process.qia_process_id) | `IQ_ITEM` |
+| 1211 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | For an existing target, the PK of the corresponding revision. NULL allowed for previews that generate new items | `00000000-0000-0000-0000-000000000001` |
+| 1212 | AI Model Name | `model_name` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Identifier of the model used for generation. Stored as a fixed version name that includes a date; an alias that points to the latest version is not stored. Recorded when confirmed; NULL is allowed when unconfirmed. | - |
+| 1213 | Prompt Version | `prompt_version` | `varchar(100)` | N | N | - | N | - | N | Y | N | Y | Version of the prompt template used by the AI service (an item of the WAS↔AI contract). Required when COMPLETED. A different prompt is not deployed under the same version name | `IQ_ITEM_v2` |
+| 1214 | Masked Raw Response | `masked_response` | `text` | N | N | - | N | - | N | N | Y | Y | The raw response returned by the AI service, kept per job in its masked state as is. The mapping table for unmasking is not stored, so it cannot be recreated later. Required when COMPLETED. Classified as sensitive because information not covered by the detection rules may remain. Which one is treated as the original in audits (this value or ai_result_item.content) is pending decision | - |
+| 1215 | Input Parameters | `input_parameters` | `jsonb` | N | N | - | Y | - | N | N | Y | Y | Screen inputs: purpose, scope, basis URS, number of items to generate, the sections of the document to generate or translate, or the process to evaluate | `{"purpose":"Access permission verification","scope":"Login","count":3}` |
+| 1216 | Generation Status | `generation_status` | `varchar(20)` | N | N | - | Y | `'PENDING'` | N | Y | N | Y | PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED | `PENDING` |
+| 1217 | Requester ID | `requested_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | User who requested the generation. For automatic/batch requests, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1218 | Requested At | `requested_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the request was received | `2026-09-02T00:00:00Z` |
+| 1219 | Execution Start Time | `started_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing start time | `2026-09-02T00:00:00Z` |
+| 1220 | Execution Completion Time | `completed_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | AI processing completion time | `2026-09-02T00:00:00Z` |
+| 1221 | Error Code | `error_code` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Failure cause code | `LLM_TIMEOUT` |
+| 1222 | Error Message | `error_message` | `text` | N | N | - | N | - | N | N | N | Y | Detailed failure message | `Model response timeout` |
+| 1223 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
+| 1224 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1225 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
+| 1226 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
 | Constraint | Type | Columns | Condition / Rule |
 |---|---|---|---|
-| `rule_ai_generation_job_1` | Business validation | `target_entity_id` | New items of ITEM_GENERATION allow a NULL target_entity_id before being applied. DOCUMENT_GENERATION is linked to the corresponding document revision. |
+| `rule_ai_generation_job_1` | Business validation | `target_entity_id` | New items of ITEM_GENERATION allow a NULL target_entity_id before being applied. DOCUMENT_GENERATION is linked to the corresponding document revision. Because the VP keeps its original sections in vp_section, a VP request is linked to the VP revision (VP_PLAN, vp_plan.vp_id). TRANSLATION is linked to the document revision to translate (DELIVERABLE_REVISION or VP_PLAN), and EVALUATION to the QIA process to evaluate (QIA_PROCESS). |
 | `rule_ai_generation_job_2` | Business validation | - | Generation completion does not mean approval of business items or document approval. After selection and application, the regular edit/approval procedure is followed. |
 | `rule_ai_generation_job_3` | Business validation | `project_id, requested_by` | At job creation, organization.ai_enabled of the reference organization for the determination must be TRUE. The reference organization is the organization to which the project's system belongs if project_id is present, and otherwise the requester's organization. Because the SYSTEM account belongs to the SYSTEM organization (ai_enabled=FALSE), it cannot request AI jobs without a project_id. If FALSE, no PENDING row is created and the generation is rejected. Audit-response bot queries follow the same setting and are rejected on the server without separate storage. When ai_enabled is switched to FALSE, jobs that are already PENDING/PROCESSING are allowed to run to completion. |
 | `rule_ai_generation_job_4` | Business validation | `generation_status, prompt_version, masked_response` | Before data is sent to the AI service, the sensitive-information detection result for the outbound data (ai_sensitive_detection) must be stored; if it cannot be stored, the data is not sent. WAS→AI sending happens once per job; per-section/per-item generation and retries are handled inside the AI service, and only the final result or failure is recorded. When COMPLETED, prompt_version and masked_response are stored. |
-| `ck_ai_generation_job_type` | CHECK | `job_type` | CHECK (job_type IN ('ITEM_GENERATION','DOCUMENT_GENERATION')) |
-| `ck_ai_generation_job_target_type` | CHECK | `target_entity_type` | CHECK (target_entity_type IN ('REQUIREMENT','FRA_ITEM','IQ_ITEM','OQ_ITEM','PQ_ITEM','DELIVERABLE_REVISION')) |
+| `ck_ai_generation_job_type` | CHECK | `job_type` | CHECK (job_type IN ('ITEM_GENERATION','DOCUMENT_GENERATION','TRANSLATION','EVALUATION')) |
+| `ck_ai_generation_job_target_type` | CHECK | `target_entity_type` | CHECK (target_entity_type IN ('REQUIREMENT','FRA_ITEM','IQ_ITEM','OQ_ITEM','PQ_ITEM','DELIVERABLE_REVISION','VP_PLAN','QIA_PROCESS')) |
 | `ck_ai_generation_job_status` | CHECK | `generation_status` | CHECK (generation_status IN ('PENDING','PROCESSING','COMPLETED','FAILED','CANCELLED')) |
 
 [↑ Back to top](#top)
@@ -4395,7 +4569,7 @@ Body, sections, versions and document approval status are stored in deliverable_
 ---
 
 <a id="table-ai_generation_result"></a>
-### 71. AI Generation Result (`ai_generation_result`)
+### 74. AI Generation Result (`ai_generation_result`)
 
 | Item | Definition |
 |---|---|
@@ -4412,17 +4586,17 @@ Body, sections, versions and document approval status are stored in deliverable_
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1181 | AI Result ID | `ai_result_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI result identifier | `00000000-0000-0000-0000-000000000001` |
-| 1182 | AI Job ID | `ai_job_id` | `uuid` | N | Y | `ai_generation_job.ai_job_id` | Y | - | N | Y | N | Y | Parent AI job | `00000000-0000-0000-0000-000000000001` |
-| 1183 | Result Title | `result_title` | `varchar(300)` | N | N | - | N | - | N | N | N | Y | Result Title | `OQ test draft` |
-| 1184 | Selected | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether adopted by the user | `TRUE` |
-| 1185 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether actually applied to the deliverable | `TRUE` |
-| 1186 | Selected By ID | `selected_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who adopted it | `00000000-0000-0000-0000-000000000001` |
-| 1187 | Selected At | `selected_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Adopted At | `2026-09-02T00:00:00Z` |
-| 1188 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
-| 1189 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1190 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
-| 1191 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1227 | AI Result ID | `ai_result_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | AI result identifier | `00000000-0000-0000-0000-000000000001` |
+| 1228 | AI Job ID | `ai_job_id` | `uuid` | N | Y | `ai_generation_job.ai_job_id` | Y | - | N | Y | N | Y | Parent AI job | `00000000-0000-0000-0000-000000000001` |
+| 1229 | Result Title | `result_title` | `varchar(300)` | N | N | - | N | - | N | N | N | Y | Result Title | `OQ test draft` |
+| 1230 | Selected | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether adopted by the user | `TRUE` |
+| 1231 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether actually applied to the deliverable | `TRUE` |
+| 1232 | Selected By ID | `selected_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | User who adopted it | `00000000-0000-0000-0000-000000000001` |
+| 1233 | Selected At | `selected_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Adopted At | `2026-09-02T00:00:00Z` |
+| 1234 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
+| 1235 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1236 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
+| 1237 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4439,11 +4613,11 @@ This is a bundle of AI results. Per-item selection and application are based on 
 ---
 
 <a id="table-ai_result_item"></a>
-### 72. AI Generation Result Item (`ai_result_item`)
+### 75. AI Generation Result Item (`ai_result_item`)
 
 | Item | Definition |
 |---|---|
-| Description | Manages the details of AI-generated URS/FRA/IQ/OQ/PQ items and document sections |
+| Description | Manages the details of AI-generated URS/FRA/IQ/OQ/PQ items, document sections, section translations and QIA question answers |
 | Primary Key | `ai_result_item_id` |
 | Main References (FK) | `ai_result_id, created_by, updated_by` |
 | GxP Criticality | High |
@@ -4456,21 +4630,22 @@ This is a bundle of AI results. Per-item selection and application are based on 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1192 | AI Result Item ID | `ai_result_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Result item identifier | `00000000-0000-0000-0000-000000000001` |
-| 1193 | AI Result ID | `ai_result_id` | `uuid` | N | Y | `ai_generation_result.ai_result_id` | Y | - | N | Y | N | Y | References the parent result | `00000000-0000-0000-0000-000000000001` |
-| 1194 | Item Order | `item_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Result display order | `1` |
-| 1195 | Item Type | `item_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT, FRA_SCENARIO, IQ_TEST, OQ_TEST, PQ_TEST, DOCUMENT_SECTION | `REQUIREMENT` |
-| 1196 | Title | `title` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | Generated item title | `Electronic signature record` |
-| 1197 | Body Content | `content` | `text` | N | N | - | Y | - | N | N | N | Y | Draft content generated by AI per test/requirement/risk assessment/section. Stored as the unmasked value; it is the proposal the user first saw and the baseline for the edit history (the masked raw response is ai_generation_job.masked_response) | `Content` |
-| 1198 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Type of the business table it was applied to: REQUIREMENT / FRA_ITEM / IQ_ITEM / OQ_ITEM / PQ_ITEM / DELIVERABLE_SECTION | `IQ_ITEM` |
-| 1199 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | PK of the revision actually created/modified by applying it. NULL before application | `00000000-0000-0000-0000-000000000001` |
-| 1200 | Adopted | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether adopted by the user | `TRUE` |
-| 1201 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
-| 1202 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1203 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
-| 1204 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
-| 1205 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Applied | `FALSE` |
-| 1206 | Applied At | `applied_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Applied At | `2026-09-01T00:00:00Z` |
+| 1238 | AI Result Item ID | `ai_result_item_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Result item identifier | `00000000-0000-0000-0000-000000000001` |
+| 1239 | AI Result ID | `ai_result_id` | `uuid` | N | Y | `ai_generation_result.ai_result_id` | Y | - | N | Y | N | Y | References the parent result | `00000000-0000-0000-0000-000000000001` |
+| 1240 | Item Order | `item_order` | `integer` | N | N | - | Y | `1` | N | Y | N | Y | Result display order | `1` |
+| 1241 | Item Type | `item_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | REQUIREMENT, FRA_SCENARIO, IQ_TEST, OQ_TEST, PQ_TEST, DOCUMENT_SECTION, SECTION_TRANSLATION=section translation (title=translated title, content=translated body), QIA_ANSWER=QIA question answer (title=question number Q1~Q10, content=O or X) | `REQUIREMENT` |
+| 1242 | Title | `title` | `varchar(500)` | N | N | - | N | - | N | N | N | Y | Generated item title | `Electronic signature record` |
+| 1243 | Body Content | `content` | `text` | N | N | - | Y | - | N | N | N | Y | Draft content generated by AI per test/requirement/risk assessment/section. Stored as the unmasked value; it is the proposal the user first saw and the baseline for the edit history (the masked raw response is ai_generation_job.masked_response) | `Content` |
+| 1244 | Judgment Score | `judgment_score` | `numeric(5,2)` | N | N | - | N | - | N | N | N | Y | Judgment score (0~100, %) returned by the AI together with each proposed answer in an automatic evaluation. Required for QIA_ANSWER and NULL for other types | `87.00` |
+| 1245 | Target Entity Type | `target_entity_type` | `varchar(50)` | N | N | - | N | - | N | Y | N | Y | Type of the business table it was applied to: REQUIREMENT / FRA_ITEM / IQ_ITEM / OQ_ITEM / PQ_ITEM / DELIVERABLE_SECTION / VP_SECTION / QIA_PROCESS. VP_SECTION is a VP section (vp_section.vp_section_id), and QIA_PROCESS is the QIA process the answers were applied to (qia_process.qia_process_id) | `IQ_ITEM` |
+| 1246 | Target Entity ID | `target_entity_id` | `uuid` | N | N | - | N | - | N | Y | N | Y | PK of the revision actually created/modified by applying it. NULL before application | `00000000-0000-0000-0000-000000000001` |
+| 1247 | Adopted | `is_selected` | `boolean` | N | N | - | Y | `FALSE` | N | Y | N | Y | Whether adopted by the user | `TRUE` |
+| 1248 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-02T00:00:00Z` |
+| 1249 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1250 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-02T00:00:00Z` |
+| 1251 | Updated By ID | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Updating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1252 | Applied | `is_applied` | `boolean` | N | N | - | Y | `FALSE` | N | N | N | Y | Applied | `FALSE` |
+| 1253 | Applied At | `applied_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Applied At | `2026-09-01T00:00:00Z` |
 
 #### Constraints
 
@@ -4478,16 +4653,17 @@ This is a bundle of AI results. Per-item selection and application are based on 
 |---|---|---|---|
 | `uq_ai_result_item_1` | UNIQUE | `ai_result_id, item_order` | UNIQUE(ai_result_id,item_order) |
 | `rule_ai_result_item_1` | Business validation | `ai_result_id, item_order, is_applied` | If is_applied=TRUE, the actual target entity type and PK, and applied_at, are required |
-| `rule_ai_result_item_2` | Business validation | - | Per-section document results are linked via DELIVERABLE_SECTION. They are not applied to items/documents from submission (REVIEW) onward; they are applied only to a DRAFT revision or a new revision. |
-| `ck_ai_result_item_type` | CHECK | `item_type` | CHECK (item_type IN ('REQUIREMENT','FRA_SCENARIO','IQ_TEST','OQ_TEST','PQ_TEST','DOCUMENT_SECTION')) |
-| `ck_ai_result_item_target_type` | CHECK | `target_entity_type` | CHECK (target_entity_type IS NULL OR target_entity_type IN ('REQUIREMENT','FRA_ITEM','IQ_ITEM','OQ_ITEM','PQ_ITEM','DELIVERABLE_SECTION')) |
+| `rule_ai_result_item_2` | Business validation | - | Per-section document results are linked via DELIVERABLE_SECTION, and per-section VP results via VP_SECTION. They are not applied to items/documents from submission (REVIEW) onward; they are applied only to a DRAFT revision or a new revision. Section translations (SECTION_TRANSLATION) are applied to the translation fields (translated_title, translated_content) of the same section, and re-applying overwrites the previous translation. QIA question answers (QIA_ANSWER) are reflected in q1_val~q10_val of the process when the user applies them. |
+| `ck_ai_result_item_type` | CHECK | `item_type` | CHECK (item_type IN ('REQUIREMENT','FRA_SCENARIO','IQ_TEST','OQ_TEST','PQ_TEST','DOCUMENT_SECTION','SECTION_TRANSLATION','QIA_ANSWER')) |
+| `ck_ai_result_item_target_type` | CHECK | `target_entity_type` | CHECK (target_entity_type IS NULL OR target_entity_type IN ('REQUIREMENT','FRA_ITEM','IQ_ITEM','OQ_ITEM','PQ_ITEM','DELIVERABLE_SECTION','VP_SECTION','QIA_PROCESS')) |
+| `ck_ai_result_item_score` | CHECK | `item_type, judgment_score` | CHECK ((judgment_score IS NULL OR (judgment_score >= 0 AND judgment_score <= 100)) AND (item_type <> 'QIA_ANSWER' OR judgment_score IS NOT NULL)) |
 
 [↑ Back to top](#top)
 
 ---
 
 <a id="table-ai_sensitive_detection"></a>
-### 73. AI Outbound Data Sensitive-Information Detection Result (`ai_sensitive_detection`)
+### 76. AI Outbound Data Sensitive-Information Detection Result (`ai_sensitive_detection`)
 
 | Item | Definition |
 |---|---|
@@ -4504,14 +4680,14 @@ This is a bundle of AI results. Per-item selection and application are based on 
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1207 | Detection ID | `detection_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Detection result row identifier | `00000000-0000-0000-0000-000000000001` |
-| 1208 | AI Job ID | `ai_job_id` | `uuid` | N | Y | `ai_generation_job.ai_job_id` | Y | - | N | Y | N | Y | AI generation job that sent the checked data | `00000000-0000-0000-0000-000000000001` |
-| 1209 | Detection Type | `detection_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Values in use (a reference list, not restricted by a CHECK): EMAIL (email), PHONE (phone number), RRN (resident registration number), ORGANIZATION (organization name such as customer, plant, or lab), PERSON (person name). Added to the list when detection items increase | `EMAIL` |
-| 1210 | Detected Count | `detected_count` | `integer` | N | N | - | Y | - | N | N | N | Y | Number of detections of the type. A checked type is recorded even with 0 detections | `2` |
-| 1211 | Detection Rule Version | `detector_version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Version of the rules used for detection and masking. A different rule set is not deployed under the same version name | `MASK_RULE_v1` |
-| 1212 | Detected At | `detected_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the detection was performed | `2026-10-16T01:00:00Z` |
-| 1213 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-10-16T01:00:00Z` |
-| 1214 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
+| 1254 | Detection ID | `detection_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Detection result row identifier | `00000000-0000-0000-0000-000000000001` |
+| 1255 | AI Job ID | `ai_job_id` | `uuid` | N | Y | `ai_generation_job.ai_job_id` | Y | - | N | Y | N | Y | AI generation job that sent the checked data | `00000000-0000-0000-0000-000000000001` |
+| 1256 | Detection Type | `detection_type` | `varchar(50)` | N | N | - | Y | - | N | Y | N | Y | Values in use (a reference list, not restricted by a CHECK): EMAIL (email), PHONE (phone number), RRN (resident registration number), ORGANIZATION (organization name such as customer, plant, or lab), PERSON (person name). Added to the list when detection items increase | `EMAIL` |
+| 1257 | Detected Count | `detected_count` | `integer` | N | N | - | Y | - | N | N | N | Y | Number of detections of the type. A checked type is recorded even with 0 detections | `2` |
+| 1258 | Detection Rule Version | `detector_version` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Version of the rules used for detection and masking. A different rule set is not deployed under the same version name | `MASK_RULE_v1` |
+| 1259 | Detected At | `detected_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | Y | N | Y | Time the detection was performed | `2026-10-16T01:00:00Z` |
+| 1260 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-10-16T01:00:00Z` |
+| 1261 | Created By ID | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | Creating user. For automated/batch processing, the user_id of the SYSTEM account is stored | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4534,7 +4710,7 @@ Data that an AI generation job sends to the AI service (system and project infor
 ## Regulation
 
 <a id="table-regulatory_source"></a>
-### 74. Regulatory Basis Document (`regulatory_source`)
+### 77. Regulatory Basis Document (`regulatory_source`)
 
 | Item | Definition |
 |---|---|
@@ -4551,23 +4727,23 @@ Data that an AI generation job sends to the AI service (system and project infor
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1215 | Regulatory Document ID | `regulatory_source_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1216 | Document Code | `source_code` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Document Code | `REF-001` |
-| 1217 | Document Type | `source_type` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | REGULATION / GUIDELINE / INTERNAL_SOP | `GUIDELINE` |
-| 1218 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Document Title | `Reference document for review` |
-| 1219 | Edition/Revision | `edition` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Edition/Revision | `Rev.1` |
-| 1220 | Issuing Body/Department | `issuing_body` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Issuing Body/Department | `Quality Assurance Team` |
-| 1221 | Source URL | `source_url` | `text` | N | N | - | N | - | N | N | N | Y | Source URL | `https://example.com/reference` |
-| 1222 | Original Attachment ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | References file_asset.file_id | `00000000-0000-0000-0000-000000000001` |
-| 1223 | Effective From | `effective_from` | `date` | N | N | - | N | - | N | N | N | Y | Effective From | `2026-09-01` |
-| 1224 | Effective To | `effective_to` | `date` | N | N | - | N | - | N | N | N | Y | Effective To | `2026-09-01` |
-| 1225 | Review Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT / VERIFIED / RETIRED | `DRAFT` |
-| 1226 | Verified By ID | `verified_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1227 | Verified At | `verified_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Verified At | `2026-09-01T00:00:00Z` |
-| 1228 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1229 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1230 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1231 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1262 | Regulatory Document ID | `regulatory_source_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1263 | Document Code | `source_code` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Document Code | `REF-001` |
+| 1264 | Document Type | `source_type` | `varchar(30)` | N | N | - | Y | - | N | N | N | Y | REGULATION / GUIDELINE / INTERNAL_SOP | `GUIDELINE` |
+| 1265 | Document Title | `title` | `varchar(255)` | N | N | - | Y | - | N | N | N | Y | Document Title | `Reference document for review` |
+| 1266 | Edition/Revision | `edition` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Edition/Revision | `Rev.1` |
+| 1267 | Issuing Body/Department | `issuing_body` | `varchar(200)` | N | N | - | N | - | N | N | N | Y | Issuing Body/Department | `Quality Assurance Team` |
+| 1268 | Source URL | `source_url` | `text` | N | N | - | N | - | N | N | N | Y | Source URL | `https://example.com/reference` |
+| 1269 | Original Attachment ID | `file_id` | `uuid` | N | Y | `file_asset.file_id` | N | - | N | Y | N | Y | References file_asset.file_id | `00000000-0000-0000-0000-000000000001` |
+| 1270 | Effective From | `effective_from` | `date` | N | N | - | N | - | N | N | N | Y | Effective From | `2026-09-01` |
+| 1271 | Effective To | `effective_to` | `date` | N | N | - | N | - | N | N | N | Y | Effective To | `2026-09-01` |
+| 1272 | Review Status | `status` | `varchar(20)` | N | N | - | Y | `'DRAFT'` | N | N | N | Y | DRAFT / VERIFIED / RETIRED | `DRAFT` |
+| 1273 | Verified By ID | `verified_by` | `uuid` | N | Y | `app_user.user_id` | N | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1274 | Verified At | `verified_at` | `timestamptz` | N | N | - | N | - | N | N | N | Y | Verified At | `2026-09-01T00:00:00Z` |
+| 1275 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1276 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1277 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1278 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4589,7 +4765,7 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 ---
 
 <a id="table-regulatory_clause"></a>
-### 75. Regulatory Clause (`regulatory_clause`)
+### 78. Regulatory Clause (`regulatory_clause`)
 
 | Item | Definition |
 |---|---|
@@ -4606,18 +4782,18 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1232 | Clause ID | `regulatory_clause_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1233 | Regulatory Document ID | `regulatory_source_id` | `uuid` | N | Y | `regulatory_source.regulatory_source_id` | Y | - | N | Y | N | Y | References regulatory_source.regulatory_source_id | `00000000-0000-0000-0000-000000000001` |
-| 1234 | Clause Code | `clause_code` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Clause Code | `4.1` |
-| 1235 | Clause Title | `title` | `varchar(255)` | N | N | - | N | - | N | N | N | Y | Clause Title | `Access management` |
-| 1236 | Clause Summary | `summary` | `text` | N | N | - | Y | - | N | N | N | Y | Clause Summary | `Summary of the requirements applicable to the relevant work` |
-| 1237 | Original Content Location | `source_locator` | `text` | N | N | - | N | - | N | N | N | Y | Original Content Location | `Chapter 4, Section 1` |
-| 1238 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
-| 1239 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | In Use | `TRUE` |
-| 1240 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1241 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1242 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1243 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1279 | Clause ID | `regulatory_clause_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1280 | Regulatory Document ID | `regulatory_source_id` | `uuid` | N | Y | `regulatory_source.regulatory_source_id` | Y | - | N | Y | N | Y | References regulatory_source.regulatory_source_id | `00000000-0000-0000-0000-000000000001` |
+| 1281 | Clause Code | `clause_code` | `varchar(100)` | N | N | - | Y | - | N | N | N | Y | Clause Code | `4.1` |
+| 1282 | Clause Title | `title` | `varchar(255)` | N | N | - | N | - | N | N | N | Y | Clause Title | `Access management` |
+| 1283 | Clause Summary | `summary` | `text` | N | N | - | Y | - | N | N | N | Y | Clause Summary | `Summary of the requirements applicable to the relevant work` |
+| 1284 | Original Content Location | `source_locator` | `text` | N | N | - | N | - | N | N | N | Y | Original Content Location | `Chapter 4, Section 1` |
+| 1285 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
+| 1286 | In Use | `is_active` | `boolean` | N | N | - | Y | `TRUE` | N | N | N | Y | In Use | `TRUE` |
+| 1287 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1288 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1289 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1290 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4632,7 +4808,7 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 ---
 
 <a id="table-requirement_regulation"></a>
-### 76. Requirement Regulatory Basis (`requirement_regulation`)
+### 79. Requirement Regulatory Basis (`requirement_regulation`)
 
 | Item | Definition |
 |---|---|
@@ -4649,16 +4825,16 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1244 | Basis Link ID | `requirement_regulation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1245 | Business Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | Y | N | Y | References requirement.requirement_id | `00000000-0000-0000-0000-000000000001` |
-| 1246 | Regulatory Clause ID | `regulatory_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | Y | - | N | Y | N | Y | References regulatory_clause.regulatory_clause_id | `00000000-0000-0000-0000-000000000001` |
-| 1247 | Application Rationale | `application_note` | `text` | N | N | - | N | - | N | N | N | Y | Application Rationale | `Applied to access permission requirements` |
-| 1248 | Citation Text | `citation_snapshot` | `text` | N | N | - | Y | - | N | N | N | Y | Preserves the document title, edition and clause display as of the time of application | `Reference document for review Rev.1 / 4.1` |
-| 1249 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
-| 1250 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1251 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1252 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1253 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1291 | Basis Link ID | `requirement_regulation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1292 | Business Item ID | `requirement_id` | `uuid` | N | Y | `requirement.requirement_id` | Y | - | N | Y | N | Y | References requirement.requirement_id | `00000000-0000-0000-0000-000000000001` |
+| 1293 | Regulatory Clause ID | `regulatory_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | Y | - | N | Y | N | Y | References regulatory_clause.regulatory_clause_id | `00000000-0000-0000-0000-000000000001` |
+| 1294 | Application Rationale | `application_note` | `text` | N | N | - | N | - | N | N | N | Y | Application Rationale | `Applied to access permission requirements` |
+| 1295 | Citation Text | `citation_snapshot` | `text` | N | N | - | Y | - | N | N | N | Y | Preserves the document title, edition and clause display as of the time of application | `Reference document for review Rev.1 / 4.1` |
+| 1296 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
+| 1297 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1298 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1299 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1300 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
@@ -4673,7 +4849,7 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 ---
 
 <a id="table-library_item_regulation"></a>
-### 77. Library Regulatory Basis (`library_item_regulation`)
+### 80. Library Regulatory Basis (`library_item_regulation`)
 
 | Item | Definition |
 |---|---|
@@ -4690,16 +4866,16 @@ Regulatory bases are managed as reusable reference data. A manually entered basi
 
 | No | Logical Name | Physical Name | Type | PK | FK | Reference | NN | Default | UQ | IDX | Sensitive | Audit | Description / Business Rule | Example |
 |---:|---|---|---|:---:|:---:|---|:---:|---|:---:|:---:|:---:|:---:|---|---|
-| 1254 | Basis Link ID | `library_item_regulation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
-| 1255 | Library Item ID | `library_id` | `uuid` | N | Y | `library_item.library_id` | Y | - | N | Y | N | Y | References library_item.library_id | `00000000-0000-0000-0000-000000000001` |
-| 1256 | Regulatory Clause ID | `regulatory_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | Y | - | N | Y | N | Y | References regulatory_clause.regulatory_clause_id | `00000000-0000-0000-0000-000000000001` |
-| 1257 | Application Rationale | `application_note` | `text` | N | N | - | N | - | N | N | N | Y | Application Rationale | `Applied to access permission requirements` |
-| 1258 | Citation Text | `citation_snapshot` | `text` | N | N | - | Y | - | N | N | N | Y | Preserves the document title, edition and clause display as of the time of application | `Reference document for review Rev.1 / 4.1` |
-| 1259 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
-| 1260 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
-| 1261 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
-| 1262 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
-| 1263 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1301 | Basis Link ID | `library_item_regulation_id` | `uuid` | Y | N | - | Y | `gen_random_uuid()` | Y | Y | N | Y | Unique identifier of this row | `00000000-0000-0000-0000-000000000001` |
+| 1302 | Library Item ID | `library_id` | `uuid` | N | Y | `library_item.library_id` | Y | - | N | Y | N | Y | References library_item.library_id | `00000000-0000-0000-0000-000000000001` |
+| 1303 | Regulatory Clause ID | `regulatory_clause_id` | `uuid` | N | Y | `regulatory_clause.regulatory_clause_id` | Y | - | N | Y | N | Y | References regulatory_clause.regulatory_clause_id | `00000000-0000-0000-0000-000000000001` |
+| 1304 | Application Rationale | `application_note` | `text` | N | N | - | N | - | N | N | N | Y | Application Rationale | `Applied to access permission requirements` |
+| 1305 | Citation Text | `citation_snapshot` | `text` | N | N | - | Y | - | N | N | N | Y | Preserves the document title, edition and clause display as of the time of application | `Reference document for review Rev.1 / 4.1` |
+| 1306 | Display Order | `sort_order` | `integer` | N | N | - | Y | - | N | N | N | Y | Display Order | `1` |
+| 1307 | Created At | `created_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Created At | `2026-09-01T00:00:00Z` |
+| 1308 | Created By | `created_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
+| 1309 | Updated At | `updated_at` | `timestamptz` | N | N | - | Y | `CURRENT_TIMESTAMP` | N | N | N | Y | Updated At | `2026-09-01T00:00:00Z` |
+| 1310 | Updated By | `updated_by` | `uuid` | N | Y | `app_user.user_id` | Y | - | N | Y | N | Y | References app_user.user_id | `00000000-0000-0000-0000-000000000001` |
 
 #### Constraints
 
